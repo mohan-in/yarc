@@ -40,6 +40,8 @@ dependencies:
   flutter_web_auth_2: ^4.1.0
   shared_preferences: ^2.5.4
   html_unescape: ^2.0.0
+  flutter_markdown: ^0.7.7+1
+  markdown: ^7.3.0
 
 dev_dependencies:
   flutter_test:
@@ -98,3 +100,14 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+  fonts:
+    - family: Roboto
+      fonts:
+        - asset: assets/fonts/Roboto-Regular.ttf
+        - asset: assets/fonts/Roboto-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Roboto-Italic.ttf
+          style: italic
+    - family: RobotoMono
+      fonts:
+        - asset: assets/fonts/RobotoMono-Regular.ttf

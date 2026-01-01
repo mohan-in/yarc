@@ -185,123 +185,114 @@ class _RedditHomePageState extends State<RedditHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return SelectionArea(
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            _currentSubreddit != null
-                ? 'r/$_currentSubreddit'
-                : (_isLoggedIn ? 'Home Feed' : 'YARC'),
-          ),
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          actions: [
-            if (_currentSubreddit != null)
-              IconButton(
-                icon: const Icon(Icons.home),
-                onPressed: () {
-                  setState(() {
-                    _currentSubreddit = null;
-                    _posts.clear();
-                    _after = null;
-                  });
-                  _loadPosts();
-                },
-                tooltip: 'Go Home',
-              ),
-            if (_isLoggedIn || _currentSubreddit != null)
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: _refreshPosts,
-              ),
-            if (!_isLoggedIn)
-              TextButton.icon(
-                icon: const Icon(Icons.login),
-                label: const Text('Login'),
-                onPressed: _handleLogin,
-                style: TextButton.styleFrom(foregroundColor: Colors.black),
-              ),
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _currentSubreddit != null
+              ? 'r/$_currentSubreddit'
+              : (_isLoggedIn ? 'Home Feed' : 'YARC'),
         ),
-        drawer: !_isLoggedIn
-            ? null
-            : AppDrawer(
-                subreddits: _subscribedSubreddits,
-                onSubredditSelected: (sub) {
-                  setState(() {
-                    _currentSubreddit = sub.displayName;
-                    _posts.clear();
-                    _after = null;
-                  });
-                  _loadPosts();
-                },
-                onLogout: _handleLogout,
-              ),
-        body: !_isLoggedIn && _currentSubreddit == null
-            ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.reddit,
-                      size: 80,
-                      color: Colors.deepOrange,
-                    ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Welcome to YARC',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: _handleLogin,
-                      icon: const Icon(Icons.login),
-                      label: const Text('Login with Reddit'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            : _posts.isEmpty && _isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: () async => _refreshPosts(),
-                child: ListView.builder(
-                  controller: _scrollController,
-                  itemCount: _posts.length + (_isLoading ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    if (index == _posts.length) {
-                      return const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    final post = _posts[index];
-                    return PostCard(
-                      post: post,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PostDetailPage(
-                              post: post,
-                              redditService: _redditService,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          if (_currentSubreddit != null)
+            IconButton(
+              icon: const Icon(Icons.home),
+              onPressed: () {
+                setState(() {
+                  _currentSubreddit = null;
+                  _posts.clear();
+                  _after = null;
+                });
+                _loadPosts();
+              },
+              tooltip: 'Go Home',
+            ),
+          if (_isLoggedIn || _currentSubreddit != null)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _refreshPosts,
+            ),
+          if (!_isLoggedIn)
+            TextButton.icon(
+              icon: const Icon(Icons.login),
+              label: const Text('Login'),
+              onPressed: _handleLogin,
+              style: TextButton.styleFrom(foregroundColor: Colors.black),
+            ),
+        ],
       ),
+      drawer: !_isLoggedIn
+          ? null
+          : AppDrawer(
+              subreddits: _subscribedSubreddits,
+              onSubredditSelected: (sub) {
+                setState(() {
+                  _currentSubreddit = sub.displayName;
+                  _posts.clear();
+                  _after = null;
+                });
+                _loadPosts();
+              },
+              onLogout: _handleLogout,
+            ),
+      body: !_isLoggedIn && _currentSubreddit == null
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.reddit, size: 80, color: Colors.deepOrange),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Welcome to YARC',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: _handleLogin,
+                    icon: const Icon(Icons.login),
+                    label: const Text('Login with Reddit'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 16,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _posts.isEmpty && _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () async => _refreshPosts(),
+              child: ListView.builder(
+                controller: _scrollController,
+                itemCount: _posts.length + (_isLoading ? 1 : 0),
+                itemBuilder: (context, index) {
+                  if (index == _posts.length) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  final post = _posts[index];
+                  return PostCard(
+                    post: post,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PostDetailPage(
+                            post: post,
+                            redditService: _redditService,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
     );
   }
 }
