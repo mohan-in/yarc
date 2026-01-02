@@ -1,3 +1,5 @@
+import 'package:draw/draw.dart' as sys;
+
 /// A data model representing a Reddit post.
 class Post {
   /// The unique ID of the post (e.g., "t3_12345").
@@ -51,36 +53,20 @@ class Post {
     this.images = const [],
   });
 
-  factory Post.fromJson(Map<String, dynamic> json) {
-    final data = json['data'];
+  factory Post.fromSubmission(sys.Submission submission) {
     String? imageUrl;
     List<String> images = [];
 
-    // Parse logic for imageUrl (single image)
-    if (data['preview'] != null &&
-        data['preview']['images'] != null &&
-        data['preview']['images'].isNotEmpty) {
-      final image = data['preview']['images'][0]['source'];
-      if (image != null && image['url'] != null) {
-        imageUrl = (image['url'] as String).replaceAll('&amp;', '&');
-      }
+    // Attempt to find the main image URL
+    final preview = submission.preview;
+    if (preview.isNotEmpty) {
+      final image = preview[0].source;
+      imageUrl = image.url.toString().replaceAll('&amp;', '&');
     }
 
-    if (imageUrl == null && data['media_metadata'] != null) {
-      final metadata = data['media_metadata'] as Map;
-      for (final key in metadata.keys) {
-        final item = metadata[key];
-        if (item['status'] == 'valid' && item['e'] == 'Image') {
-          if (item['s'] != null && item['s']['u'] != null) {
-            imageUrl = (item['s']['u'] as String).replaceAll('&amp;', '&');
-            break; // Use the first valid image found
-          }
-        }
-      }
-    }
-
-    if (imageUrl == null && data['url'] != null) {
-      final String url = data['url'];
+    // Check for direct URL if it's an image
+    if (imageUrl == null) {
+      final String url = submission.url.toString();
       if (url.endsWith('.jpg') ||
           url.endsWith('.jpeg') ||
           url.endsWith('.png') ||
@@ -89,52 +75,52 @@ class Post {
       }
     }
 
-    // Parse logic for gallery images
-    if (data['gallery_data'] != null && data['media_metadata'] != null) {
-      final galleryData = data['gallery_data'];
-      final metadata = data['media_metadata'];
-      if (galleryData['items'] != null) {
-        for (final item in galleryData['items']) {
-          final mediaId = item['media_id'];
-          if (metadata[mediaId] != null) {
-            final mediaItem = metadata[mediaId];
-            if (mediaItem['status'] == 'valid' && mediaItem['e'] == 'Image') {
-              if (mediaItem['s'] != null && mediaItem['s']['u'] != null) {
-                String url = (mediaItem['s']['u'] as String).replaceAll(
-                  '&amp;',
-                  '&',
-                );
-                images.add(url);
+    // Gallery handling might be more complex with draw, checking mostly for media_metadata
+    // draw might not expose raw json easily for everything, but we can try accessing data property if needed.
+    // submission.data matches the raw map.
+    if (submission.data != null) {
+      final data = submission.data!;
+      if (data['gallery_data'] != null && data['media_metadata'] != null) {
+        final galleryData = data['gallery_data'];
+        final metadata = data['media_metadata'];
+        if (galleryData['items'] != null) {
+          for (final item in galleryData['items']) {
+            final mediaId = item['media_id'];
+            if (metadata[mediaId] != null) {
+              final mediaItem = metadata[mediaId];
+              if (mediaItem['status'] == 'valid' && mediaItem['e'] == 'Image') {
+                if (mediaItem['s'] != null && mediaItem['s']['u'] != null) {
+                  String url = (mediaItem['s']['u'] as String).replaceAll(
+                    '&amp;',
+                    '&',
+                  );
+                  images.add(url);
+                }
               }
             }
           }
         }
       }
-    } else if (imageUrl != null) {
-      // If not a gallery but has a main image, add it to images list as fallback
+    }
+
+    if (images.isEmpty && imageUrl != null) {
       images.add(imageUrl);
     }
 
     return Post(
-      id: data['id'],
-      title: data['title'],
-      author: data['author'],
-      subreddit: data['subreddit'],
-      ups: data['ups'],
-      numComments: data['num_comments'] ?? 0,
-      thumbnail:
-          data['thumbnail'] != 'self' &&
-              data['thumbnail'] != 'default' &&
-              data['thumbnail'] != 'spoiler' &&
-              data['thumbnail'] != 'image' &&
-              data['thumbnail'] != 'nsfw' &&
-              (data['thumbnail'] as String).startsWith('http')
-          ? data['thumbnail']
+      id: submission.id ?? '',
+      title: submission.title,
+      author: submission.author,
+      subreddit: submission.subreddit.displayName,
+      ups: submission.upvotes,
+      numComments: submission.numComments,
+      thumbnail: submission.thumbnail.toString().startsWith('http')
+          ? submission.thumbnail.toString()
           : null,
       imageUrl: imageUrl,
-      permalink: data['permalink'],
-      content: data['selftext'] ?? '',
-      createdUtc: (data['created_utc'] as num).toDouble(),
+      permalink: submission.data!['permalink'] ?? '',
+      content: submission.selftext ?? '',
+      createdUtc: submission.createdUtc.millisecondsSinceEpoch / 1000,
       images: images,
     );
   }

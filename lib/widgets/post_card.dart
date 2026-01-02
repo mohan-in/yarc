@@ -6,7 +6,7 @@ import '../utils/image_utils.dart';
 import '../utils/html_utils.dart';
 import '../utils/date_utils.dart';
 import 'full_screen_image_view.dart';
-import 'linkable_text.dart';
+import 'markdown_content.dart';
 
 /// A card widget that displays a summary of a [Post].
 ///
@@ -78,7 +78,7 @@ class _PostCardState extends State<PostCard> {
               if (widget.post.content.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 4.0),
-                  child: LinkableText(
+                  child: MarkdownContent(
                     text: HtmlUtils.unescape(widget.post.content),
                     maxLines: widget.expanded ? null : 3,
                     overflow: widget.expanded ? null : TextOverflow.ellipsis,

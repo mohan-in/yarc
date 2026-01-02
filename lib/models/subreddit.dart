@@ -1,3 +1,5 @@
+import 'package:draw/draw.dart' as draw;
+
 class Subreddit {
   final String displayName;
   final String title;
@@ -11,29 +13,31 @@ class Subreddit {
     required this.url,
   });
 
-  factory Subreddit.fromJson(Map<String, dynamic> json) {
-    final data = json['data'];
-    String? icon = data['icon_img'];
-    if (icon != null && icon.isNotEmpty) {
-      // Decode HTML entities if present
-      icon = icon.replaceAll('&amp;', '&');
-    } else {
-      icon = data['community_icon'];
-      if (icon != null && icon.isNotEmpty) {
-        // Community icons often have query params, remove them if needed or use as is
-        // but definitely decode
-        icon = icon.replaceAll('&amp;', '&');
+  factory Subreddit.fromDraw(draw.Subreddit sub) {
+    // draw Subreddit might not have explicit fields populated without fetching,
+    // but user.subreddits() returns populated ones usually.
+    // sub.data is the raw map.
+
+    String? icon;
+    final iconUri = sub.iconImage;
+    if (iconUri != null) {
+      icon = iconUri.toString().replaceAll('&amp;', '&');
+    }
+
+    if ((icon == null || icon.isEmpty) && sub.data != null) {
+      final commIcon = sub.data!['community_icon'];
+      if (commIcon != null && commIcon is String && commIcon.isNotEmpty) {
+        icon = commIcon.replaceAll('&amp;', '&');
       }
     }
 
-    // Fallback if icon is empty string
-    if (icon == '') icon = null;
+    if (icon != null && icon.isEmpty) icon = null;
 
     return Subreddit(
-      displayName: data['display_name'],
-      title: data['title'],
+      displayName: sub.displayName,
+      title: sub.title,
       iconImg: icon,
-      url: data['url'],
+      url: sub.path,
     );
   }
 }

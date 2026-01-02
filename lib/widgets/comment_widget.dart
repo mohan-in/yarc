@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/comment.dart';
 import '../utils/html_utils.dart';
-import 'linkable_text.dart';
+import 'markdown_content.dart';
 
 class CommentWidget extends StatefulWidget {
   final Comment comment;
@@ -72,7 +72,7 @@ class _CommentWidgetState extends State<CommentWidget> {
                       .where((p) => p.trim().isNotEmpty)
                       .expand(
                         (p) => [
-                          LinkableText(text: HtmlUtils.unescape(p.trim())),
+                          MarkdownContent(text: HtmlUtils.unescape(p.trim())),
                           const SizedBox(
                             height: 6,
                           ), // Reduced paragraph spacing

@@ -9,13 +9,13 @@ import 'full_screen_image_view.dart';
 
 /// A widget that parses text (Markdown) and renders it with clickable links
 /// and inline images.
-class LinkableText extends StatelessWidget {
+class MarkdownContent extends StatelessWidget {
   final String text;
   final TextStyle? style;
   final int? maxLines;
   final TextStyle? linkStyle;
 
-  const LinkableText({
+  const MarkdownContent({
     super.key,
     required this.text,
     this.style,

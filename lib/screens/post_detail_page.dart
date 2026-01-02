@@ -26,7 +26,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
   @override
   void initState() {
     super.initState();
-    _commentsFuture = widget.redditService.fetchComments(widget.post.permalink);
+    _commentsFuture = widget.redditService.fetchComments(widget.post.id);
   }
 
   @override

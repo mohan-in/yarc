@@ -44,7 +44,7 @@ class _RedditHomePageState extends State<RedditHomePage> {
   }
 
   Future<void> _checkLoginStatus() async {
-    final loggedIn = await _authService.isLoggedIn();
+    final loggedIn = _authService.isLoggedIn;
     setState(() {
       _isLoggedIn = loggedIn;
       _currentSubreddit = null;
