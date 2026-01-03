@@ -18,10 +18,14 @@ class AuthState {
 }
 
 /// Notifier for managing authentication state.
-class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthService _authService;
+class AuthNotifier extends Notifier<AuthState> {
+  late final AuthService _authService;
 
-  AuthNotifier(this._authService) : super(const AuthState());
+  @override
+  AuthState build() {
+    _authService = getIt<AuthService>();
+    return const AuthState();
+  }
 
   AuthService get authService => _authService;
 
@@ -51,6 +55,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 /// Provider for AuthNotifier using get_it service locator.
-final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(getIt<AuthService>());
-});
+final authProvider = NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);

@@ -4,10 +4,14 @@ import '../models/subreddit.dart';
 import '../services/reddit_service.dart';
 
 /// Notifier for managing subscribed subreddits.
-class SubredditsNotifier extends StateNotifier<List<Subreddit>> {
-  final RedditService _redditService;
+class SubredditsNotifier extends Notifier<List<Subreddit>> {
+  late final RedditService _redditService;
 
-  SubredditsNotifier(this._redditService) : super([]);
+  @override
+  List<Subreddit> build() {
+    _redditService = getIt<RedditService>();
+    return [];
+  }
 
   /// Fetches and sorts the user's subscribed subreddits.
   Future<void> fetchSubreddits() async {
@@ -31,6 +35,6 @@ class SubredditsNotifier extends StateNotifier<List<Subreddit>> {
 
 /// Provider for SubredditsNotifier using get_it.
 final subredditsProvider =
-    StateNotifierProvider<SubredditsNotifier, List<Subreddit>>((ref) {
-      return SubredditsNotifier(getIt<RedditService>());
-    });
+    NotifierProvider<SubredditsNotifier, List<Subreddit>>(
+      SubredditsNotifier.new,
+    );

@@ -55,12 +55,16 @@ class FeedState {
 }
 
 /// Notifier for managing the post feed with caching.
-class FeedNotifier extends StateNotifier<FeedState> {
-  final RedditService _redditService;
-  final PostCacheService _cacheService;
+class FeedNotifier extends Notifier<FeedState> {
+  late final RedditService _redditService;
+  late final PostCacheService _cacheService;
 
-  FeedNotifier(this._redditService, this._cacheService)
-    : super(const FeedState());
+  @override
+  FeedState build() {
+    _redditService = getIt<RedditService>();
+    _cacheService = getIt<PostCacheService>();
+    return const FeedState();
+  }
 
   /// Loads posts, optionally paginating with the current `after` cursor.
   Future<void> loadPosts({bool refresh = false}) async {
@@ -157,6 +161,6 @@ final redditServiceProvider = Provider<RedditService>((ref) {
 });
 
 /// Provider for FeedNotifier using get_it.
-final feedProvider = StateNotifierProvider<FeedNotifier, FeedState>((ref) {
-  return FeedNotifier(getIt<RedditService>(), getIt<PostCacheService>());
-});
+final feedProvider = NotifierProvider<FeedNotifier, FeedState>(
+  FeedNotifier.new,
+);
