@@ -4,4 +4,4 @@ To run this app, you need to have a Reddit API client ID. You can get these by c
 
 Once you have your client ID, you can run the app by setting the following environment variables:
 
-flutter run --dart-define=REDDIT_CLIENT_ID=<clientId>
+flutter run --dart-define=REDDIT_CLIENT_ID=YOUR_CLIENT_ID
