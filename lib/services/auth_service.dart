@@ -1,9 +1,6 @@
-import 'dart:async';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/foundation.dart';
 import 'package:draw/draw.dart';
-import 'auth_listener.dart';
 
 /// Service responsible for handling Reddit OAuth2 authentication using the `draw` package.
 class AuthService {
@@ -19,13 +16,7 @@ class AuthService {
     'history',
   ];
 
-  /// Returns the Redirect URI based on the platform.
-  String get _redirectUri {
-    if (kIsWeb) {
-      return '${Uri.base.origin}/auth.html';
-    }
-    return 'com.mohan.reddit.client://callback';
-  }
+  static const String _redirectUri = 'com.mohan.reddit.client://callback';
 
   Reddit? _reddit;
   Reddit? get reddit => _reddit;
@@ -64,19 +55,12 @@ class AuthService {
     );
 
     try {
-      final fallbackFuture = listenForAuthToken();
-
-      final authFuture = FlutterWebAuth2.authenticate(
+      final result = await FlutterWebAuth2.authenticate(
         url: url.toString(),
-        callbackUrlScheme: kIsWeb ? 'http' : 'com.mohan.reddit.client',
+        callbackUrlScheme: 'com.mohan.reddit.client',
       );
 
-      final result = await Future.any([
-        authFuture,
-        fallbackFuture.then((value) => value ?? Completer<String>().future),
-      ]);
-
-      final code = Uri.parse(result as String).queryParameters['code'];
+      final code = Uri.parse(result).queryParameters['code'];
       if (code != null) {
         await _exchangeCodeForToken(code, redditConfig);
         return true;

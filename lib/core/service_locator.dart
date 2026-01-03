@@ -15,5 +15,5 @@ void setupServiceLocator() {
     () => RedditService(authService: getIt<AuthService>()),
   );
 
-  getIt.registerLazySingleton<CacheService>(() => CacheService());
+  getIt.registerLazySingleton<PostCacheService>(() => PostCacheService());
 }

@@ -3,10 +3,10 @@ import '../models/post.dart';
 import '../utils/html_utils.dart';
 import 'image_carousel.dart';
 import 'markdown_content.dart';
-import 'network_image_widget.dart';
+import 'cached_image.dart';
 import 'post_metadata.dart';
-import 'video_player_widget.dart';
-import 'youtube_player_widget.dart';
+import 'video_player.dart';
+import 'youtube_embed.dart';
 
 /// A card widget that displays a summary of a [Post].
 ///
@@ -102,7 +102,7 @@ class PostCard extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 8.0),
         child: GestureDetector(
           onTap: () {},
-          child: VideoPlayerWidget(videoUrl: post.videoUrl!, autoPlay: true),
+          child: RedditVideoPlayer(videoUrl: post.videoUrl!, autoPlay: true),
         ),
       );
     }
@@ -112,7 +112,7 @@ class PostCard extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 8.0),
         child: GestureDetector(
           onTap: () {},
-          child: YouTubePlayerWidget(videoId: post.youtubeId!),
+          child: YouTubeEmbed(videoId: post.youtubeId!),
         ),
       );
     }
@@ -121,7 +121,7 @@ class PostCard extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
         child: post.images.length == 1
-            ? NetworkImageWidget(
+            ? CachedImage(
                 imageUrl: post.images.first,
                 fullScreenUrls: post.images,
               )
@@ -132,7 +132,7 @@ class PostCard extends StatelessWidget {
     if (post.thumbnail != null) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8.0),
-        child: NetworkImageWidget(
+        child: CachedImage(
           imageUrl: post.thumbnail!,
           fullScreenUrls: [post.thumbnail!],
         ),

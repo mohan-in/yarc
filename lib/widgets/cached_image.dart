@@ -5,13 +5,13 @@ import 'full_screen_image_view.dart';
 
 /// A reusable widget for displaying a single network image with loading,
 /// error handling, disk/memory caching, and tap-to-fullscreen functionality.
-class NetworkImageWidget extends StatelessWidget {
+class CachedImage extends StatelessWidget {
   final String imageUrl;
   final List<String>? fullScreenUrls;
   final BoxFit fit;
   final double? height;
 
-  const NetworkImageWidget({
+  const CachedImage({
     super.key,
     required this.imageUrl,
     this.fullScreenUrls,

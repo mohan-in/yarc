@@ -3,24 +3,24 @@ import '../models/post.dart';
 import '../models/comment.dart';
 import '../services/reddit_service.dart';
 import '../widgets/post_card.dart';
-import '../widgets/comment_widget.dart';
+import '../widgets/comment_tile.dart';
 import '../utils/html_utils.dart';
 
-class PostDetailPage extends StatefulWidget {
+class PostDetailScreen extends StatefulWidget {
   final Post post;
   final RedditService redditService;
 
-  const PostDetailPage({
+  const PostDetailScreen({
     super.key,
     required this.post,
     required this.redditService,
   });
 
   @override
-  State<PostDetailPage> createState() => _PostDetailPageState();
+  State<PostDetailScreen> createState() => _PostDetailScreenState();
 }
 
-class _PostDetailPageState extends State<PostDetailPage> {
+class _PostDetailScreenState extends State<PostDetailScreen> {
   late Future<List<Comment>> _commentsFuture;
 
   @override
@@ -68,7 +68,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
               } else {
                 return SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
-                    return CommentWidget(comment: snapshot.data![index]);
+                    return CommentTile(comment: snapshot.data![index]);
                   }, childCount: snapshot.data!.length),
                 );
               }

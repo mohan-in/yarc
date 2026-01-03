@@ -4,12 +4,12 @@ import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-class VideoPlayerWidget extends StatefulWidget {
+class RedditVideoPlayer extends StatefulWidget {
   final String videoUrl;
   final bool autoPlay;
   final double aspectRatio;
 
-  const VideoPlayerWidget({
+  const RedditVideoPlayer({
     super.key,
     required this.videoUrl,
     this.autoPlay = false,
@@ -17,10 +17,10 @@ class VideoPlayerWidget extends StatefulWidget {
   });
 
   @override
-  State<VideoPlayerWidget> createState() => _VideoPlayerWidgetState();
+  State<RedditVideoPlayer> createState() => _RedditVideoPlayerState();
 }
 
-class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
+class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   bool _isInit = false;

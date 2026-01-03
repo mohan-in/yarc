@@ -7,16 +7,16 @@ import '../providers/subreddits_state.dart';
 import '../widgets/post_card.dart';
 import '../widgets/app_drawer.dart';
 import '../utils/image_utils.dart';
-import 'post_detail_page.dart';
+import 'post_detail_screen.dart';
 
-class RedditHomePage extends ConsumerStatefulWidget {
-  const RedditHomePage({super.key});
+class HomeScreen extends ConsumerStatefulWidget {
+  const HomeScreen({super.key});
 
   @override
-  ConsumerState<RedditHomePage> createState() => _RedditHomePageState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _RedditHomePageState extends ConsumerState<RedditHomePage> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   // Prefetch threshold: Start loading next page when 800px from bottom
   // This is roughly 2-3 cards ahead, giving seamless infinite scroll
   static const int _scrollThreshold = 800;
@@ -259,7 +259,7 @@ class _RedditHomePageState extends ConsumerState<RedditHomePage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PostDetailPage(
+                          builder: (context) => PostDetailScreen(
                             post: post,
                             redditService: redditService,
                           ),

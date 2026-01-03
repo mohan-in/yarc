@@ -3,7 +3,7 @@ import '../models/post.dart';
 import '../models/post_hive_adapter.dart';
 
 /// Service for caching posts locally using Hive.
-class CacheService {
+class PostCacheService {
   static const String _postsBoxName = 'posts_cache';
   static const String _readPostsBoxName = 'read_posts';
   static const String _homeKey = '__home__';

@@ -9,7 +9,7 @@ void main() async {
 
   // Initialize services
   setupServiceLocator();
-  await CacheService.init();
+  await PostCacheService.init();
 
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
           labelSmall: TextStyle(fontSize: 12), // default 11 + 1
         ),
       ),
-      home: const RedditHomePage(),
+      home: const HomeScreen(),
     );
   }
 }

@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
-class YouTubePlayerWidget extends StatefulWidget {
+class YouTubeEmbed extends StatefulWidget {
   final String videoId;
 
-  const YouTubePlayerWidget({super.key, required this.videoId});
+  const YouTubeEmbed({super.key, required this.videoId});
 
   @override
-  State<YouTubePlayerWidget> createState() => _YouTubePlayerWidgetState();
+  State<YouTubeEmbed> createState() => _YouTubeEmbedState();
 }
 
-class _YouTubePlayerWidgetState extends State<YouTubePlayerWidget> {
+class _YouTubeEmbedState extends State<YouTubeEmbed> {
   late YoutubePlayerController _controller;
   bool _isPlayerReady = false;
 

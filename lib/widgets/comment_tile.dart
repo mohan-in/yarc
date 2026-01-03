@@ -3,17 +3,17 @@ import '../models/comment.dart';
 import '../utils/html_utils.dart';
 import 'markdown_content.dart';
 
-class CommentWidget extends StatefulWidget {
+class CommentTile extends StatefulWidget {
   final Comment comment;
   final int depth;
 
-  const CommentWidget({super.key, required this.comment, this.depth = 0});
+  const CommentTile({super.key, required this.comment, this.depth = 0});
 
   @override
-  State<CommentWidget> createState() => _CommentWidgetState();
+  State<CommentTile> createState() => _CommentTileState();
 }
 
-class _CommentWidgetState extends State<CommentWidget> {
+class _CommentTileState extends State<CommentTile> {
   bool _isCollapsed = false;
 
   void _toggleCollapse() {
@@ -85,7 +85,7 @@ class _CommentWidgetState extends State<CommentWidget> {
               children: widget.comment.replies
                   .map(
                     (reply) =>
-                        CommentWidget(comment: reply, depth: widget.depth + 1),
+                        CommentTile(comment: reply, depth: widget.depth + 1),
                   )
                   .toList(),
             ),

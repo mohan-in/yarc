@@ -57,7 +57,7 @@ class FeedState {
 /// Notifier for managing the post feed with caching.
 class FeedNotifier extends StateNotifier<FeedState> {
   final RedditService _redditService;
-  final CacheService _cacheService;
+  final PostCacheService _cacheService;
 
   FeedNotifier(this._redditService, this._cacheService)
     : super(const FeedState());
@@ -158,5 +158,5 @@ final redditServiceProvider = Provider<RedditService>((ref) {
 
 /// Provider for FeedNotifier using get_it.
 final feedProvider = StateNotifierProvider<FeedNotifier, FeedState>((ref) {
-  return FeedNotifier(getIt<RedditService>(), getIt<CacheService>());
+  return FeedNotifier(getIt<RedditService>(), getIt<PostCacheService>());
 });
