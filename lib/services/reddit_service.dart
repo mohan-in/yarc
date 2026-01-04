@@ -82,4 +82,31 @@ class RedditService {
       return [];
     }
   }
+
+  /// Searches for subreddits by name prefix.
+  /// Returns a list of subreddits whose names start with the query.
+  Future<List<Subreddit>> searchSubreddits(String query) async {
+    final reddit = _reddit;
+    if (reddit == null || query.isEmpty) return [];
+
+    try {
+      final results = await reddit.subreddits.searchByName(
+        query,
+        includeNsfw: false,
+      );
+      // Fetch full subreddit info for each result
+      final List<Subreddit> subs = [];
+      for (final ref in results) {
+        try {
+          final sub = await ref.populate();
+          subs.add(Subreddit.fromDraw(sub));
+        } catch (_) {
+          // Skip subreddits that fail to load
+        }
+      }
+      return subs;
+    } catch (e) {
+      return [];
+    }
+  }
 }

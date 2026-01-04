@@ -7,6 +7,7 @@ import '../providers/subreddits_state.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/login_prompt.dart';
 import '../widgets/post_list.dart';
+import '../widgets/subreddit_search_delegate.dart';
 import '../utils/image_utils.dart';
 import 'post_detail_screen.dart';
 
@@ -151,27 +152,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          feedState.currentSubreddit != null
-              ? 'r/${feedState.currentSubreddit}'
-              : (authState.isLoggedIn ? 'Home Feed' : 'YARC'),
+    // Handle back gesture: go to home feed if viewing a subreddit
+    return PopScope(
+      canPop: feedState.currentSubreddit == null,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && feedState.currentSubreddit != null) {
+          ref.read(feedProvider.notifier).selectSubreddit(null);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            feedState.currentSubreddit != null
+                ? 'r/${feedState.currentSubreddit}'
+                : (authState.isLoggedIn ? 'Home' : 'YARC'),
+          ),
+          actions: _buildAppBarActions(authState, feedState),
         ),
-        actions: _buildAppBarActions(authState, feedState),
+        drawer: !authState.isLoggedIn
+            ? null
+            : AppDrawer(
+                subreddits: subreddits,
+                onSubredditSelected: (sub) {
+                  ref
+                      .read(feedProvider.notifier)
+                      .selectSubreddit(sub.displayName);
+                },
+                onLogout: _handleLogout,
+              ),
+        body: _buildBody(authState, feedState, redditService),
       ),
-      drawer: !authState.isLoggedIn
-          ? null
-          : AppDrawer(
-              subreddits: subreddits,
-              onSubredditSelected: (sub) {
-                ref
-                    .read(feedProvider.notifier)
-                    .selectSubreddit(sub.displayName);
-              },
-              onLogout: _handleLogout,
-            ),
-      body: _buildBody(authState, feedState, redditService),
     );
   }
 
@@ -186,6 +196,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           tooltip: 'Go Home',
         ),
       if (authState.isLoggedIn || feedState.currentSubreddit != null) ...[
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: _openSearch,
+          tooltip: 'Search Subreddits',
+        ),
         IconButton(
           icon: Icon(
             feedState.hideRead ? Icons.visibility_off : Icons.visibility,
@@ -212,6 +227,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           style: TextButton.styleFrom(foregroundColor: Colors.black),
         ),
     ];
+  }
+
+  Future<void> _openSearch() async {
+    final selectedSubreddit = await showSearch<String?>(
+      context: context,
+      delegate: SubredditSearchDelegate(ref: ref),
+    );
+
+    if (selectedSubreddit != null) {
+      ref.read(feedProvider.notifier).selectSubreddit(selectedSubreddit);
+    }
   }
 
   Widget _buildBody(

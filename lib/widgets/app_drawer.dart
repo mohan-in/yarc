@@ -39,6 +39,7 @@ class AppDrawer extends StatelessWidget {
                     itemCount: subreddits.length,
                     itemBuilder: (context, index) {
                       final sub = subreddits[index];
+                      final textTheme = Theme.of(context).textTheme;
                       return ListTile(
                         leading: sub.iconImg != null
                             ? CircleAvatar(
@@ -47,7 +48,12 @@ class AppDrawer extends StatelessWidget {
                                 ),
                               )
                             : const CircleAvatar(child: Icon(Icons.reddit)),
-                        title: Text(sub.displayName),
+                        title: Text(
+                          sub.displayName,
+                          style: textTheme.bodyLarge?.copyWith(
+                            fontSize: (textTheme.bodyLarge?.fontSize ?? 16) - 1,
+                          ),
+                        ),
                         onTap: () {
                           onSubredditSelected(sub);
                           Navigator.pop(context); // Close drawer
