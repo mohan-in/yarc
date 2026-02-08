@@ -159,6 +159,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   } else {
                     context.read<FeedNotifier>().selectSubredditWithInfo(sub);
                   }
+                  _scrollToTop();
                   Navigator.pop(context);
                 },
                 onLogout: _handleLogout,
@@ -210,14 +211,6 @@ class _HomeScreenState extends State<HomeScreen> {
     FeedNotifier feedNotifier,
   ) {
     return [
-      if (feedNotifier.currentSubreddit != null)
-        IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () {
-            context.read<FeedNotifier>().selectSubreddit(null);
-          },
-          tooltip: 'Go Home',
-        ),
       if (authNotifier.isLoggedIn || feedNotifier.currentSubreddit != null) ...[
         IconButton(
           icon: const Icon(Icons.search),

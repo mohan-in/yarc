@@ -36,13 +36,6 @@ class AppDrawer extends StatelessWidget {
       destinationCount++;
     }
 
-    addWidget(
-      Padding(
-        padding: const EdgeInsets.fromLTRB(28, 16, 16, 10),
-        child: Text('YARC', style: Theme.of(context).textTheme.titleSmall),
-      ),
-    );
-
     addDestination(
       const NavigationDrawerDestination(
         icon: Icon(Icons.home_outlined),
