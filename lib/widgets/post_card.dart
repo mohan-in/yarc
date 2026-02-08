@@ -158,7 +158,10 @@ class PostCard extends StatelessWidget {
                 imageUrl: post.images.first,
                 fullScreenUrls: post.images,
               )
-            : ImageCarousel(imageUrls: post.images),
+            : ImageCarousel(
+                imageUrls: post.images,
+                aspectRatio: post.aspectRatio,
+              ),
       );
     }
 

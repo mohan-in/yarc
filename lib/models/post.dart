@@ -51,6 +51,9 @@ class Post {
   /// The YouTube video ID, if available.
   final String? youtubeId;
 
+  /// The aspect ratio of the main image/video (width / height).
+  final double? aspectRatio;
+
   Post({
     required this.id,
     required this.title,
@@ -68,6 +71,7 @@ class Post {
     this.videoUrl,
     this.isYoutube = false,
     this.youtubeId,
+    this.aspectRatio,
   });
 
   factory Post.fromSubmission(sys.Submission submission) {
@@ -77,12 +81,16 @@ class Post {
     String? videoUrl;
     bool isYoutube = false;
     String? youtubeId;
+    double? aspectRatio;
 
     // Attempt to find the main image URL
     final preview = submission.preview;
     if (preview.isNotEmpty) {
       final image = preview[0].source;
       imageUrl = HtmlUtils.unescape(image.url.toString());
+      if (image.width > 0 && image.height > 0) {
+        aspectRatio = image.width / image.height;
+      }
     }
 
     // Check for direct URL if it's an image
@@ -102,7 +110,10 @@ class Post {
 
     if (submission.data != null) {
       final data = submission.data!.cast<String, dynamic>();
-      _parseGalleryData(data, images);
+      final galleryRatio = _parseGalleryData(data, images);
+      if (aspectRatio == null && galleryRatio != null) {
+        aspectRatio = galleryRatio;
+      }
 
       // 1. Try extracting from main post data
       videoUrl = _extractVideoUrl(data);
@@ -160,7 +171,13 @@ class Post {
 
           // Try to extract images/gallery from parent if main post has none
           if (images.isEmpty && imageUrl == null) {
-            _parseGalleryData(parentData.cast<String, dynamic>(), images);
+            final parentGalleryRatio = _parseGalleryData(
+              parentData.cast<String, dynamic>(),
+              images,
+            );
+            if (aspectRatio == null && parentGalleryRatio != null) {
+              aspectRatio = parentGalleryRatio;
+            }
 
             // Check parent URL for direct image
             if (parentData['url'] != null) {
@@ -187,6 +204,14 @@ class Post {
                 imageUrl = HtmlUtils.unescape(
                   imageMap['source']['url'] as String,
                 );
+                final width = imageMap['source']['width'];
+                final height = imageMap['source']['height'];
+                if (width != null &&
+                    height != null &&
+                    width > 0 &&
+                    height > 0) {
+                  aspectRatio = width / height;
+                }
               }
             }
           }
@@ -273,13 +298,15 @@ class Post {
       videoUrl: videoUrl,
       isYoutube: isYoutube,
       youtubeId: youtubeId,
+      aspectRatio: aspectRatio,
     );
   }
 
-  static void _parseGalleryData(
+  static double? _parseGalleryData(
     Map<String, dynamic> data,
     List<String> images,
   ) {
+    double? firstAspectRatio;
     if (data['gallery_data'] != null && data['media_metadata'] != null) {
       final galleryData = data['gallery_data'];
       final metadata = data['media_metadata'];
@@ -292,12 +319,21 @@ class Post {
               if (mediaItem['s'] != null && mediaItem['s']['u'] != null) {
                 final url = HtmlUtils.unescape(mediaItem['s']['u'] as String);
                 images.add(url);
+
+                if (firstAspectRatio == null) {
+                  final x = mediaItem['s']['x'];
+                  final y = mediaItem['s']['y'];
+                  if (x != null && y != null && x > 0 && y > 0) {
+                    firstAspectRatio = x / y;
+                  }
+                }
               }
             }
           }
         }
       }
     }
+    return firstAspectRatio;
   }
 
   static String? _extractVideoUrl(Map dataMap) {
