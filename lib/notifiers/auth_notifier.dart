@@ -25,14 +25,15 @@ class AuthNotifier extends ChangeNotifier {
   }
 
   /// Initiates the login flow.
-  Future<bool> login() async {
-    if (_repository == null) return false;
-    final success = await _repository!.login();
-    if (success) {
+  /// Returns null on success, or an error message on failure.
+  Future<String?> login() async {
+    if (_repository == null) return 'Auth repository not initialized';
+    final error = await _repository!.login();
+    if (error == null) {
       _isLoggedIn = true;
       notifyListeners();
     }
-    return success;
+    return error;
   }
 
   /// Logs out the user.

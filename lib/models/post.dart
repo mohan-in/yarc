@@ -283,7 +283,7 @@ class Post {
 
     return Post(
       id: submission.id ?? '',
-      title: submission.title,
+      title: HtmlUtils.unescape(submission.title),
       author: submission.author,
       subreddit: submission.subreddit.displayName,
       ups: submission.upvotes,
@@ -291,7 +291,9 @@ class Post {
       thumbnail: thumbnailUrl,
       imageUrl: imageUrl,
       permalink: submission.data!['permalink'] ?? '',
-      content: submission.selftext ?? '',
+      content: submission.selftext != null
+          ? HtmlUtils.unescape(submission.selftext!)
+          : '',
       createdUtc: submission.createdUtc.millisecondsSinceEpoch / 1000,
       images: images,
       isVideo: isVideo && videoUrl != null,

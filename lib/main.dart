@@ -14,6 +14,7 @@ import 'notifiers/auth_notifier.dart';
 import 'notifiers/feed_notifier.dart';
 import 'notifiers/search_notifier.dart';
 import 'notifiers/subreddits_notifier.dart';
+import 'notifiers/video_autoplay_notifier.dart';
 import 'screens/home_screen.dart';
 import 'screens/post_detail_screen.dart';
 
@@ -165,6 +166,7 @@ class _MyAppState extends State<MyApp> {
           create: (_) => SearchNotifier(),
           update: (_, repo, notifier) => notifier!..setRepository(repo),
         ),
+        ChangeNotifierProvider(create: (_) => VideoAutoplayNotifier()),
       ],
       child: Builder(
         builder: (context) {

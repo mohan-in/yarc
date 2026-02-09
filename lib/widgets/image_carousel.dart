@@ -27,7 +27,7 @@ class _ImageCarouselState extends State<ImageCarousel> {
 
   @override
   Widget build(BuildContext context) {
-    Widget content = Stack(
+    final content = Stack(
       children: [
         PageView.builder(
           controller: _pageController,

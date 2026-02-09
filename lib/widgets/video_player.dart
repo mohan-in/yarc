@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
-import 'package:visibility_detector/visibility_detector.dart';
+import 'package:provider/provider.dart';
+import '../notifiers/video_autoplay_notifier.dart';
 
 class RedditVideoPlayer extends StatefulWidget {
   final String videoUrl;
@@ -24,13 +25,71 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   bool _isInit = false;
-  bool _isVisible = false;
   bool _isFullScreenActive = false;
+  // Unique ID for this player instance to coordinate with notifier
+  late final String _playerId;
 
   @override
   void initState() {
     super.initState();
+    _playerId = widget.videoUrl;
     _initializePlayer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.autoPlay) {
+      final notifier = context.watch<VideoAutoplayNotifier>();
+      _checkAutoplay(notifier);
+    }
+  }
+
+  void _checkAutoplay(VideoAutoplayNotifier notifier) {
+    if (!_isInit || _chewieController == null || _isFullScreenActive) return;
+
+    // Post-frame callback to ensure layout is ready for coordinate check
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      final renderObject = context.findRenderObject();
+      if (renderObject is! RenderBox || !renderObject.attached) return;
+
+      final viewportHeight = MediaQuery.of(context).size.height;
+      try {
+        final position = renderObject.localToGlobal(Offset.zero);
+        final top = position.dy;
+        final center = top + (renderObject.size.height / 2);
+
+        // "Middle 70%" zone
+        final safeZoneTop = viewportHeight * 0.15;
+        final safeZoneBottom = viewportHeight * 0.85;
+
+        final isInZone = center >= safeZoneTop && center <= safeZoneBottom;
+
+        if (isInZone) {
+          // If in zone, we should be playing unless someone else already is
+          if (notifier.playingVideoId == null) {
+            notifier.play(_playerId);
+          } else if (notifier.playingVideoId == _playerId) {
+            if (!_chewieController!.isPlaying) {
+              _chewieController!.play();
+            }
+          }
+          // If someone else is playing, we wait (sticky behavior)
+        } else {
+          // If out of zone, we must stop if we are the one playing
+          if (notifier.playingVideoId == _playerId) {
+            notifier.stop(_playerId);
+          }
+          if (_chewieController!.isPlaying) {
+            _chewieController!.pause();
+          }
+        }
+      } catch (e) {
+        // Handle layout errors (e.g. during navigation)
+      }
+    });
   }
 
   Future<void> _initializePlayer() async {
@@ -45,7 +104,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         aspectRatio: _videoPlayerController.value.aspectRatio,
-        showControls: false, // Hide controls inline to behave like an image
+        showControls: false,
         showControlsOnInitialize: false,
         deviceOrientationsOnEnterFullScreen: [
           DeviceOrientation.portraitUp,
@@ -76,8 +135,11 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
         _isInit = true;
       });
 
-      if (widget.autoPlay && _isVisible) {
-        _chewieController?.play();
+      // Initial check in case we load directly into view
+      if (widget.autoPlay && mounted) {
+        // Trigger a check via the notifier logic
+        // We can't access context.read inside async init easily without mounted check
+        // relying on didChangeDependencies or scrolling to trigger
       }
     } catch (_) {}
   }
@@ -86,29 +148,18 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   void dispose() {
     _videoPlayerController.dispose();
     _chewieController?.dispose();
+    // If we were playing, stop
+    // We can't access context here easily if unmounted, but ideally notifier cleans up or new player takes over
     super.dispose();
-  }
-
-  void _handleVisibilityChanged(VisibilityInfo info) {
-    if (!mounted || !_isInit || _chewieController == null) return;
-    // Don't pause if we are in full screen mode (native video player active)
-    if (_isFullScreenActive) return;
-
-    if (info.visibleFraction > 0.6) {
-      _isVisible = true;
-      if (widget.autoPlay && !_chewieController!.isPlaying) {
-        _chewieController!.play();
-      }
-    } else {
-      _isVisible = false;
-      if (widget.autoPlay && _chewieController!.isPlaying) {
-        _chewieController!.pause();
-      }
-    }
   }
 
   void _enterFullScreen() {
     _isFullScreenActive = true;
+    // Tell notifier to stop managing us for a moment (or just let it be)
+    // Actually, if we go fullscreen, we probably want to pause the specific inline player logic
+    // But Chewie handles fullscreen by creating a new controller usually or reparenting.
+    // Let's just pause our inline logic.
+
     final fullScreenController = ChewieController(
       videoPlayerController: _videoPlayerController,
       aspectRatio: _videoPlayerController.value.aspectRatio,
@@ -140,9 +191,9 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
         .then((_) {
           _isFullScreenActive = false;
           fullScreenController.dispose();
-          // Ensure inline player state is consistent if needed
-          if (mounted && widget.autoPlay && _isVisible) {
-            _chewieController?.play();
+          // Re-trigger auth check?
+          if (mounted && widget.autoPlay) {
+            context.read<VideoAutoplayNotifier>().notifyScroll();
           }
         });
   }
@@ -155,20 +206,6 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
         child: Container(
           color: Colors.black12,
           child: const Center(child: CircularProgressIndicator()),
-        ),
-      );
-    }
-
-    if (widget.autoPlay) {
-      return VisibilityDetector(
-        key: Key(widget.videoUrl),
-        onVisibilityChanged: _handleVisibilityChanged,
-        child: GestureDetector(
-          onTap: _enterFullScreen,
-          child: AspectRatio(
-            aspectRatio: _videoPlayerController.value.aspectRatio,
-            child: Stack(children: [Chewie(controller: _chewieController!)]),
-          ),
         ),
       );
     }

@@ -5,6 +5,7 @@ import '../services/reddit_service.dart';
 import '../notifiers/auth_notifier.dart';
 import '../notifiers/feed_notifier.dart';
 import '../notifiers/subreddits_notifier.dart';
+import '../notifiers/video_autoplay_notifier.dart';
 import '../models/subreddit.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/login_prompt.dart';
@@ -60,6 +61,8 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<FeedNotifier>().loadPosts();
     }
 
+    context.read<VideoAutoplayNotifier>().notifyScroll();
+
     if ((currentPosition - _lastPrecachePosition).abs() >=
         kPrecacheScrollThreshold) {
       _lastPrecachePosition = currentPosition;
@@ -69,10 +72,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleLogin() async {
     final authNotifier = context.read<AuthNotifier>();
-    final success = await authNotifier.login();
-    if (success && mounted) {
+    final error = await authNotifier.login();
+
+    if (!mounted) return;
+
+    if (error == null) {
       context.read<FeedNotifier>().loadPosts();
       context.read<SubredditsNotifier>().fetch();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.red),
+      );
     }
   }
 

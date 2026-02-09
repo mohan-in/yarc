@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:draw/draw.dart';
@@ -91,20 +92,28 @@ class AuthService {
   }
 
   /// Initiates the OAuth2 authentication flow.
-  Future<bool> authenticate() async {
-    final redditConfig = Reddit.createInstalledFlowInstance(
-      clientId: _clientId,
-      userAgent: _userAgent,
-      redirectUri: Uri.parse(_redirectUri),
-    );
-
-    final url = redditConfig.auth.url(
-      _oauthScopes,
-      'random_string',
-      compactLogin: true,
-    );
+  /// Returns null on success, or an error message on failure.
+  Future<String?> authenticate() async {
+    if (_clientId.isEmpty) {
+      return 'Reddit Client ID not configured. Please pass it via --dart-define=REDDIT_CLIENT_ID=...';
+    }
 
     try {
+      final redditConfig = Reddit.createInstalledFlowInstance(
+        clientId: _clientId,
+        userAgent: _userAgent,
+        redirectUri: Uri.parse(_redirectUri),
+      );
+
+      final url = redditConfig.auth.url(
+        _oauthScopes,
+        'random_string',
+        compactLogin: true,
+      );
+
+      debugPrint('Authenticating with URL: $url');
+      debugPrint('Expecting callback at: com.mohan.reddit.client://callback');
+
       final result = await FlutterWebAuth2.authenticate(
         url: url.toString(),
         callbackUrlScheme: 'com.mohan.reddit.client',
@@ -113,10 +122,13 @@ class AuthService {
       final code = Uri.parse(result).queryParameters['code'];
       if (code != null) {
         await _exchangeCodeForToken(code, redditConfig);
-        return true;
+        return null; // Success
+      } else {
+        return 'Login cancelled or no code returned.';
       }
-    } catch (_) {}
-    return false;
+    } catch (e) {
+      return 'Login failed: ${e.toString()}';
+    }
   }
 
   /// Exchanges the authorization code for an access token.

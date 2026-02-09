@@ -32,14 +32,21 @@ class DeepLinkService {
   }
 
   Stream<DeepLinkResult> get linkStream {
-    return _appLinks.uriLinkStream.map((uri) => parseRedditUrl(uri));
+    return _appLinks.uriLinkStream
+        .map((uri) => parseRedditUrl(uri))
+        .where((result) => result != null)
+        .cast<DeepLinkResult>();
   }
 
   /// Parse a Reddit URL into a DeepLinkResult
-  DeepLinkResult parseRedditUrl(Uri uri) {
+  DeepLinkResult? parseRedditUrl(Uri uri) {
     final pathSegments = uri.pathSegments;
 
     if (pathSegments.isEmpty) {
+      // Ignore auth callback if it somehow reaches here
+      if (uri.host == 'callback') {
+        return null; // Don't navigate
+      }
       return const DeepLinkResult(type: DeepLinkType.home);
     }
 

@@ -7,7 +7,10 @@
         {
             "name": "yarc",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "toolArgs": [
+                "--dart-define=REDDIT_CLIENT_ID=YOUR_CLIENT_ID"
+            ]
         },
         {
             "name": "yarc (profile mode)",

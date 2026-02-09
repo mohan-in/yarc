@@ -15,7 +15,8 @@ class AuthRepository {
   }
 
   /// Initiates the login flow.
-  Future<bool> login() async {
+  /// Returns null on success, or an error message on failure.
+  Future<String?> login() async {
     return await _service.authenticate();
   }
 

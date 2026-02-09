@@ -1,4 +1,5 @@
 import 'package:draw/draw.dart' as draw;
+import '../utils/html_utils.dart';
 
 class Comment {
   final String id;
@@ -30,7 +31,7 @@ class Comment {
     return Comment(
       id: comment.id ?? '',
       author: comment.author,
-      body: comment.body ?? '',
+      body: comment.body != null ? HtmlUtils.unescape(comment.body!) : '',
       ups: comment.upvotes,
       createdUtc: comment.createdUtc.millisecondsSinceEpoch / 1000,
       replies: replies,

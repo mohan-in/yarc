@@ -66,11 +66,11 @@ class Subreddit {
 
     return Subreddit(
       displayName: sub.displayName,
-      title: sub.title,
+      title: HtmlUtils.unescape(sub.title),
       iconImg: icon,
       url: sub.path,
       subscriberCount: subscribers,
-      description: description,
+      description: description != null ? HtmlUtils.unescape(description) : null,
     );
   }
 }
