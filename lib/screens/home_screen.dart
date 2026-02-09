@@ -245,13 +245,6 @@ class _HomeScreenState extends State<HomeScreen> {
           },
         ),
       ],
-      if (!authNotifier.isLoggedIn)
-        TextButton.icon(
-          icon: const Icon(Icons.login),
-          label: const Text('Login'),
-          onPressed: _handleLogin,
-          style: TextButton.styleFrom(foregroundColor: Colors.black),
-        ),
     ];
   }
 
