@@ -40,12 +40,11 @@ lib/
 │   ├── post.dart
 │   ├── comment.dart
 │   ├── subreddit.dart
-│   ├── post_hive_adapter.dart # Hive TypeAdapter
 │   └── models.dart            # Barrel file
 ├── services/              # Raw data access
 │   ├── auth_service.dart      # OAuth authentication
 │   ├── reddit_service.dart    # Reddit API calls
-│   ├── cache_service.dart     # Hive local storage
+│   ├── history_service.dart   # Local history tracking (Hive)
 │   └── deep_link_service.dart # Deep linking logic
 ├── repositories/          # Business logic
 │   ├── auth_repository.dart
@@ -75,7 +74,7 @@ Raw data access—no business logic.
 |---------|---------------|
 | `AuthService` | OAuth2 flow, token storage |
 | `RedditService` | Reddit API calls via `draw` package |
-| `CacheService` | Hive-based post caching, read tracking |
+| `HistoryService` | Hive-based read history tracking |
 | `DeepLinkService` | Handles incoming deep links (cold/warm start) |
 
 ### Repositories
@@ -84,7 +83,7 @@ Orchestrate services, apply business rules.
 | Repository | Dependencies | Purpose |
 |------------|--------------|---------|
 | `AuthRepository` | AuthService | Login/logout abstraction |
-| `PostRepository` | RedditService, CacheService | Posts with caching |
+| `PostRepository` | RedditService, HistoryService | Posts & history tracking |
 | `SubredditRepository` | RedditService | Subreddits + search |
 
 ### Notifiers
@@ -107,9 +106,9 @@ Hold reactive state, notify UI of changes.
 Files like `models/models.dart`, `widgets/widgets.dart`, and `utils/utils.dart` are "barrel files". They export all files in their directory to simplify imports elsewhere.
 - **Convention**: Keep them clean, containing *only* export statements.
 
-### Local Caching (Hive)
-- **Manual Serialization**: `PostAdapter` in `models/post_hive_adapter.dart` manually implements `TypeAdapter<Post>` to avoid code generation overhead for complex objects.
-- **Service**: `CacheService` manages the Hive boxes.
+### Local Storage (Hive)
+- **Service**: `HistoryService` manages the Hive boxes for tracking read posts.
+- **Usage**: Simple key-value storage for post IDs marked as read.
 
 ### Deep Linking
 - **Service**: `DeepLinkService` uses `app_links` to handle universal links and custom schemes.
@@ -126,14 +125,14 @@ MultiProvider(
   providers: [
     // Services (no dependencies)
     Provider(create: (_) => AuthService()),
-    Provider(create: (_) => CacheService()),
+    Provider(create: (_) => HistoryService()),
     
     // Services (with dependencies)
     ProxyProvider<AuthService, RedditService>(...),
     
     // Repositories
     ProxyProvider<AuthService, AuthRepository>(...),
-    ProxyProvider2<RedditService, CacheService, PostRepository>(...),
+    ProxyProvider2<RedditService, HistoryService, PostRepository>(...),
     
     // Notifiers
     ChangeNotifierProxyProvider<AuthRepository, AuthNotifier>(...),
@@ -156,8 +155,7 @@ MultiProvider(
    - Calls loadPosts()
          ↓
 3. PostRepository.getPosts(subreddit: "flutter"):
-   - Checks cache first
-   - Falls back to RedditService.fetchPosts()
+   - Calls RedditService.fetchPosts()
          ↓
 4. RedditService.fetchPosts():
    - Calls Reddit API via `draw` package

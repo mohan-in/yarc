@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../services/reddit_service.dart';
 import '../notifiers/auth_notifier.dart';
 import '../notifiers/feed_notifier.dart';
@@ -12,7 +11,7 @@ import '../widgets/login_prompt.dart';
 import '../widgets/post_list.dart';
 import '../widgets/subreddit_search_delegate.dart';
 import '../utils/constants.dart';
-import '../utils/image_utils.dart';
+import '../utils/feed_utils.dart';
 import 'post_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -31,15 +30,18 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
+    // PostFrameCallback ensures we have access to Providers after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initializeAuth();
     });
   }
 
   Future<void> _initializeAuth() async {
+    // context.read() is used to access providers without listening to changes
     final authNotifier = context.read<AuthNotifier>();
     final feedNotifier = context.read<FeedNotifier>();
     final subredditsNotifier = context.read<SubredditsNotifier>();
+
     await authNotifier.init();
     if (authNotifier.isLoggedIn && mounted) {
       feedNotifier.loadPosts();
@@ -54,20 +56,37 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _scrollListener() {
-    final currentPosition = _scrollController.position.pixels;
+    if (!_scrollController.hasClients) return;
 
-    if (currentPosition >=
-        _scrollController.position.maxScrollExtent - kPaginationThreshold) {
+    final currentPosition = _scrollController.position.pixels;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+
+    // Infinite scroll: Load more posts when user is close to the bottom
+    if (currentPosition >= maxScroll - kPaginationThreshold) {
       context.read<FeedNotifier>().loadPosts();
     }
 
+    // Video autoplay: Notify the manager to check which video is visible
     context.read<VideoAutoplayNotifier>().notifyScroll();
 
+    // Image precaching: Prefetch images for smoother scrolling
     if ((currentPosition - _lastPrecachePosition).abs() >=
         kPrecacheScrollThreshold) {
       _lastPrecachePosition = currentPosition;
       _precachePostImages();
     }
+  }
+
+  void _precachePostImages() {
+    final feedNotifier = context.read<FeedNotifier>();
+    final posts = feedNotifier.visiblePosts;
+
+    // Delegate complex precaching logic to utility class
+    FeedUtils.precachePostImages(
+      context,
+      posts,
+      _scrollController.position.pixels,
+    );
   }
 
   Future<void> _handleLogin() async {
@@ -93,58 +112,19 @@ class _HomeScreenState extends State<HomeScreen> {
     context.read<SubredditsNotifier>().clear();
   }
 
-  /// Precaches images for upcoming posts (not yet visible).
-  /// Uses CachedNetworkImage's cache manager for disk caching.
-  void _precachePostImages() {
-    final feedNotifier = context.read<FeedNotifier>();
-    final posts = feedNotifier.visiblePosts;
-
-    final scrollPosition = _scrollController.hasClients
-        ? _scrollController.position.pixels
-        : 0.0;
-    final estimatedVisibleIndex = (scrollPosition / kEstimatedPostCardHeight)
-        .floor();
-
-    final startIndex = (estimatedVisibleIndex + kVisiblePostsBeforePrefetch)
-        .clamp(0, posts.length);
-    final endIndex = (startIndex + kPrefetchPostCount).clamp(0, posts.length);
-
-    for (var i = startIndex; i < endIndex; i++) {
-      final post = posts[i];
-
-      // Collect all image URLs for this post (carousel or single image)
-      final imagesToCache = <String>[];
-
-      if (post.images.isNotEmpty) {
-        imagesToCache.addAll(post.images);
-      } else if (post.imageUrl != null) {
-        imagesToCache.add(post.imageUrl!);
-      } else if (post.thumbnail != null) {
-        imagesToCache.add(post.thumbnail!);
-      }
-
-      for (final imageUrl in imagesToCache) {
-        precacheImage(
-          CachedNetworkImageProvider(
-            ImageUtils.getCorsUrl(imageUrl),
-            headers: ImageUtils.authHeaders,
-          ),
-          context,
-        ).catchError((_) {});
-      }
-    }
-  }
-
   void _scrollToTop() {
-    _scrollController.animateTo(
-      0,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
+    if (_scrollController.hasClients) {
+      _scrollController.animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // context.watch() rebuilds this widget when the provider notifies listeners
     final authNotifier = context.watch<AuthNotifier>();
     final feedNotifier = context.watch<FeedNotifier>();
     final subredditsNotifier = context.watch<SubredditsNotifier>();
@@ -177,8 +157,10 @@ class _HomeScreenState extends State<HomeScreen> {
         body: RefreshIndicator(
           onRefresh: () => context.read<FeedNotifier>().refresh(),
           child: CustomScrollView(
+            // CustomScrollView allows mixing different scrollable areas (Slivers)
             controller: _scrollController,
             slivers: [
+              // SliverAppBar floats above the content and can snap/hide
               SliverAppBar(
                 floating: true,
                 title: Text(
@@ -186,12 +168,19 @@ class _HomeScreenState extends State<HomeScreen> {
                       ? 'r/${feedNotifier.currentSubreddit}'
                       : (authNotifier.isLoggedIn ? 'Home' : 'YARC'),
                 ),
-                actions: _buildAppBarActions(authNotifier, feedNotifier),
+                actions: _buildAppBarActions(
+                  context,
+                  authNotifier,
+                  feedNotifier,
+                ),
               ),
+
+              // Show login prompt if not logged in and not viewing a specific subreddit
               if (!authNotifier.isLoggedIn &&
                   feedNotifier.currentSubreddit == null)
                 SliverFillRemaining(child: LoginPrompt(onLogin: _handleLogin))
               else
+                // SliverPostList efficiently renders the list of posts
                 SliverPostList(
                   posts: feedNotifier.visiblePosts,
                   isLoading: feedNotifier.isLoading,
@@ -217,6 +206,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   List<Widget> _buildAppBarActions(
+    BuildContext context,
     AuthNotifier authNotifier,
     FeedNotifier feedNotifier,
   ) {
@@ -224,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (authNotifier.isLoggedIn || feedNotifier.currentSubreddit != null) ...[
         IconButton(
           icon: const Icon(Icons.search),
-          onPressed: _openSearch,
+          onPressed: () => _openSearch(context),
           tooltip: 'Search Subreddits',
         ),
         IconButton(
@@ -248,13 +238,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ];
   }
 
-  Future<void> _openSearch() async {
+  Future<void> _openSearch(BuildContext context) async {
     final selectedSubreddit = await showSearch<Subreddit?>(
       context: context,
       delegate: SubredditSearchDelegate(),
     );
 
-    if (selectedSubreddit != null && mounted) {
+    if (selectedSubreddit != null && context.mounted) {
       context.read<FeedNotifier>().selectSubredditWithInfo(selectedSubreddit);
     }
   }

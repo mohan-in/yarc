@@ -1,60 +1,29 @@
-import '../models/post.dart';
 import '../models/comment.dart';
 import '../models/types.dart';
 import '../services/reddit_service.dart';
-import '../services/cache_service.dart';
+import '../services/history_service.dart';
 
-/// Repository for post operations with caching support.
+/// Repository for post operations.
 class PostRepository {
   final RedditService _redditService;
-  final CacheService _cacheService;
+  final HistoryService _historyService;
 
-  PostRepository(this._redditService, this._cacheService);
+  PostRepository(this._redditService, this._historyService);
 
-  /// Fetches posts with optional caching.
+  /// Fetches posts.
   ///
   /// Returns a [PostsResult] containing posts and the pagination cursor.
-  Future<PostsResult> getPosts({
-    String? subreddit,
-    String? after,
-    bool useCache = true,
-  }) async {
-    if (useCache && after == null) {
-      final cached = await _cacheService.getCachedPosts(subreddit);
-      if (cached.isNotEmpty) {
-        _fetchAndCacheInBackground(subreddit);
-        return (posts: cached, nextAfter: null);
-      }
-    }
-
+  Future<PostsResult> getPosts({String? subreddit, String? after}) async {
     return await _fetchFromApi(subreddit, after);
   }
 
-  /// Fetches fresh posts from API and caches them.
+  /// Fetches fresh posts from API.
   Future<PostsResult> refresh({String? subreddit}) async {
-    final result = await _redditService.fetchPosts(subreddit: subreddit);
-    await _cacheService.cachePosts(subreddit, result.posts);
-    return result;
+    return await _redditService.fetchPosts(subreddit: subreddit);
   }
 
   Future<PostsResult> _fetchFromApi(String? subreddit, String? after) async {
-    final result = await _redditService.fetchPosts(
-      subreddit: subreddit,
-      after: after,
-    );
-    if (after == null) {
-      await _cacheService.cachePosts(subreddit, result.posts);
-    }
-    return result;
-  }
-
-  void _fetchAndCacheInBackground(String? subreddit) {
-    _redditService
-        .fetchPosts(subreddit: subreddit)
-        .then((result) {
-          _cacheService.cachePosts(subreddit, result.posts);
-        })
-        .catchError((_) {});
+    return await _redditService.fetchPosts(subreddit: subreddit, after: after);
   }
 
   /// Fetches comments for a post.
@@ -62,18 +31,13 @@ class PostRepository {
     return await _redditService.fetchComments(postId);
   }
 
-  /// Gets cached posts for a subreddit.
-  Future<List<Post>> getCachedPosts(String? subreddit) async {
-    return await _cacheService.getCachedPosts(subreddit);
-  }
-
   /// Marks a post as read.
   Future<void> markAsRead(String postId) async {
-    await _cacheService.markAsRead(postId);
+    await _historyService.markAsRead(postId);
   }
 
   /// Gets all read post IDs.
   Future<Set<String>> getReadPostIds() async {
-    return await _cacheService.getReadPostIds();
+    return await _historyService.getReadPostIds();
   }
 }

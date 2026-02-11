@@ -1,5 +1,6 @@
 import 'package:draw/draw.dart' as draw;
 import 'package:flutter/foundation.dart';
+import '../utils/post_parser.dart';
 import '../models/post.dart';
 import '../models/comment.dart';
 import '../models/subreddit.dart';
@@ -38,7 +39,7 @@ class RedditService {
     try {
       await for (final content in stream) {
         if (content is draw.Submission) {
-          posts.add(Post.fromSubmission(content));
+          posts.add(PostParser.parse(content));
           nextAfterToken = content.fullname;
         }
       }
@@ -110,7 +111,7 @@ class RedditService {
 
       await _authService.persistCredentials();
 
-      return Post.fromSubmission(submission);
+      return PostParser.parse(submission);
     } catch (e) {
       if (e.toString().contains('401')) {
         try {

@@ -4,7 +4,7 @@ import 'dart:async';
 
 import 'theme/theme.dart';
 import 'services/auth_service.dart';
-import 'services/cache_service.dart';
+import 'services/history_service.dart';
 import 'services/reddit_service.dart';
 import 'services/deep_link_service.dart';
 import 'repositories/auth_repository.dart';
@@ -21,7 +21,7 @@ import 'screens/post_detail_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await CacheService.init();
+  await HistoryService.init();
 
   runApp(const MyApp());
 }
@@ -135,7 +135,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         Provider(create: (_) => AuthService()),
-        Provider(create: (_) => CacheService()),
+        Provider(create: (_) => HistoryService()),
         ProxyProvider<AuthService, RedditService>(
           update: (_, auth, prev) => RedditService(auth),
         ),
@@ -143,8 +143,8 @@ class _MyAppState extends State<MyApp> {
         ProxyProvider<AuthService, AuthRepository>(
           update: (_, auth, prev) => AuthRepository(auth),
         ),
-        ProxyProvider2<RedditService, CacheService, PostRepository>(
-          update: (_, reddit, cache, prev) => PostRepository(reddit, cache),
+        ProxyProvider2<RedditService, HistoryService, PostRepository>(
+          update: (_, reddit, history, prev) => PostRepository(reddit, history),
         ),
         ProxyProvider<RedditService, SubredditRepository>(
           update: (_, reddit, prev) => SubredditRepository(reddit),

@@ -48,37 +48,45 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   void _checkAutoplay(VideoAutoplayNotifier notifier) {
     if (!_isInit || _chewieController == null || _isFullScreenActive) return;
 
-    // Post-frame callback to ensure layout is ready for coordinate check
+    // Post-frame callback ensures the layout is complete before we calculate positions
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
+      // Find the render object of this specific video player widget
       final renderObject = context.findRenderObject();
       if (renderObject is! RenderBox || !renderObject.attached) return;
 
       final viewportHeight = MediaQuery.of(context).size.height;
       try {
+        // Get the global position of the video player on the screen
         final position = renderObject.localToGlobal(Offset.zero);
         final top = position.dy;
         final center = top + (renderObject.size.height / 2);
 
-        // "Middle 70%" zone
+        // Define the "Safe Zone" in the middle of the screen (15% to 85%)
+        // We only want to play videos when they are mostly centered
         final safeZoneTop = viewportHeight * 0.15;
         final safeZoneBottom = viewportHeight * 0.85;
 
         final isInZone = center >= safeZoneTop && center <= safeZoneBottom;
 
         if (isInZone) {
-          // If in zone, we should be playing unless someone else already is
+          // If this video is in the safe zone:
+          // 1. Play it if no other video is playing
           if (notifier.playingVideoId == null) {
             notifier.play(_playerId);
-          } else if (notifier.playingVideoId == _playerId) {
+          }
+          // 2. Play it if WE are the ones supposed to be playing (resume if paused)
+          else if (notifier.playingVideoId == _playerId) {
             if (!_chewieController!.isPlaying) {
               _chewieController!.play();
             }
           }
-          // If someone else is playing, we wait (sticky behavior)
+          // 3. Otherwise, if another video is playing, we do nothing (sticky behavior)
+          // This prevents rapid switching when two videos are briefly in the zone together
         } else {
-          // If out of zone, we must stop if we are the one playing
+          // If this video is OUT of the safe zone:
+          // We MUST stop it if it is currently the active one
           if (notifier.playingVideoId == _playerId) {
             notifier.stop(_playerId);
           }
@@ -87,7 +95,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
           }
         }
       } catch (e) {
-        // Handle layout errors (e.g. during navigation)
+        // Handle layout errors gracefully (e.g. during navigation transitions)
       }
     });
   }
@@ -137,9 +145,8 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
 
       // Initial check in case we load directly into view
       if (widget.autoPlay && mounted) {
-        // Trigger a check via the notifier logic
-        // We can't access context.read inside async init easily without mounted check
-        // relying on didChangeDependencies or scrolling to trigger
+        final notifier = context.read<VideoAutoplayNotifier>();
+        _checkAutoplay(notifier);
       }
     } catch (_) {}
   }

@@ -24,23 +24,30 @@ class SliverPostList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (posts.isEmpty && isLoading) {
+      // If we have no posts and are loading, show a full-screen loader
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
+    // Determine if we need to show a header (Subreddit info)
     final hasHeader = subredditInfo != null;
     final headerCount = hasHeader ? 1 : 0;
+
+    // Total items = Header (optional) + Posts + Loading Indicator (optional)
     final itemCount = headerCount + posts.length + (isLoading ? 1 : 0);
 
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
+        // 1. Render Header if it exists and is the first item
         if (hasHeader && index == 0) {
           return SubredditInfoCard(subreddit: subredditInfo!);
         }
 
+        // Calculate the actual post index by subtracting offset
         final postIndex = index - headerCount;
 
+        // 2. Render Loading Indicator at the very end
         if (postIndex == posts.length) {
           return const Padding(
             padding: EdgeInsets.all(16.0),
@@ -48,8 +55,10 @@ class SliverPostList extends StatelessWidget {
           );
         }
 
+        // 3. Render Post Card
         final post = posts[postIndex];
         return PostCard(
+          // Key helps Flutter efficiently update the list when items change
           key: ValueKey(post.id),
           post: post,
           onTap: () => onPostTap(post),

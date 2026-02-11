@@ -9,7 +9,6 @@ class FeedNotifier extends ChangeNotifier {
 
   List<Post> _posts = [];
   bool _isLoading = false;
-  bool _isLoadingFromCache = false;
   String? _currentSubreddit;
   Subreddit? _currentSubredditInfo;
   String? _after;
@@ -18,7 +17,6 @@ class FeedNotifier extends ChangeNotifier {
 
   List<Post> get posts => _posts;
   bool get isLoading => _isLoading;
-  bool get isLoadingFromCache => _isLoadingFromCache;
   String? get currentSubreddit => _currentSubreddit;
   Subreddit? get currentSubredditInfo => _currentSubredditInfo;
   bool get hideRead => _hideRead;
@@ -39,24 +37,7 @@ class FeedNotifier extends ChangeNotifier {
   Future<void> loadPosts({bool refresh = false}) async {
     if (_repository == null || _isLoading) return;
 
-    final isFirstLoad = _posts.isEmpty && !refresh;
-
     _readPostIds = await _repository!.getReadPostIds();
-
-    if (isFirstLoad) {
-      _isLoadingFromCache = true;
-      notifyListeners();
-
-      final cached = await _repository!.getCachedPosts(_currentSubreddit);
-      if (cached.isNotEmpty) {
-        _posts = cached;
-        _isLoadingFromCache = false;
-        notifyListeners();
-      } else {
-        _isLoadingFromCache = false;
-        notifyListeners();
-      }
-    }
 
     _isLoading = true;
     notifyListeners();
@@ -67,7 +48,6 @@ class FeedNotifier extends ChangeNotifier {
           : await _repository!.getPosts(
               subreddit: _currentSubreddit,
               after: _after,
-              useCache: false,
             );
 
       // Deduplicate posts when appending to avoid "duplicate key" errors in lists
@@ -89,9 +69,6 @@ class FeedNotifier extends ChangeNotifier {
   /// Refreshes the feed.
   Future<void> refresh() async {
     if (_repository == null) return;
-
-    final cached = await _repository!.getCachedPosts(_currentSubreddit);
-    _posts = cached.isNotEmpty ? cached : [];
     _after = null;
     notifyListeners();
 

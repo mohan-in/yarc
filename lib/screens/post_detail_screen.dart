@@ -3,7 +3,7 @@ import '../models/post.dart';
 import '../models/comment.dart';
 import '../services/reddit_service.dart';
 import '../widgets/post_card.dart';
-import '../widgets/comment_tile.dart';
+import '../widgets/comment_list.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final Post post;
@@ -25,6 +25,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   @override
   void initState() {
     super.initState();
+    // Start fetching comments as soon as the screen initializes
     _commentsFuture = widget.redditService.fetchComments(widget.post.id);
   }
 
@@ -32,11 +33,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: CustomScrollView(
+        // CustomScrollView enables complex scrolling effects like the floating app bar
         slivers: [
           SliverAppBar(pinned: true, title: Text('r/${widget.post.subreddit}')),
+
+          // Post content
           SliverToBoxAdapter(
             child: PostCard(post: widget.post, expanded: true),
           ),
+
+          // Comments Header
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
@@ -49,30 +55,10 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               ),
             ),
           ),
-          FutureBuilder<List<Comment>>(
-            future: _commentsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SliverToBoxAdapter(
-                  child: Center(child: CircularProgressIndicator()),
-                );
-              } else if (snapshot.hasError) {
-                return SliverToBoxAdapter(
-                  child: Center(child: Text('Error: ${snapshot.error}')),
-                );
-              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const SliverToBoxAdapter(
-                  child: Center(child: Text('No comments yet.')),
-                );
-              } else {
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    return CommentTile(comment: snapshot.data![index]);
-                  }, childCount: snapshot.data!.length),
-                );
-              }
-            },
-          ),
+
+          // Comments List
+          // We extracted the complex loading logic into a separate widget
+          CommentList(commentsFuture: _commentsFuture),
         ],
       ),
     );
