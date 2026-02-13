@@ -6,10 +6,10 @@ import 'full_screen_image_view.dart';
 
 /// A horizontal carousel for displaying multiple images with swipe navigation.
 class ImageCarousel extends StatefulWidget {
+  const ImageCarousel({super.key, required this.imageUrls, this.aspectRatio});
+
   final List<String> imageUrls;
   final double? aspectRatio;
-
-  const ImageCarousel({super.key, required this.imageUrls, this.aspectRatio});
 
   @override
   State<ImageCarousel> createState() => _ImageCarouselState();

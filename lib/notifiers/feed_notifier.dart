@@ -24,7 +24,9 @@ class FeedNotifier extends ChangeNotifier {
 
   /// Returns filtered posts based on hideRead flag.
   List<Post> get visiblePosts {
-    if (!_hideRead) return _posts;
+    if (!_hideRead) {
+      return _posts;
+    }
     return _posts.where((p) => !_readPostIds.contains(p.id)).toList();
   }
 
@@ -35,7 +37,9 @@ class FeedNotifier extends ChangeNotifier {
 
   /// Loads posts, optionally paginating.
   Future<void> loadPosts({bool refresh = false}) async {
-    if (_repository == null || _isLoading) return;
+    if (_repository == null || _isLoading) {
+      return;
+    }
 
     _readPostIds = await _repository!.getReadPostIds();
 
@@ -68,7 +72,9 @@ class FeedNotifier extends ChangeNotifier {
 
   /// Refreshes the feed.
   Future<void> refresh() async {
-    if (_repository == null) return;
+    if (_repository == null) {
+      return;
+    }
     _after = null;
     notifyListeners();
 
@@ -99,7 +105,9 @@ class FeedNotifier extends ChangeNotifier {
 
   /// Toggles hiding read posts.
   Future<void> toggleHideRead() async {
-    if (_repository == null) return;
+    if (_repository == null) {
+      return;
+    }
     _readPostIds = await _repository!.getReadPostIds();
     _hideRead = !_hideRead;
     notifyListeners();
@@ -107,7 +115,9 @@ class FeedNotifier extends ChangeNotifier {
 
   /// Marks a post as read.
   Future<void> markAsRead(String postId) async {
-    if (_repository == null) return;
+    if (_repository == null) {
+      return;
+    }
     await _repository!.markAsRead(postId);
     _readPostIds = await _repository!.getReadPostIds();
     notifyListeners();

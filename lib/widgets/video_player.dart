@@ -6,16 +6,16 @@ import 'package:provider/provider.dart';
 import '../notifiers/video_autoplay_notifier.dart';
 
 class RedditVideoPlayer extends StatefulWidget {
-  final String videoUrl;
-  final bool autoPlay;
-  final double aspectRatio;
-
   const RedditVideoPlayer({
     super.key,
     required this.videoUrl,
     this.autoPlay = false,
     this.aspectRatio = 16 / 9,
   });
+
+  final String videoUrl;
+  final bool autoPlay;
+  final double aspectRatio;
 
   @override
   State<RedditVideoPlayer> createState() => _RedditVideoPlayerState();
@@ -46,15 +46,21 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   }
 
   void _checkAutoplay(VideoAutoplayNotifier notifier) {
-    if (!_isInit || _chewieController == null || _isFullScreenActive) return;
+    if (!_isInit || _chewieController == null || _isFullScreenActive) {
+      return;
+    }
 
     // Post-frame callback ensures the layout is complete before we calculate positions
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       // Find the render object of this specific video player widget
       final renderObject = context.findRenderObject();
-      if (renderObject is! RenderBox || !renderObject.attached) return;
+      if (renderObject is! RenderBox || !renderObject.attached) {
+        return;
+      }
 
       final viewportHeight = MediaQuery.of(context).size.height;
       try {
@@ -107,7 +113,9 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
 
     try {
       await _videoPlayerController.initialize();
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
 
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,

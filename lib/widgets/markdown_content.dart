@@ -10,11 +10,6 @@ import 'full_screen_image_view.dart';
 /// A widget that parses text (Markdown) and renders it with clickable links
 /// and inline images.
 class MarkdownContent extends StatelessWidget {
-  final String text;
-  final TextStyle? style;
-  final int? maxLines;
-  final TextStyle? linkStyle;
-
   const MarkdownContent({
     super.key,
     required this.text,
@@ -24,6 +19,11 @@ class MarkdownContent extends StatelessWidget {
     // [overflow] is intentionally removed as FadedTruncation handles it visually.
     TextOverflow? overflow,
   });
+
+  final String text;
+  final TextStyle? style;
+  final int? maxLines;
+  final TextStyle? linkStyle;
 
   @override
   Widget build(BuildContext context) {
@@ -80,16 +80,18 @@ class MarkdownContent extends StatelessWidget {
 
 /// A helper builder to render images that open full-screen on tap.
 class _TapToOpenImageBuilder extends MarkdownElementBuilder {
+  _TapToOpenImageBuilder(this.context, this.linkStyle, this.theme);
+
   final BuildContext context;
   final TextStyle? linkStyle;
   final ThemeData theme;
 
-  _TapToOpenImageBuilder(this.context, this.linkStyle, this.theme);
-
   @override
   Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
     final url = element.attributes['src'];
-    if (url == null) return null;
+    if (url == null) {
+      return null;
+    }
 
     return GestureDetector(
       onTap: () {

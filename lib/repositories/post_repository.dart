@@ -5,10 +5,10 @@ import '../services/history_service.dart';
 
 /// Repository for post operations.
 class PostRepository {
+  PostRepository(this._redditService, this._historyService);
+
   final RedditService _redditService;
   final HistoryService _historyService;
-
-  PostRepository(this._redditService, this._historyService);
 
   /// Fetches posts.
   ///

@@ -38,5 +38,37 @@ linter:
     # Use interpolation for string composition
     prefer_interpolation_to_compose_strings: true
 
+    # --- Readability & Style ---
+    # Forces if, for, etc., to use new lines
+    always_put_control_body_on_new_line: true
+    # Enforces consistent string styling
+    prefer_single_quotes: true
+    # Keeps class structure predictable
+    sort_constructors_first: true
+    # Improves readability of nested Widget trees
+    sort_child_properties_last: true
+    # Removes redundant Widgets
+    avoid_unnecessary_containers: true
+    # Encourages SizedBox over Container for simple dimensions
+    sized_box_for_whitespace: true
+    # Clear indication of inherited methods
+    annotate_overrides: true
+
+    # --- Error Prevention & Safety ---
+    # Flags futures that are not awaited or explicitly ignored
+    unawaited_futures: true
+    # Encourages Future<void> over void for async functions
+    avoid_void_async: true
+    # Catches accidental infinite recursion
+    recursive_getters: true
+    # Prevents memory leaks from unclosed Streams
+    cancel_subscriptions: true
+    # Prevents memory leaks
+    close_sinks: true
+    # Removes redundant code (variables are null by default)
+    avoid_init_to_null: true
+    # Ensures Widgets integrate correctly with Flutter's element tree
+    use_key_in_widget_constructors: true
+
 # Additional information about this file can be found at
 # https://dart.dev/guides/language/analysis-options

@@ -17,7 +17,9 @@ class AuthNotifier extends ChangeNotifier {
 
   /// Initializes auth and restores session if available.
   Future<void> init() async {
-    if (_repository == null) return;
+    if (_repository == null) {
+      return;
+    }
     await _repository!.init();
     _isLoggedIn = _repository!.isLoggedIn;
     _isInitialized = true;
@@ -27,7 +29,9 @@ class AuthNotifier extends ChangeNotifier {
   /// Initiates the login flow.
   /// Returns null on success, or an error message on failure.
   Future<String?> login() async {
-    if (_repository == null) return 'Auth repository not initialized';
+    if (_repository == null) {
+      return 'Auth repository not initialized';
+    }
     final error = await _repository!.login();
     if (error == null) {
       _isLoggedIn = true;
@@ -38,7 +42,9 @@ class AuthNotifier extends ChangeNotifier {
 
   /// Logs out the user.
   Future<void> logout() async {
-    if (_repository == null) return;
+    if (_repository == null) {
+      return;
+    }
     await _repository!.logout();
     _isLoggedIn = false;
     notifyListeners();

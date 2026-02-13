@@ -3,9 +3,9 @@ import '../services/reddit_service.dart';
 
 /// Repository for subreddit operations.
 class SubredditRepository {
-  final RedditService _redditService;
-
   SubredditRepository(this._redditService);
+
+  final RedditService _redditService;
 
   /// Fetches the user's subscribed subreddits, sorted alphabetically.
   Future<List<Subreddit>> getSubscribed() async {
@@ -19,7 +19,9 @@ class SubredditRepository {
 
   /// Searches for subreddits by name prefix.
   Future<List<Subreddit>> search(String query) async {
-    if (query.length < 2) return [];
+    if (query.length < 2) {
+      return [];
+    }
     return await _redditService.searchSubreddits(query);
   }
 }

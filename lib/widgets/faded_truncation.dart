@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 /// A widget that constrains its child's height and applies a fade-out gradient
 /// at the bottom to indicate truncation.
 class FadedTruncation extends StatelessWidget {
-  final Widget child;
-  final double maxHeight;
-
   const FadedTruncation({
     super.key,
     required this.child,
     this.maxHeight = 120.0,
   });
+
+  final Widget child;
+  final double maxHeight;
 
   @override
   Widget build(BuildContext context) {

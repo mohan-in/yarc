@@ -39,7 +39,9 @@ class ImageUtils {
   /// Returns true for .jpg, .jpeg, .png, .gif, and .webp extensions.
   static bool isImageExtension(String url) {
     final uri = Uri.tryParse(url);
-    if (uri == null) return false;
+    if (uri == null) {
+      return false;
+    }
     final path = uri.path.toLowerCase();
     return path.endsWith('.jpg') ||
         path.endsWith('.jpeg') ||

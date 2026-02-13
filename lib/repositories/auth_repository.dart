@@ -2,9 +2,9 @@ import '../services/auth_service.dart';
 
 /// Repository for authentication operations.
 class AuthRepository {
-  final AuthService _service;
-
   AuthRepository(this._service);
+
+  final AuthService _service;
 
   /// Whether the user is currently logged in.
   bool get isLoggedIn => _service.isLoggedIn;

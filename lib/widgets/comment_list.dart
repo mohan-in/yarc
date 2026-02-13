@@ -9,9 +9,9 @@ import '../widgets/comment_tile.dart';
 /// Depending on where it is used (e.g., inside CustomScrollView),
 /// it can return a generic widget or a Sliver.
 class CommentList extends StatelessWidget {
-  final Future<List<Comment>> commentsFuture;
-
   const CommentList({super.key, required this.commentsFuture});
+
+  final Future<List<Comment>> commentsFuture;
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class CommentList extends StatelessWidget {
           return SliverToBoxAdapter(
             child: Center(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Text('Error: ${snapshot.error}'),
               ),
             ),

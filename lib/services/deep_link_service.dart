@@ -3,17 +3,17 @@ import 'dart:async';
 
 /// Parsed deep link result for navigation
 class DeepLinkResult {
-  final DeepLinkType type;
-  final String? subreddit;
-  final String? postId;
-  final String? username;
-
   const DeepLinkResult({
     required this.type,
     this.subreddit,
     this.postId,
     this.username,
   });
+
+  final DeepLinkType type;
+  final String? subreddit;
+  final String? postId;
+  final String? username;
 }
 
 enum DeepLinkType { subreddit, post, user, home, unknown }

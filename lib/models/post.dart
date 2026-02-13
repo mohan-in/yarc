@@ -1,5 +1,25 @@
 /// A data model representing a Reddit post.
 class Post {
+  Post({
+    required this.id,
+    required this.title,
+    required this.author,
+    required this.subreddit,
+    required this.ups,
+    required this.numComments,
+    this.thumbnail,
+    this.imageUrl,
+    required this.permalink,
+    required this.content,
+    required this.createdUtc,
+    this.images = const [],
+    this.isVideo = false,
+    this.videoUrl,
+    this.isYoutube = false,
+    this.youtubeId,
+    this.aspectRatio,
+  });
+
   /// The unique ID of the post (e.g., "t3_12345").
   final String id;
 
@@ -48,26 +68,5 @@ class Post {
   /// The YouTube video ID, if available.
   final String? youtubeId;
 
-  /// The aspect ratio of the main image/video (width / height).
   final double? aspectRatio;
-
-  Post({
-    required this.id,
-    required this.title,
-    required this.author,
-    required this.subreddit,
-    required this.ups,
-    required this.numComments,
-    this.thumbnail,
-    this.imageUrl,
-    required this.permalink,
-    required this.content,
-    required this.createdUtc,
-    this.images = const [],
-    this.isVideo = false,
-    this.videoUrl,
-    this.isYoutube = false,
-    this.youtubeId,
-    this.aspectRatio,
-  });
 }

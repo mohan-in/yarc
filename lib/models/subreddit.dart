@@ -6,24 +6,6 @@ import '../utils/html_utils.dart';
 /// Contains display information like name, title, icon, and subscriber count.
 /// Used for displaying subreddit lists and info cards.
 class Subreddit {
-  /// The display name of the subreddit (e.g., "flutter").
-  final String displayName;
-
-  /// The full title of the subreddit.
-  final String title;
-
-  /// URL to the subreddit's icon image, if available.
-  final String? iconImg;
-
-  /// The URL path to the subreddit (e.g., "/r/flutter").
-  final String url;
-
-  /// Number of subscribers, if available.
-  final int? subscriberCount;
-
-  /// Public description of the subreddit, if available.
-  final String? description;
-
   Subreddit({
     required this.displayName,
     required this.title,
@@ -51,7 +33,9 @@ class Subreddit {
       }
     }
 
-    if (icon != null && icon.isEmpty) icon = null;
+    if (icon != null && icon.isEmpty) {
+      icon = null;
+    }
 
     int? subscribers;
     if (sub.data != null && sub.data!['subscribers'] != null) {
@@ -61,7 +45,9 @@ class Subreddit {
     String? description;
     if (sub.data != null && sub.data!['public_description'] != null) {
       description = sub.data!['public_description'] as String?;
-      if (description != null && description.isEmpty) description = null;
+      if (description != null && description.isEmpty) {
+        description = null;
+      }
     }
 
     return Subreddit(
@@ -73,4 +59,22 @@ class Subreddit {
       description: description != null ? HtmlUtils.unescape(description) : null,
     );
   }
+
+  /// The display name of the subreddit (e.g., "flutter").
+  final String displayName;
+
+  /// The full title of the subreddit.
+  final String title;
+
+  /// URL to the subreddit's icon image, if available.
+  final String? iconImg;
+
+  /// The URL path to the subreddit (e.g., "/r/flutter").
+  final String url;
+
+  /// Number of subscribers, if available.
+  final int? subscriberCount;
+
+  /// Public description of the subreddit, if available.
+  final String? description;
 }

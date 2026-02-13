@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/reddit_service.dart';
@@ -44,8 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
     await authNotifier.init();
     if (authNotifier.isLoggedIn && mounted) {
-      feedNotifier.loadPosts();
-      subredditsNotifier.fetch();
+      unawaited(feedNotifier.loadPosts());
+      unawaited(subredditsNotifier.fetch());
     }
   }
 
@@ -56,14 +57,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _scrollListener() {
-    if (!_scrollController.hasClients) return;
+    if (!_scrollController.hasClients) {
+      return;
+    }
 
     final currentPosition = _scrollController.position.pixels;
     final maxScroll = _scrollController.position.maxScrollExtent;
 
     // Infinite scroll: Load more posts when user is close to the bottom
     if (currentPosition >= maxScroll - kPaginationThreshold) {
-      context.read<FeedNotifier>().loadPosts();
+      unawaited(context.read<FeedNotifier>().loadPosts());
     }
 
     // Video autoplay: Notify the manager to check which video is visible
@@ -93,11 +96,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final authNotifier = context.read<AuthNotifier>();
     final error = await authNotifier.login();
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     if (error == null) {
-      context.read<FeedNotifier>().loadPosts();
-      context.read<SubredditsNotifier>().fetch();
+      unawaited(context.read<FeedNotifier>().loadPosts());
+      unawaited(context.read<SubredditsNotifier>().fetch());
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(error), backgroundColor: Colors.red),
@@ -107,7 +112,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleLogout() async {
     await context.read<AuthNotifier>().logout();
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     context.read<FeedNotifier>().clear();
     context.read<SubredditsNotifier>().clear();
   }

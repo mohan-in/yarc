@@ -8,11 +8,6 @@ import 'subreddit_info_card.dart';
 ///
 /// Must be used inside a [CustomScrollView].
 class SliverPostList extends StatelessWidget {
-  final List<Post> posts;
-  final bool isLoading;
-  final void Function(Post post) onPostTap;
-  final Subreddit? subredditInfo;
-
   const SliverPostList({
     super.key,
     required this.posts,
@@ -20,6 +15,11 @@ class SliverPostList extends StatelessWidget {
     required this.onPostTap,
     this.subredditInfo,
   });
+
+  final List<Post> posts;
+  final bool isLoading;
+  final void Function(Post post) onPostTap;
+  final Subreddit? subredditInfo;
 
   @override
   Widget build(BuildContext context) {

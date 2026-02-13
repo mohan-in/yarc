@@ -2,13 +2,6 @@ import 'package:draw/draw.dart' as draw;
 import '../utils/html_utils.dart';
 
 class Comment {
-  final String id;
-  final String author;
-  final String body;
-  final int ups;
-  final double createdUtc;
-  final List<Comment> replies;
-
   Comment({
     required this.id,
     required this.author,
@@ -37,4 +30,11 @@ class Comment {
       replies: replies,
     );
   }
+
+  final String id;
+  final String author;
+  final String body;
+  final int ups;
+  final double createdUtc;
+  final List<Comment> replies;
 }

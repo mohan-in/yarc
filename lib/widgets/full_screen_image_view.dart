@@ -4,14 +4,14 @@ import '../utils/image_utils.dart';
 
 /// A full-screen image viewer that supports zooming and panning.
 class FullScreenImageView extends StatefulWidget {
-  final List<String> imageUrls;
-  final int initialIndex;
-
   const FullScreenImageView({
     super.key,
     required this.imageUrls,
     this.initialIndex = 0,
   });
+
+  final List<String> imageUrls;
+  final int initialIndex;
 
   @override
   State<FullScreenImageView> createState() => _FullScreenImageViewState();

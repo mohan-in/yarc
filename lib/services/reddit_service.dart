@@ -10,9 +10,9 @@ import 'auth_service.dart';
 
 /// Service for Reddit API calls.
 class RedditService {
-  final AuthService _authService;
-
   RedditService(this._authService);
+
+  final AuthService _authService;
 
   draw.Reddit? get _reddit => _authService.reddit;
 
@@ -128,7 +128,9 @@ class RedditService {
   /// Fetches the user's subscribed subreddits.
   Future<List<Subreddit>> fetchSubscribedSubreddits() async {
     final reddit = _reddit;
-    if (reddit == null) return [];
+    if (reddit == null) {
+      return [];
+    }
 
     try {
       final List<Subreddit> subs = [];
@@ -155,7 +157,9 @@ class RedditService {
   /// Searches for subreddits by name prefix.
   Future<List<Subreddit>> searchSubreddits(String query) async {
     final reddit = _reddit;
-    if (reddit == null || query.isEmpty) return [];
+    if (reddit == null || query.isEmpty) {
+      return [];
+    }
 
     try {
       final results = await reddit.subreddits.searchByName(

@@ -3,11 +3,6 @@ import '../models/subreddit.dart';
 import '../utils/image_utils.dart';
 
 class AppDrawer extends StatelessWidget {
-  final List<Subreddit> subreddits;
-  final String? currentSubreddit;
-  final Function(Subreddit?) onSubredditSelected;
-  final VoidCallback onLogout;
-
   const AppDrawer({
     super.key,
     required this.subreddits,
@@ -15,6 +10,11 @@ class AppDrawer extends StatelessWidget {
     required this.onSubredditSelected,
     required this.onLogout,
   });
+
+  final List<Subreddit> subreddits;
+  final String? currentSubreddit;
+  final Function(Subreddit?) onSubredditSelected;
+  final VoidCallback onLogout;
 
   @override
   Widget build(BuildContext context) {

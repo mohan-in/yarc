@@ -21,7 +21,9 @@ class SearchNotifier extends ChangeNotifier {
 
   /// Searches for subreddits by name.
   Future<void> search(String query) async {
-    if (_repository == null) return;
+    if (_repository == null) {
+      return;
+    }
 
     _query = query;
 

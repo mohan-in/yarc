@@ -16,7 +16,9 @@ class SubredditsNotifier extends ChangeNotifier {
 
   /// Fetches the user's subscribed subreddits.
   Future<void> fetch() async {
-    if (_repository == null) return;
+    if (_repository == null) {
+      return;
+    }
     try {
       _subreddits = await _repository!.getSubscribed();
       notifyListeners();

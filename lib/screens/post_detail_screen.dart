@@ -6,14 +6,14 @@ import '../widgets/post_card.dart';
 import '../widgets/comment_list.dart';
 
 class PostDetailScreen extends StatefulWidget {
-  final Post post;
-  final RedditService redditService;
-
   const PostDetailScreen({
     super.key,
     required this.post,
     required this.redditService,
   });
+
+  final Post post;
+  final RedditService redditService;
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();

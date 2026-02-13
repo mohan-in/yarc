@@ -3,9 +3,9 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 
 class YouTubeEmbed extends StatefulWidget {
-  final String videoId;
-
   const YouTubeEmbed({super.key, required this.videoId});
+
+  final String videoId;
 
   @override
   State<YouTubeEmbed> createState() => _YouTubeEmbedState();
@@ -39,7 +39,9 @@ class _YouTubeEmbedState extends State<YouTubeEmbed> {
   }
 
   void _handleVisibilityChanged(VisibilityInfo info) {
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     if (info.visibleFraction < 0.5) {
       if (_controller.value.isPlaying) {
         _controller.pause();

@@ -29,7 +29,9 @@ class AuthService {
   /// Returns true if we have valid credentials with a refresh token,
   /// even if the access token has expired (it will be refreshed automatically).
   bool get isLoggedIn {
-    if (_reddit == null) return false;
+    if (_reddit == null) {
+      return false;
+    }
     try {
       final credentials = _reddit!.auth.credentials;
       return credentials.refreshToken != null;
@@ -41,7 +43,9 @@ class AuthService {
   /// Persists the current credentials to storage.
   /// Should be called after API operations that may trigger a token refresh.
   Future<void> persistCredentials() async {
-    if (_reddit == null || !_reddit!.auth.isValid) return;
+    if (_reddit == null || !_reddit!.auth.isValid) {
+      return;
+    }
 
     try {
       final currentCredentials = _reddit!.auth.credentials.toJson();

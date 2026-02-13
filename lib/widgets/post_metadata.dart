@@ -4,11 +4,6 @@ import '../utils/date_utils.dart';
 
 /// A widget displaying post metadata: time, comments, upvotes, and external link.
 class PostMetadata extends StatelessWidget {
-  final double createdUtc;
-  final int numComments;
-  final int ups;
-  final String permalink;
-
   const PostMetadata({
     super.key,
     required this.createdUtc,
@@ -16,6 +11,11 @@ class PostMetadata extends StatelessWidget {
     required this.ups,
     required this.permalink,
   });
+
+  final double createdUtc;
+  final int numComments;
+  final int ups;
+  final String permalink;
 
   Future<void> _copyUrl(BuildContext context) async {
     final String url = 'https://www.reddit.com$permalink';

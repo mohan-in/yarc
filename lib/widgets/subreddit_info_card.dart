@@ -5,9 +5,9 @@ import '../utils/image_utils.dart';
 
 /// A card displaying subreddit information at the top of the feed.
 class SubredditInfoCard extends StatelessWidget {
-  final Subreddit subreddit;
-
   const SubredditInfoCard({super.key, required this.subreddit});
+
+  final Subreddit subreddit;
 
   @override
   Widget build(BuildContext context) {

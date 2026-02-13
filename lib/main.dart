@@ -60,7 +60,9 @@ class _MyAppState extends State<MyApp> {
 
   Future<void> _handleDeepLink(DeepLinkResult result) async {
     final context = _navigatorKey.currentContext;
-    if (context == null) return;
+    if (context == null) {
+      return;
+    }
 
     switch (result.type) {
       case DeepLinkType.subreddit:
@@ -86,12 +88,14 @@ class _MyAppState extends State<MyApp> {
                 _navigatorKey.currentState?.popUntil((route) => route.isFirst);
               }
 
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => PostDetailScreen(
-                    post: post,
-                    redditService: redditService,
+              unawaited(
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PostDetailScreen(
+                      post: post,
+                      redditService: redditService,
+                    ),
                   ),
                 ),
               );

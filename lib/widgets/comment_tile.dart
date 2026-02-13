@@ -5,10 +5,10 @@ import '../utils/date_utils.dart';
 import 'markdown_content.dart';
 
 class CommentTile extends StatefulWidget {
+  const CommentTile({super.key, required this.comment, this.depth = 0});
+
   final Comment comment;
   final int depth;
-
-  const CommentTile({super.key, required this.comment, this.depth = 0});
 
   @override
   State<CommentTile> createState() => _CommentTileState();

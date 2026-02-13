@@ -13,16 +13,16 @@ import 'youtube_embed.dart';
 /// Shows title, author, subreddit, content preview, and images/thumbnails.
 /// Supports tapping to view details via [onTap].
 class PostCard extends StatelessWidget {
-  final Post post;
-  final VoidCallback? onTap;
-  final bool expanded;
-
   const PostCard({
     super.key,
     required this.post,
     this.onTap,
     this.expanded = false,
   });
+
+  final Post post;
+  final VoidCallback? onTap;
+  final bool expanded;
 
   @override
   Widget build(BuildContext context) {
