@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter/services.dart';
 import '../utils/date_utils.dart';
 
 /// A widget displaying post metadata: time, comments, upvotes, and external link.
@@ -17,10 +17,13 @@ class PostMetadata extends StatelessWidget {
     required this.permalink,
   });
 
-  Future<void> _launchURL() async {
-    final Uri url = Uri.parse('https://www.reddit.com$permalink');
-    if (!await launchUrl(url)) {
-      throw Exception('Could not launch $url');
+  Future<void> _copyUrl(BuildContext context) async {
+    final String url = 'https://www.reddit.com$permalink';
+    await Clipboard.setData(ClipboardData(text: url));
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Post URL copied to clipboard')),
+      );
     }
   }
 
@@ -39,11 +42,11 @@ class PostMetadata extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: const Icon(Icons.open_in_new, size: 20),
-              onPressed: _launchURL,
+              icon: const Icon(Icons.copy, size: 20),
+              onPressed: () => _copyUrl(context),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
-              tooltip: 'Open on Reddit',
+              tooltip: 'Copy post URL',
             ),
             const SizedBox(width: 16),
             const Icon(Icons.mode_comment_outlined, size: 16),
