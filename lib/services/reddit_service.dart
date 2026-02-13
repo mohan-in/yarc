@@ -62,7 +62,7 @@ class RedditService {
     return (posts: posts, nextAfter: nextAfterToken);
   }
 
-  /// Fetches comments for a post.
+  /// Fetches comments for a post, with automatic 401 retry handling.
   Future<List<Comment>> fetchComments(String postId) async {
     final reddit = _reddit;
     if (reddit == null) {
@@ -98,7 +98,7 @@ class RedditService {
     }
   }
 
-  /// Fetches a single post by ID.
+  /// Fetches a single post by ID, with automatic 401 retry handling.
   Future<Post?> fetchPost(String postId) async {
     final reddit = _reddit;
     if (reddit == null) {
@@ -126,6 +126,7 @@ class RedditService {
   }
 
   /// Fetches the user's subscribed subreddits.
+  /// Returns an empty list on failure or if not logged in.
   Future<List<Subreddit>> fetchSubscribedSubreddits() async {
     final reddit = _reddit;
     if (reddit == null) {
@@ -155,6 +156,7 @@ class RedditService {
   }
 
   /// Searches for subreddits by name prefix.
+  /// Returns an empty list on failure.
   Future<List<Subreddit>> searchSubreddits(String query) async {
     final reddit = _reddit;
     if (reddit == null || query.isEmpty) {

@@ -23,7 +23,6 @@ class Post {
   /// The unique ID of the post (e.g., "t3_12345").
   final String id;
 
-  /// The title of the post.
   final String title;
 
   /// The username of the author (without "u/").
@@ -32,7 +31,6 @@ class Post {
   /// The subreddit name (without "r/").
   final String subreddit;
 
-  /// The number of upvotes.
   final int ups;
 
   /// The URL of the thumbnail image, if available.
@@ -44,7 +42,6 @@ class Post {
   /// The permalink path to the post (e.g., "/r/flutter/comments/...").
   final String permalink;
 
-  /// The number of comments.
   final int numComments;
 
   /// The textual content of the post (selftext).
@@ -56,16 +53,12 @@ class Post {
   /// A list of image URLs for gallery posts.
   final List<String> images;
 
-  /// Whether the post contains a video.
   final bool isVideo;
 
-  /// The URL of the video, if available.
   final String? videoUrl;
 
-  /// Whether the post is a YouTube video.
   final bool isYoutube;
 
-  /// The YouTube video ID, if available.
   final String? youtubeId;
 
   final double? aspectRatio;

@@ -35,7 +35,6 @@ class FeedNotifier extends ChangeNotifier {
     _repository = repository;
   }
 
-  /// Loads posts, optionally paginating.
   Future<void> loadPosts({bool refresh = false}) async {
     if (_repository == null || _isLoading) {
       return;
@@ -70,7 +69,6 @@ class FeedNotifier extends ChangeNotifier {
     }
   }
 
-  /// Refreshes the feed.
   Future<void> refresh() async {
     if (_repository == null) {
       return;
@@ -81,7 +79,6 @@ class FeedNotifier extends ChangeNotifier {
     await loadPosts(refresh: true);
   }
 
-  /// Switches to a specific subreddit.
   void selectSubreddit(String? subreddit) {
     _posts = [];
     _after = null;
@@ -92,7 +89,6 @@ class FeedNotifier extends ChangeNotifier {
     loadPosts();
   }
 
-  /// Switches to a specific subreddit with full info.
   void selectSubredditWithInfo(Subreddit subreddit) {
     _posts = [];
     _after = null;
@@ -103,7 +99,6 @@ class FeedNotifier extends ChangeNotifier {
     loadPosts();
   }
 
-  /// Toggles hiding read posts.
   Future<void> toggleHideRead() async {
     if (_repository == null) {
       return;
@@ -113,7 +108,6 @@ class FeedNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Marks a post as read.
   Future<void> markAsRead(String postId) async {
     if (_repository == null) {
       return;

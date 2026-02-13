@@ -19,7 +19,6 @@ class SearchNotifier extends ChangeNotifier {
     _repository = repository;
   }
 
-  /// Searches for subreddits by name.
   Future<void> search(String query) async {
     if (_repository == null) {
       return;
@@ -53,7 +52,6 @@ class SearchNotifier extends ChangeNotifier {
     }
   }
 
-  /// Clears the search state.
   void clear() {
     _query = '';
     _results = [];

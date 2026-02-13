@@ -21,7 +21,6 @@ class VideoAutoplayNotifier extends ChangeNotifier {
     }
   }
 
-  /// Stops a video if it is currently playing.
   void stop(String videoId) {
     if (_playingVideoId == videoId) {
       _playingVideoId = null;

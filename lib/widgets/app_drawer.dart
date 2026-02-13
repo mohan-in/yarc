@@ -23,15 +23,14 @@ class AppDrawer extends StatelessWidget {
     final indexToAction = <int, VoidCallback>{};
     int destinationCount = 0;
 
-    // Helper to add a plain widget (not a destination)
+    // Helper to add a plain widget (contributes to children but not destination index)
     void addWidget(Widget widget) {
       children.add(widget);
     }
 
-    // Helper to add a destination and map its destination index to an action
+    // Helper to associate a destination widget with an action
     void addDestination(Widget widget, VoidCallback action) {
       children.add(widget);
-      // Map the current destination count to this action
       indexToAction[destinationCount] = action;
       destinationCount++;
     }
@@ -107,7 +106,7 @@ class AppDrawer extends StatelessWidget {
       ),
     );
 
-    int selectedIndex = 0; // Default to Home (Destination 0)
+    int selectedIndex = 0;
 
     if (currentSubreddit != null) {
       final subIndex = subreddits.indexWhere(

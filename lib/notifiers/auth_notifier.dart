@@ -40,7 +40,6 @@ class AuthNotifier extends ChangeNotifier {
     return error;
   }
 
-  /// Logs out the user.
   Future<void> logout() async {
     if (_repository == null) {
       return;

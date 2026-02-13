@@ -63,18 +63,14 @@ class Subreddit {
   /// The display name of the subreddit (e.g., "flutter").
   final String displayName;
 
-  /// The full title of the subreddit.
   final String title;
 
-  /// URL to the subreddit's icon image, if available.
   final String? iconImg;
 
   /// The URL path to the subreddit (e.g., "/r/flutter").
   final String url;
 
-  /// Number of subscribers, if available.
   final int? subscriberCount;
 
-  /// Public description of the subreddit, if available.
   final String? description;
 }
