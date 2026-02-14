@@ -6,7 +6,7 @@ final ThemeData appTheme = ThemeData(
   colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
   appBarTheme: const AppBarTheme(
     centerTitle: true,
-    scrolledUnderElevation: 4.0,
+    scrolledUnderElevation: 4,
     backgroundColor: Color(0xFF1565C0),
     foregroundColor: Colors.white,
     surfaceTintColor: Colors.transparent,

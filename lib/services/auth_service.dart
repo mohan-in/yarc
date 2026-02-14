@@ -1,7 +1,7 @@
+import 'package:draw/draw.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:draw/draw.dart';
 
 /// Service responsible for Reddit OAuth2 authentication.
 class AuthService {
@@ -35,7 +35,7 @@ class AuthService {
     try {
       final credentials = _reddit!.auth.credentials;
       return credentials.refreshToken != null;
-    } catch (_) {
+    } on Exception catch (_) {
       return false;
     }
   }
@@ -54,7 +54,7 @@ class AuthService {
         await prefs.setString(_credentialsKey, currentCredentials);
         _lastSavedCredentials = currentCredentials;
       }
-    } catch (_) {}
+    } on Exception catch (_) {}
   }
 
   /// Initializes the data source, restoring the session if available.
@@ -76,20 +76,21 @@ class AuthService {
         if (!_reddit!.auth.isValid && isLoggedIn) {
           await refreshSession();
         }
-      } catch (_) {
+      } on Exception catch (_) {
         await logout();
       }
     }
   }
 
-  /// Forces a session refresh.
-  /// Useful when receiving 401 errors despite the client thinking the token is valid.
+  /// Forces a session refresh. Useful when
+  /// receiving 401 errors despite the client
+  /// thinking the token is valid.
   Future<void> refreshSession() async {
     if (_reddit != null && isLoggedIn) {
       try {
         await _reddit!.auth.refresh();
         await persistCredentials();
-      } catch (_) {
+      } on Exception catch (_) {
         rethrow;
       }
     }
@@ -99,7 +100,9 @@ class AuthService {
   /// Returns null on success, or an error message on failure.
   Future<String?> authenticate() async {
     if (_clientId.isEmpty) {
-      return 'Reddit Client ID not configured. Please pass it via --dart-define=REDDIT_CLIENT_ID=...';
+      return 'Reddit Client ID not configured. '
+          'Please pass it via '
+          '--dart-define=REDDIT_CLIENT_ID=...';
     }
 
     try {
@@ -130,8 +133,8 @@ class AuthService {
       } else {
         return 'Login cancelled or no code returned.';
       }
-    } catch (e) {
-      return 'Login failed: ${e.toString()}';
+    } on Exception catch (e) {
+      return 'Login failed: $e';
     }
   }
 
@@ -145,7 +148,7 @@ class AuthService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_credentialsKey, credentialsJson);
       _lastSavedCredentials = credentialsJson;
-    } catch (_) {
+    } on Exception catch (_) {
       rethrow;
     }
   }

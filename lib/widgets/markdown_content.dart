@@ -1,23 +1,23 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/foundation.dart';
-import '../utils/image_utils.dart';
-import 'faded_truncation.dart';
-import 'full_screen_image_view.dart';
+import 'package:yarc/utils/image_utils.dart';
+import 'package:yarc/widgets/faded_truncation.dart';
+import 'package:yarc/widgets/full_screen_image_view.dart';
 
 /// A widget that parses text (Markdown) and renders it with clickable links
 /// and inline images.
 class MarkdownContent extends StatelessWidget {
   const MarkdownContent({
-    super.key,
     required this.text,
+    super.key,
     this.style,
     this.maxLines,
     this.linkStyle,
-    // [overflow] is intentionally removed as FadedTruncation handles it visually.
-    TextOverflow? overflow,
   });
 
   final String text;
@@ -61,7 +61,7 @@ class MarkdownContent extends StatelessWidget {
       ),
       onTapLink: (text, href, title) async {
         if (href != null) {
-          final Uri uri = Uri.parse(href);
+          final uri = Uri.parse(href);
           if (await canLaunchUrl(uri)) {
             await launchUrl(uri);
           }
@@ -95,17 +95,21 @@ class _TapToOpenImageBuilder extends MarkdownElementBuilder {
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FullScreenImageView(imageUrls: [url]),
+        unawaited(
+          Navigator.push<void>(
+            context,
+            MaterialPageRoute<void>(
+              builder: (context) => FullScreenImageView(
+                imageUrls: [url],
+              ),
+            ),
           ),
         );
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: ClipRRect(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(8),
           child: Image.network(
             ImageUtils.getCorsUrl(url),
             headers: kIsWeb

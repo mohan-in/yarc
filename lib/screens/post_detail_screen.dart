@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import '../models/post.dart';
-import '../models/comment.dart';
-import '../services/reddit_service.dart';
-import '../widgets/post_card.dart';
-import '../widgets/comment_list.dart';
+import 'package:yarc/models/comment.dart';
+import 'package:yarc/models/post.dart';
+import 'package:yarc/services/reddit_service.dart';
+import 'package:yarc/widgets/comment_list.dart';
+import 'package:yarc/widgets/post_card.dart';
 
 class PostDetailScreen extends StatefulWidget {
   const PostDetailScreen({
-    super.key,
     required this.post,
     required this.redditService,
+    super.key,
   });
 
   final Post post;
@@ -33,7 +33,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: CustomScrollView(
-        // CustomScrollView enables complex scrolling effects like the floating app bar
+        // CustomScrollView enables complex
+        // scrolling effects like the floating bar
         slivers: [
           SliverAppBar(pinned: true, title: Text('r/${widget.post.subreddit}')),
 
@@ -45,7 +46,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           // Comments Header
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Text(
                 'Comments',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(

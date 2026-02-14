@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import '../models/comment.dart';
-import '../utils/html_utils.dart';
-import '../utils/date_utils.dart';
-import 'markdown_content.dart';
+import 'package:yarc/models/comment.dart';
+import 'package:yarc/utils/date_utils.dart';
+import 'package:yarc/utils/html_utils.dart';
+import 'package:yarc/widgets/markdown_content.dart';
 
 class CommentTile extends StatefulWidget {
-  const CommentTile({super.key, required this.comment, this.depth = 0});
+  const CommentTile({required this.comment, super.key, this.depth = 0});
 
   final Comment comment;
   final int depth;
@@ -48,7 +48,7 @@ class _CommentTileState extends State<CommentTile> {
         InkWell(
           onTap: _toggleCollapse,
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -123,12 +123,12 @@ class _CommentTileState extends State<CommentTile> {
               children: [
                 Expanded(
                   child: Container(
-                    margin: const EdgeInsets.only(left: 8.0),
+                    margin: const EdgeInsets.only(left: 8),
                     decoration: BoxDecoration(
                       border: Border(
                         left: BorderSide(
                           color: depthColor.withAlpha(128),
-                          width: 2.0,
+                          width: 2,
                         ),
                       ),
                     ),
@@ -150,7 +150,7 @@ class _CommentTileState extends State<CommentTile> {
 
     if (widget.depth == 0) {
       return Card(
-        margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 16.0),
+        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
         elevation: 2,
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

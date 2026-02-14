@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../utils/date_utils.dart';
+import 'package:yarc/utils/date_utils.dart';
 
-/// A widget displaying post metadata: time, comments, upvotes, and external link.
+/// A widget displaying post metadata:
+/// time, comments, upvotes, and external link.
 class PostMetadata extends StatelessWidget {
   const PostMetadata({
-    super.key,
     required this.createdUtc,
     required this.numComments,
     required this.ups,
     required this.permalink,
+    super.key,
   });
 
   final double createdUtc;
@@ -18,7 +19,7 @@ class PostMetadata extends StatelessWidget {
   final String permalink;
 
   Future<void> _copyUrl(BuildContext context) async {
-    final String url = 'https://www.reddit.com$permalink';
+    final url = 'https://www.reddit.com$permalink';
     await Clipboard.setData(ClipboardData(text: url));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

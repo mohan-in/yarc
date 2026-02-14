@@ -1,7 +1,7 @@
-import '../models/comment.dart';
-import '../models/types.dart';
-import '../services/reddit_service.dart';
-import '../services/history_service.dart';
+import 'package:yarc/models/comment.dart';
+import 'package:yarc/models/types.dart';
+import 'package:yarc/services/history_service.dart';
+import 'package:yarc/services/reddit_service.dart';
 
 /// Repository for post operations.
 class PostRepository {
@@ -14,21 +14,21 @@ class PostRepository {
   ///
   /// Returns a [PostsResult] containing posts and the pagination cursor.
   Future<PostsResult> getPosts({String? subreddit, String? after}) async {
-    return await _fetchFromApi(subreddit, after);
+    return _fetchFromApi(subreddit, after);
   }
 
   /// Fetches fresh posts from API.
   Future<PostsResult> refresh({String? subreddit}) async {
-    return await _redditService.fetchPosts(subreddit: subreddit);
+    return _redditService.fetchPosts(subreddit: subreddit);
   }
 
   Future<PostsResult> _fetchFromApi(String? subreddit, String? after) async {
-    return await _redditService.fetchPosts(subreddit: subreddit, after: after);
+    return _redditService.fetchPosts(subreddit: subreddit, after: after);
   }
 
   /// Fetches comments for a post.
   Future<List<Comment>> getComments(String postId) async {
-    return await _redditService.fetchComments(postId);
+    return _redditService.fetchComments(postId);
   }
 
   /// Marks a post as read.
@@ -38,6 +38,6 @@ class PostRepository {
 
   /// Gets all read post IDs.
   Future<Set<String>> getReadPostIds() async {
-    return await _historyService.getReadPostIds();
+    return _historyService.getReadPostIds();
   }
 }

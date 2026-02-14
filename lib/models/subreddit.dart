@@ -1,5 +1,5 @@
 import 'package:draw/draw.dart' as draw;
-import '../utils/html_utils.dart';
+import 'package:yarc/utils/html_utils.dart';
 
 /// Represents a Reddit subreddit with its metadata.
 ///
@@ -9,8 +9,7 @@ class Subreddit {
   Subreddit({
     required this.displayName,
     required this.title,
-    this.iconImg,
-    required this.url,
+    required this.url, this.iconImg,
     this.subscriberCount,
     this.description,
   });

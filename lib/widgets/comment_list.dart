@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../models/comment.dart';
+import 'package:yarc/models/comment.dart';
 
-import '../widgets/comment_tile.dart';
+import 'package:yarc/widgets/comment_tile.dart';
 
 /// A widget that loads and displays comments for a post.
 ///
@@ -9,7 +9,7 @@ import '../widgets/comment_tile.dart';
 /// Depending on where it is used (e.g., inside CustomScrollView),
 /// it can return a generic widget or a Sliver.
 class CommentList extends StatelessWidget {
-  const CommentList({super.key, required this.commentsFuture});
+  const CommentList({required this.commentsFuture, super.key});
 
   final Future<List<Comment>> commentsFuture;
 
@@ -28,7 +28,7 @@ class CommentList extends StatelessWidget {
           return SliverToBoxAdapter(
             child: Center(
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16),
                 child: Text('Error: ${snapshot.error}'),
               ),
             ),
@@ -38,14 +38,15 @@ class CommentList extends StatelessWidget {
           return const SliverToBoxAdapter(
             child: Center(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16),
                 child: Text('No comments yet.'),
               ),
             ),
           );
         } else {
           // Efficiently render the list of comments
-          // SliverList is better for performance than ListView when part of a CustomScrollView
+          // SliverList is better for performance
+          // than ListView inside CustomScrollView
           return SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               return CommentTile(comment: snapshot.data![index]);

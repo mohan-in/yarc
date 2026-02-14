@@ -13,7 +13,8 @@ class VideoAutoplayNotifier extends ChangeNotifier {
 
   /// Requests to play a video.
   /// If another video is playing, it will be stopped by the nature of the UI
-  /// reacting to [playingVideoId] changes, but we enforce single source of truth here.
+  /// reacting to [playingVideoId] changes, but we
+  /// enforce single source of truth here.
   void play(String videoId) {
     if (_playingVideoId != videoId) {
       _playingVideoId = videoId;

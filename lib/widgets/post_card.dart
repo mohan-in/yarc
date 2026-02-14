@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import '../models/post.dart';
-import '../utils/html_utils.dart';
-import 'image_carousel.dart';
-import 'markdown_content.dart';
-import 'cached_image.dart';
-import 'post_metadata.dart';
-import 'video_player.dart';
-import 'youtube_embed.dart';
+import 'package:yarc/models/post.dart';
+import 'package:yarc/utils/html_utils.dart';
+import 'package:yarc/widgets/cached_image.dart';
+import 'package:yarc/widgets/image_carousel.dart';
+import 'package:yarc/widgets/markdown_content.dart';
+import 'package:yarc/widgets/post_metadata.dart';
+import 'package:yarc/widgets/video_player.dart';
+import 'package:yarc/widgets/youtube_embed.dart';
 
 /// A card widget that displays a summary of a [Post].
 ///
@@ -14,8 +14,8 @@ import 'youtube_embed.dart';
 /// Supports tapping to view details via [onTap].
 class PostCard extends StatelessWidget {
   const PostCard({
-    super.key,
     required this.post,
+    super.key,
     this.onTap,
     this.expanded = false,
   });
@@ -29,11 +29,11 @@ class PostCard extends StatelessWidget {
     return Card(
       elevation: 2,
       clipBehavior: Clip.antiAlias,
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -87,9 +87,9 @@ class PostCard extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
-    String content = HtmlUtils.unescape(post.content);
+    var content = HtmlUtils.unescape(post.content);
 
-    final Set<String> mediaUrls = {...post.images};
+    final mediaUrls = <String>{...post.images};
     if (post.thumbnail != null) {
       mediaUrls.add(post.thumbnail!);
     }
@@ -116,23 +116,22 @@ class PostCard extends StatelessWidget {
     }
 
     return Padding(
-      padding: const EdgeInsets.only(top: 4.0),
+      padding: const EdgeInsets.only(top: 4),
       child: MarkdownContent(
         text: content,
         maxLines: expanded ? null : 3,
-        overflow: expanded ? null : TextOverflow.ellipsis,
         style: Theme.of(context).textTheme.bodyMedium,
       ),
     );
   }
 
   Widget _buildMedia() {
-    final bool showVideo = post.isVideo && post.videoUrl != null;
-    final bool showYoutube = post.isYoutube && post.youtubeId != null;
+    final showVideo = post.isVideo && post.videoUrl != null;
+    final showYoutube = post.isYoutube && post.youtubeId != null;
 
     if (showVideo) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.only(bottom: 8),
         child: GestureDetector(
           onTap: () {},
           child: RedditVideoPlayer(videoUrl: post.videoUrl!, autoPlay: true),
@@ -142,7 +141,7 @@ class PostCard extends StatelessWidget {
 
     if (showYoutube) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.only(bottom: 8),
         child: GestureDetector(
           onTap: () {},
           child: YouTubeEmbed(videoId: post.youtubeId!),
@@ -152,7 +151,7 @@ class PostCard extends StatelessWidget {
 
     if (post.images.isNotEmpty) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.only(bottom: 8),
         child: post.images.length == 1
             ? CachedImage(
                 imageUrl: post.images.first,
@@ -167,7 +166,7 @@ class PostCard extends StatelessWidget {
 
     if (post.thumbnail != null) {
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8.0),
+        padding: const EdgeInsets.only(bottom: 8),
         child: CachedImage(
           imageUrl: post.thumbnail!,
           fullScreenUrls: [post.thumbnail!],

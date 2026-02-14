@@ -1,16 +1,34 @@
 import 'package:draw/draw.dart' as sys;
-import '../models/post.dart';
-import '../utils/html_utils.dart';
+import 'package:yarc/models/post.dart';
+import 'package:yarc/utils/html_utils.dart';
 
 /// Utility class for parsing Reddit submissions into Post models.
 class PostParser {
+  static final _imageUrlRegex = RegExp(
+    r'https?://[^\s\)]+\.(?:jpg|jpeg|png|gif|webp)(?:\?[^\s\)]*)?',
+    caseSensitive: false,
+  );
+
+  static final _redditPreviewRegex = RegExp(
+    r'https?://preview\.redd\.it/[^\s\)]+',
+    caseSensitive: false,
+  );
+
+  static final _youtubeRegex = RegExp(
+    r'^.*((youtu.be\/)|(v\/)|'
+    r'(\/u\/\w\/)|(embed\/)|'
+    r'(watch\?)|(shorts\/)|(live\/))'
+    r'\??v?=?([^#&?]*).*',
+    caseSensitive: false,
+  );
+
   /// Parses a DRAW Submission object into a Post model.
   static Post parse(sys.Submission submission) {
     String? imageUrl;
-    final List<String> images = [];
-    bool isVideo = submission.isVideo;
+    final images = <String>[];
+    var isVideo = submission.isVideo;
     String? videoUrl;
-    bool isYoutube = false;
+    var isYoutube = false;
     String? youtubeId;
     double? aspectRatio;
 
@@ -25,8 +43,9 @@ class PostParser {
     }
 
     // Check for direct URL if it's an image
-    // If imageUrl creates a static preview but url is a gif, prefer the gif!
-    final String url = submission.url.toString();
+    // If imageUrl creates a static preview but url is a gif,
+    // prefer the gif!
+    final url = submission.url.toString();
     if (!isVideo) {
       if (url.endsWith('.gif')) {
         imageUrl = url; // Force use the GIF url
@@ -49,30 +68,19 @@ class PostParser {
       // 1. Try extracting from main post data
       videoUrl = _extractVideoUrl(data);
 
-      // If no video found yet, check for MP4 variant in preview (common for GIFs)
-      if (videoUrl == null &&
-          data['preview'] != null &&
-          data['preview']['images'] != null &&
-          (data['preview']['images'] as List).isNotEmpty) {
-        final imageMap = data['preview']['images'][0] as Map;
-        if (imageMap['variants'] != null &&
-            imageMap['variants']['mp4'] != null) {
-          final mp4Variant = imageMap['variants']['mp4'];
-          if (mp4Variant['source'] != null &&
-              mp4Variant['source']['url'] != null) {
-            videoUrl = HtmlUtils.unescape(
-              mp4Variant['source']['url'] as String,
-            );
-            isVideo = true;
-          }
-        }
+      // If no video found yet, check for MP4 variant
+      // in preview (common for GIFs)
+      if (videoUrl == null) {
+        videoUrl = _extractMp4FromPreview(data);
+        if (videoUrl != null) isVideo = true;
       }
 
-      // 2. If no video found, check if it's a crosspost
+      // 2. If no video found, check crosspost
       if (data['crosspost_parent_list'] != null) {
-        final List crossposts = data['crosspost_parent_list'];
+        final crossposts = data['crosspost_parent_list'] as List<dynamic>;
         if (crossposts.isNotEmpty) {
-          final parentData = crossposts[0] as Map;
+          final parentData = (crossposts[0] as Map<dynamic, dynamic>)
+              .cast<String, dynamic>();
 
           // Try to get video from parent
           videoUrl ??= _extractVideoUrl(parentData);
@@ -81,68 +89,38 @@ class PostParser {
             isVideo = true;
           }
 
-          // If still no video, check parent for MP4 variant in preview
-          if (videoUrl == null &&
-              parentData['preview'] != null &&
-              parentData['preview']['images'] != null &&
-              (parentData['preview']['images'] as List).isNotEmpty) {
-            final imageMap = parentData['preview']['images'][0] as Map;
-            if (imageMap['variants'] != null &&
-                imageMap['variants']['mp4'] != null) {
-              final mp4Variant = imageMap['variants']['mp4'];
-              if (mp4Variant['source'] != null &&
-                  mp4Variant['source']['url'] != null) {
-                videoUrl = HtmlUtils.unescape(
-                  mp4Variant['source']['url'] as String,
-                );
-                isVideo = true;
-              }
-            }
+          // Check parent for MP4 variant in preview
+          if (videoUrl == null) {
+            videoUrl = _extractMp4FromPreview(parentData);
+            if (videoUrl != null) isVideo = true;
           }
 
-          // Try to extract images/gallery from parent if main post has none
+          // Try to extract images/gallery from parent
           if (images.isEmpty && imageUrl == null) {
-            final parentGalleryRatio = _parseGalleryData(
-              parentData.cast<String, dynamic>(),
-              images,
-            );
+            final parentGalleryRatio = _parseGalleryData(parentData, images);
             if (aspectRatio == null && parentGalleryRatio != null) {
               aspectRatio = parentGalleryRatio;
             }
 
             // Check parent URL for direct image
             if (parentData['url'] != null) {
-              final String pUrl = parentData['url'].toString();
+              final pUrl = parentData['url'].toString();
               if (pUrl.endsWith('.jpg') ||
                   pUrl.endsWith('.jpeg') ||
                   pUrl.endsWith('.png') ||
                   pUrl.endsWith('.gif')) {
                 imageUrl = pUrl;
-                // If checking parent URL, we should also check if it's a GIF
-                // But generally if it's a GIF repost, we handled it as video via preview above
-                // or we fall back to imageUrl here.
               }
             }
 
             // Check parent preview if still no image
-            if (imageUrl == null &&
-                parentData['preview'] != null &&
-                parentData['preview']['images'] != null &&
-                (parentData['preview']['images'] as List).isNotEmpty) {
-              final imageMap = parentData['preview']['images'][0] as Map;
-              if (imageMap['source'] != null &&
-                  imageMap['source']['url'] != null) {
-                imageUrl = HtmlUtils.unescape(
-                  imageMap['source']['url'] as String,
-                );
-                final width = imageMap['source']['width'];
-                final height = imageMap['source']['height'];
-                if (width != null &&
-                    height != null &&
-                    width > 0 &&
-                    height > 0) {
-                  aspectRatio = width / height;
-                }
+            if (imageUrl == null) {
+              final result = _extractImageFromPreview(
+                parentData,
+              );
+              if (result != null) {
+                imageUrl = result.url;
+                aspectRatio ??= result.aspectRatio;
               }
             }
           }
@@ -160,9 +138,10 @@ class PostParser {
           isYoutube = true;
         } else if (data['crosspost_parent_list'] != null) {
           // Check for YouTube in crosspost parent
-          final List crossposts = data['crosspost_parent_list'];
+          final crossposts = data['crosspost_parent_list'] as List<dynamic>;
           if (crossposts.isNotEmpty) {
-            final parentData = crossposts[0] as Map;
+            final parentData = (crossposts[0] as Map<dynamic, dynamic>)
+                .cast<String, dynamic>();
             youtubeId = _extractYoutubeId(parentData);
             if (youtubeId != null) {
               isYoutube = true;
@@ -177,37 +156,24 @@ class PostParser {
     }
 
     // Extract image URLs from selftext content
-    // This handles posts where high-res images are embedded in the text
-    final String selftext = submission.selftext ?? '';
+    final selftext = submission.selftext ?? '';
     if (selftext.isNotEmpty) {
-      final imageUrlRegex = RegExp(
-        r'https?://[^\s\)]+\.(?:jpg|jpeg|png|gif|webp)(?:\?[^\s\)]*)?',
-        caseSensitive: false,
-      );
-      // Also match Reddit preview URLs that may not have file extensions
-      final redditPreviewRegex = RegExp(
-        r'https?://preview\.redd\.it/[^\s\)]+',
-        caseSensitive: false,
-      );
-
-      for (final match in imageUrlRegex.allMatches(selftext)) {
-        // HTML-unescape the URL so it matches the content after HtmlUtils.unescape()
-        final url = HtmlUtils.unescape(match.group(0)!);
-        if (!images.contains(url)) {
-          images.add(url);
+      for (final match in _imageUrlRegex.allMatches(selftext)) {
+        final matchUrl = HtmlUtils.unescape(match.group(0)!);
+        if (!images.contains(matchUrl)) {
+          images.add(matchUrl);
         }
       }
-      for (final match in redditPreviewRegex.allMatches(selftext)) {
-        // HTML-unescape the URL so it matches the content after HtmlUtils.unescape()
-        final url = HtmlUtils.unescape(match.group(0)!);
-        if (!images.contains(url)) {
-          images.add(url);
+      for (final match in _redditPreviewRegex.allMatches(selftext)) {
+        final matchUrl = HtmlUtils.unescape(match.group(0)!);
+        if (!images.contains(matchUrl)) {
+          images.add(matchUrl);
         }
       }
     }
 
-    // Only use thumbnail if no high-resolution images are available
-    final String? thumbnailUrl =
+    // Only use thumbnail if no high-res images
+    final thumbnailUrl =
         images.isEmpty && submission.thumbnail.toString().startsWith('http')
         ? submission.thumbnail.toString()
         : null;
@@ -221,7 +187,7 @@ class PostParser {
       numComments: submission.numComments,
       thumbnail: thumbnailUrl,
       imageUrl: imageUrl,
-      permalink: submission.data!['permalink'] ?? '',
+      permalink: (submission.data!['permalink'] as String?) ?? '',
       content: submission.selftext != null
           ? HtmlUtils.unescape(submission.selftext!)
           : '',
@@ -241,21 +207,26 @@ class PostParser {
   ) {
     double? firstAspectRatio;
     if (data['gallery_data'] != null && data['media_metadata'] != null) {
-      final galleryData = data['gallery_data'];
-      final metadata = data['media_metadata'];
+      final galleryData = data['gallery_data'] as Map<String, dynamic>;
+      final metadata = data['media_metadata'] as Map<String, dynamic>;
       if (galleryData['items'] != null) {
-        for (final item in galleryData['items']) {
-          final mediaId = item['media_id'];
-          if (metadata[mediaId] != null) {
-            final mediaItem = metadata[mediaId];
+        final items = galleryData['items'] as List<dynamic>;
+        for (final item in items) {
+          final itemMap = item as Map<String, dynamic>;
+          final mediaId = itemMap['media_id'] as String?;
+          if (mediaId != null && metadata[mediaId] != null) {
+            final mediaItem = metadata[mediaId] as Map<String, dynamic>;
             if (mediaItem['status'] == 'valid' && mediaItem['e'] == 'Image') {
-              if (mediaItem['s'] != null && mediaItem['s']['u'] != null) {
-                final url = HtmlUtils.unescape(mediaItem['s']['u'] as String);
+              final s = mediaItem['s'] as Map<String, dynamic>?;
+              if (s != null && s['u'] != null) {
+                final url = HtmlUtils.unescape(
+                  s['u'] as String,
+                );
                 images.add(url);
 
                 if (firstAspectRatio == null) {
-                  final x = mediaItem['s']['x'];
-                  final y = mediaItem['s']['y'];
+                  final x = s['x'] as int?;
+                  final y = s['y'] as int?;
                   if (x != null && y != null && x > 0 && y > 0) {
                     firstAspectRatio = x / y;
                   }
@@ -269,43 +240,96 @@ class PostParser {
     return firstAspectRatio;
   }
 
-  static String? _extractVideoUrl(Map dataMap) {
-    final data = dataMap.cast<String, dynamic>();
+  /// Extracts MP4 variant URL from preview data.
+  static String? _extractMp4FromPreview(
+    Map<String, dynamic> data,
+  ) {
+    if (data['preview'] == null) return null;
+    final preview = data['preview'] as Map<String, dynamic>;
+    if (preview['images'] == null) return null;
+    final imagesList = preview['images'] as List<dynamic>;
+    if (imagesList.isEmpty) return null;
+    final imageMap = imagesList[0] as Map<String, dynamic>;
+    if (imageMap['variants'] == null) return null;
+    final variants = imageMap['variants'] as Map<String, dynamic>;
+    if (variants['mp4'] == null) return null;
+    final mp4Variant = variants['mp4'] as Map<String, dynamic>;
+    if (mp4Variant['source'] == null) return null;
+    final source = mp4Variant['source'] as Map<String, dynamic>;
+    if (source['url'] == null) return null;
+    return HtmlUtils.unescape(source['url'] as String);
+  }
+
+  /// Extracts image URL and aspect ratio from preview.
+  static ({String url, double? aspectRatio})? _extractImageFromPreview(
+    Map<String, dynamic> data,
+  ) {
+    if (data['preview'] == null) return null;
+    final preview = data['preview'] as Map<String, dynamic>;
+    if (preview['images'] == null) return null;
+    final imagesList = preview['images'] as List<dynamic>;
+    if (imagesList.isEmpty) return null;
+    final imageMap = imagesList[0] as Map<String, dynamic>;
+    if (imageMap['source'] == null) return null;
+    final source = imageMap['source'] as Map<String, dynamic>;
+    if (source['url'] == null) return null;
+    final url = HtmlUtils.unescape(source['url'] as String);
+    double? ratio;
+    final width = source['width'] as int?;
+    final height = source['height'] as int?;
+    if (width != null && height != null && width > 0 && height > 0) {
+      ratio = width / height;
+    }
+    return (url: url, aspectRatio: ratio);
+  }
+
+  static String? _extractVideoUrl(
+    Map<String, dynamic> data,
+  ) {
     String? url;
-    if (data['secure_media'] != null &&
-        data['secure_media']['reddit_video'] != null) {
-      url =
-          data['secure_media']['reddit_video']['hls_url'] ??
-          data['secure_media']['reddit_video']['fallback_url'];
-    } else if (data['media'] != null && data['media']['reddit_video'] != null) {
-      url =
-          data['media']['reddit_video']['hls_url'] ??
-          data['media']['reddit_video']['fallback_url'];
-    } else if (data['preview'] != null &&
-        data['preview']['reddit_video_preview'] != null) {
-      url =
-          data['preview']['reddit_video_preview']['hls_url'] ??
-          data['preview']['reddit_video_preview']['fallback_url'];
-    } else if (data['url'] != null && data['url'].toString().endsWith('.mp4')) {
-      url = data['url'];
+    if (data['secure_media'] != null) {
+      final secureMedia = data['secure_media'] as Map<String, dynamic>;
+      if (secureMedia['reddit_video'] != null) {
+        final video = secureMedia['reddit_video'] as Map<String, dynamic>;
+        url =
+            (video['hls_url'] as String?) ?? (video['fallback_url'] as String?);
+      }
+    }
+    if (url == null && data['media'] != null) {
+      final media = data['media'] as Map<String, dynamic>;
+      if (media['reddit_video'] != null) {
+        final video = media['reddit_video'] as Map<String, dynamic>;
+        url =
+            (video['hls_url'] as String?) ?? (video['fallback_url'] as String?);
+      }
+    }
+    if (url == null && data['preview'] != null) {
+      final preview = data['preview'] as Map<String, dynamic>;
+      if (preview['reddit_video_preview'] != null) {
+        final video = preview['reddit_video_preview'] as Map<String, dynamic>;
+        url =
+            (video['hls_url'] as String?) ?? (video['fallback_url'] as String?);
+      }
+    }
+    if (url == null &&
+        data['url'] != null &&
+        data['url'].toString().endsWith('.mp4')) {
+      url = data['url'] as String?;
     }
     return url != null ? HtmlUtils.unescape(url) : null;
   }
 
-  static String? _extractYoutubeId(Map dataMap) {
-    final data = dataMap.cast<String, dynamic>();
+  static String? _extractYoutubeId(
+    Map<String, dynamic> data,
+  ) {
     if (data['domain'] == 'youtube.com' ||
         data['domain'] == 'youtu.be' ||
         data['domain'] == 'm.youtube.com' ||
         (data['url'] != null &&
             data['url'].toString().contains('youtube.com')) ||
         (data['url'] != null && data['url'].toString().contains('youtu.be'))) {
-      final String url = HtmlUtils.unescape(data['url'].toString());
-      final RegExp regExp = RegExp(
-        r'^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?)|(shorts\/)|(live\/))\??v?=?([^#&?]*).*',
-        caseSensitive: false,
-      );
-      final match = regExp.firstMatch(url);
+      final url = HtmlUtils.unescape(data['url'].toString());
+      final match = _youtubeRegex.firstMatch(url);
       if (match != null && match.group(9) != null) {
         final id = match.group(9);
         if (id != null && id.length == 11) {

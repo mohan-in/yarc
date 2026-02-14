@@ -1,5 +1,6 @@
-import 'package:app_links/app_links.dart';
 import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 
 /// Parsed deep link result for navigation
 class DeepLinkResult {
@@ -33,7 +34,7 @@ class DeepLinkService {
 
   Stream<DeepLinkResult> get linkStream {
     return _appLinks.uriLinkStream
-        .map((uri) => parseRedditUrl(uri))
+        .map(parseRedditUrl)
         .where((result) => result != null)
         .cast<DeepLinkResult>();
   }
@@ -91,6 +92,6 @@ class DeepLinkService {
 
   /// Dispose of any subscriptions
   void dispose() {
-    _linkSubscription?.cancel();
+    unawaited(_linkSubscription?.cancel());
   }
 }

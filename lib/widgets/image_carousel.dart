@@ -1,12 +1,14 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
-import '../utils/image_utils.dart';
-import 'full_screen_image_view.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:yarc/utils/image_utils.dart';
+import 'package:yarc/widgets/full_screen_image_view.dart';
 
 /// A horizontal carousel for displaying multiple images with swipe navigation.
 class ImageCarousel extends StatefulWidget {
-  const ImageCarousel({super.key, required this.imageUrls, this.aspectRatio});
+  const ImageCarousel({required this.imageUrls, super.key, this.aspectRatio});
 
   final List<String> imageUrls;
   final double? aspectRatio;
@@ -40,12 +42,14 @@ class _ImageCarouselState extends State<ImageCarousel> {
           itemBuilder: (context, index) {
             return GestureDetector(
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => FullScreenImageView(
-                      imageUrls: widget.imageUrls,
-                      initialIndex: index,
+                unawaited(
+                  Navigator.push<void>(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (context) => FullScreenImageView(
+                        imageUrls: widget.imageUrls,
+                        initialIndex: index,
+                      ),
                     ),
                   ),
                 );
@@ -90,9 +94,11 @@ class _ImageCarouselState extends State<ImageCarousel> {
               child: Center(
                 child: IconButton(
                   onPressed: () {
-                    _pageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+                    unawaited(
+                      _pageController.previousPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      ),
                     );
                   },
                   icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
@@ -110,9 +116,11 @@ class _ImageCarouselState extends State<ImageCarousel> {
               child: Center(
                 child: IconButton(
                   onPressed: () {
-                    _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
+                    unawaited(
+                      _pageController.nextPage(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      ),
                     );
                   },
                   icon: const Icon(

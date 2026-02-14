@@ -1,22 +1,22 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'dart:async';
 
-import 'theme/theme.dart';
-import 'services/auth_service.dart';
-import 'services/history_service.dart';
-import 'services/reddit_service.dart';
-import 'services/deep_link_service.dart';
-import 'repositories/auth_repository.dart';
-import 'repositories/post_repository.dart';
-import 'repositories/subreddit_repository.dart';
-import 'notifiers/auth_notifier.dart';
-import 'notifiers/feed_notifier.dart';
-import 'notifiers/search_notifier.dart';
-import 'notifiers/subreddits_notifier.dart';
-import 'notifiers/video_autoplay_notifier.dart';
-import 'screens/home_screen.dart';
-import 'screens/post_detail_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:yarc/notifiers/auth_notifier.dart';
+import 'package:yarc/notifiers/feed_notifier.dart';
+import 'package:yarc/notifiers/search_notifier.dart';
+import 'package:yarc/notifiers/subreddits_notifier.dart';
+import 'package:yarc/notifiers/video_autoplay_notifier.dart';
+import 'package:yarc/repositories/auth_repository.dart';
+import 'package:yarc/repositories/post_repository.dart';
+import 'package:yarc/repositories/subreddit_repository.dart';
+import 'package:yarc/screens/home_screen.dart';
+import 'package:yarc/screens/post_detail_screen.dart';
+import 'package:yarc/services/auth_service.dart';
+import 'package:yarc/services/deep_link_service.dart';
+import 'package:yarc/services/history_service.dart';
+import 'package:yarc/services/reddit_service.dart';
+import 'package:yarc/theme/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,7 +44,7 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    _initDeepLinks();
+    unawaited(_initDeepLinks());
   }
 
   Future<void> _initDeepLinks() async {
@@ -70,13 +70,12 @@ class _MyAppState extends State<MyApp> {
           context.read<FeedNotifier>().selectSubreddit(result.subreddit);
           _navigatorKey.currentState?.popUntil((route) => route.isFirst);
         }
-        break;
       case DeepLinkType.post:
         if (result.postId != null) {
-          final messenger = ScaffoldMessenger.of(context);
-          messenger.showSnackBar(
-            const SnackBar(content: Text('Opening post...')),
-          );
+          final messenger = ScaffoldMessenger.of(context)
+            ..showSnackBar(
+              const SnackBar(content: Text('Opening post...')),
+            );
 
           try {
             final redditService = context.read<RedditService>();
@@ -107,21 +106,19 @@ class _MyAppState extends State<MyApp> {
                 context.read<FeedNotifier>().selectSubreddit(result.subreddit);
               }
             }
-          } catch (e) {
+          } on Object catch (e) {
             if (context.mounted) {
               messenger.showSnackBar(
-                SnackBar(content: Text('Error: ${e.toString()}')),
+                SnackBar(content: Text('Error: $e')),
               );
             }
           }
         }
-        break;
       case DeepLinkType.user:
         break;
       case DeepLinkType.home:
         context.read<FeedNotifier>().selectSubreddit(null);
         _navigatorKey.currentState?.popUntil((route) => route.isFirst);
-        break;
       case DeepLinkType.unknown:
         break;
     }
@@ -129,7 +126,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void dispose() {
-    _linkSubscription?.cancel();
+    unawaited(_linkSubscription?.cancel());
     _deepLinkService.dispose();
     super.dispose();
   }
@@ -177,7 +174,7 @@ class _MyAppState extends State<MyApp> {
           if (_pendingDeepLink != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (_pendingDeepLink != null) {
-                _handleDeepLink(_pendingDeepLink!);
+                unawaited(_handleDeepLink(_pendingDeepLink!));
                 _pendingDeepLink = null;
               }
             });

@@ -1,5 +1,5 @@
-import '../models/subreddit.dart';
-import '../services/reddit_service.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/services/reddit_service.dart';
 
 /// Repository for subreddit operations.
 class SubredditRepository {
@@ -22,6 +22,6 @@ class SubredditRepository {
     if (query.length < 2) {
       return [];
     }
-    return await _redditService.searchSubreddits(query);
+    return _redditService.searchSubreddits(query);
   }
 }

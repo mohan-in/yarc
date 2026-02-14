@@ -1,12 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../utils/image_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:yarc/utils/image_utils.dart';
 
 /// A full-screen image viewer that supports zooming and panning.
 class FullScreenImageView extends StatefulWidget {
   const FullScreenImageView({
-    super.key,
-    required this.imageUrls,
+    required this.imageUrls, super.key,
     this.initialIndex = 0,
   });
 
@@ -58,7 +57,7 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
         itemBuilder: (context, index) {
           return InteractiveViewer(
             minScale: 0.5,
-            maxScale: 4.0,
+            maxScale: 4,
             child: Center(
               child: CachedNetworkImage(
                 imageUrl: ImageUtils.getCorsUrl(widget.imageUrls[index]),

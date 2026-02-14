@@ -4,8 +4,7 @@ import 'package:flutter/material.dart';
 /// at the bottom to indicate truncation.
 class FadedTruncation extends StatelessWidget {
   const FadedTruncation({
-    super.key,
-    required this.child,
+    required this.child, super.key,
     this.maxHeight = 120.0,
   });
 
@@ -15,7 +14,7 @@ class FadedTruncation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ShaderMask(
-      shaderCallback: (Rect bounds) {
+      shaderCallback: (bounds) {
         return const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,

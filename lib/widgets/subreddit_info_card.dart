@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../models/subreddit.dart';
-import '../utils/image_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/utils/image_utils.dart';
 
 /// A card displaying subreddit information at the top of the feed.
 class SubredditInfoCard extends StatelessWidget {
-  const SubredditInfoCard({super.key, required this.subreddit});
+  const SubredditInfoCard({required this.subreddit, super.key});
 
   final Subreddit subreddit;
 
@@ -16,7 +16,7 @@ class SubredditInfoCard extends StatelessWidget {
 
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

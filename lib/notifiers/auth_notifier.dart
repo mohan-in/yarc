@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart';
-import '../repositories/auth_repository.dart';
+import 'package:yarc/repositories/auth_repository.dart';
 
 /// Notifier for managing authentication state.
 class AuthNotifier extends ChangeNotifier {
@@ -11,6 +11,7 @@ class AuthNotifier extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   bool get isInitialized => _isInitialized;
 
+  // ignore: use_setters_to_change_properties, method does more than set
   void setRepository(AuthRepository repository) {
     _repository = repository;
   }

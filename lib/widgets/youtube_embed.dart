@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class YouTubeEmbed extends StatefulWidget {
-  const YouTubeEmbed({super.key, required this.videoId});
+  const YouTubeEmbed({required this.videoId, super.key});
 
   final String videoId;
 

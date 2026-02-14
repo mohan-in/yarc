@@ -1,19 +1,20 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../services/reddit_service.dart';
-import '../notifiers/auth_notifier.dart';
-import '../notifiers/feed_notifier.dart';
-import '../notifiers/subreddits_notifier.dart';
-import '../notifiers/video_autoplay_notifier.dart';
-import '../models/subreddit.dart';
-import '../widgets/app_drawer.dart';
-import '../widgets/login_prompt.dart';
-import '../widgets/post_list.dart';
-import '../widgets/subreddit_search_delegate.dart';
-import '../utils/constants.dart';
-import '../utils/feed_utils.dart';
-import 'post_detail_screen.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/notifiers/auth_notifier.dart';
+import 'package:yarc/notifiers/feed_notifier.dart';
+import 'package:yarc/notifiers/subreddits_notifier.dart';
+import 'package:yarc/notifiers/video_autoplay_notifier.dart';
+import 'package:yarc/screens/post_detail_screen.dart';
+import 'package:yarc/services/reddit_service.dart';
+import 'package:yarc/utils/constants.dart';
+import 'package:yarc/utils/feed_utils.dart';
+import 'package:yarc/widgets/app_drawer.dart';
+import 'package:yarc/widgets/login_prompt.dart';
+import 'package:yarc/widgets/post_list.dart';
+import 'package:yarc/widgets/subreddit_search_delegate.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -31,9 +32,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
-    // PostFrameCallback ensures we have access to Providers after the first build
+    // PostFrameCallback ensures we
+    // have access to Providers after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeAuth();
+      unawaited(_initializeAuth());
     });
   }
 
@@ -121,10 +123,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _scrollToTop() {
     if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        0,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+      unawaited(
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        ),
       );
     }
   }
@@ -164,7 +168,8 @@ class _HomeScreenState extends State<HomeScreen> {
         body: RefreshIndicator(
           onRefresh: () => context.read<FeedNotifier>().refresh(),
           child: CustomScrollView(
-            // CustomScrollView allows mixing different scrollable areas (Slivers)
+            // CustomScrollView allows mixing
+            // different scrollable areas (Slivers)
             controller: _scrollController,
             slivers: [
               // SliverAppBar floats above the content and can snap/hide
@@ -182,7 +187,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // Show login prompt if not logged in and not viewing a specific subreddit
+              // Show login prompt if not logged in
+              // and not viewing a specific subreddit
               if (!authNotifier.isLoggedIn &&
                   feedNotifier.currentSubreddit == null)
                 SliverFillRemaining(child: LoginPrompt(onLogin: _handleLogin))
@@ -193,13 +199,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   isLoading: feedNotifier.isLoading,
                   subredditInfo: feedNotifier.currentSubredditInfo,
                   onPostTap: (post) {
-                    context.read<FeedNotifier>().markAsRead(post.id);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PostDetailScreen(
-                          post: post,
-                          redditService: redditService,
+                    unawaited(
+                      context.read<FeedNotifier>().markAsRead(post.id),
+                    );
+                    unawaited(
+                      Navigator.push<void>(
+                        context,
+                        MaterialPageRoute<void>(
+                          builder: (context) => PostDetailScreen(
+                            post: post,
+                            redditService: redditService,
+                          ),
                         ),
                       ),
                     );
@@ -229,7 +239,9 @@ class _HomeScreenState extends State<HomeScreen> {
             feedNotifier.hideRead ? Icons.visibility_off : Icons.visibility,
           ),
           onPressed: () {
-            context.read<FeedNotifier>().toggleHideRead();
+            unawaited(
+              context.read<FeedNotifier>().toggleHideRead(),
+            );
             _scrollToTop();
           },
           tooltip: feedNotifier.hideRead ? 'Show All Posts' : 'Hide Read Posts',
@@ -237,7 +249,9 @@ class _HomeScreenState extends State<HomeScreen> {
         IconButton(
           icon: const Icon(Icons.refresh),
           onPressed: () {
-            context.read<FeedNotifier>().refresh();
+            unawaited(
+              context.read<FeedNotifier>().refresh(),
+            );
             _scrollToTop();
           },
         ),

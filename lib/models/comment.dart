@@ -1,5 +1,5 @@
 import 'package:draw/draw.dart' as draw;
-import '../utils/html_utils.dart';
+import 'package:yarc/utils/html_utils.dart';
 
 class Comment {
   Comment({
@@ -12,7 +12,7 @@ class Comment {
   });
 
   factory Comment.fromDraw(draw.Comment comment) {
-    final List<Comment> replies = [];
+    final replies = <Comment>[];
     if (comment.replies != null) {
       for (final reply in comment.replies!.comments) {
         if (reply is draw.Comment) {

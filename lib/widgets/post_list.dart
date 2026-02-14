@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import '../models/post.dart';
-import '../models/subreddit.dart';
-import 'post_card.dart';
-import 'subreddit_info_card.dart';
+import 'package:yarc/models/post.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/widgets/post_card.dart';
+import 'package:yarc/widgets/subreddit_info_card.dart';
 
 /// A sliver list of posts with infinite scroll support.
 ///
 /// Must be used inside a [CustomScrollView].
 class SliverPostList extends StatelessWidget {
   const SliverPostList({
-    super.key,
     required this.posts,
     required this.isLoading,
     required this.onPostTap,
+    super.key,
     this.subredditInfo,
   });
 
@@ -50,7 +50,7 @@ class SliverPostList extends StatelessWidget {
         // 2. Render Loading Indicator at the very end
         if (postIndex == posts.length) {
           return const Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(16),
             child: Center(child: CircularProgressIndicator()),
           );
         }

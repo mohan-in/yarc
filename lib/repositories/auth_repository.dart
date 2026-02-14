@@ -1,4 +1,4 @@
-import '../services/auth_service.dart';
+import 'package:yarc/services/auth_service.dart';
 
 /// Repository for authentication operations.
 class AuthRepository {
@@ -17,7 +17,7 @@ class AuthRepository {
   /// Initiates the login flow.
   /// Returns null on success, or an error message on failure.
   Future<String?> login() async {
-    return await _service.authenticate();
+    return _service.authenticate();
   }
 
   /// Logs out the user.

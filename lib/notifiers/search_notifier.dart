@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import '../repositories/subreddit_repository.dart';
-import '../models/subreddit.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/repositories/subreddit_repository.dart';
 
 /// Notifier for managing subreddit search state.
 class SearchNotifier extends ChangeNotifier {
@@ -15,6 +15,7 @@ class SearchNotifier extends ChangeNotifier {
   bool get isLoading => _isLoading;
 
   /// Sets the repository. Called by ProxyProvider.
+  // ignore: use_setters_to_change_properties
   void setRepository(SubredditRepository repository) {
     _repository = repository;
   }
@@ -43,7 +44,7 @@ class SearchNotifier extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
       }
-    } catch (e) {
+    } on Exception catch (_) {
       if (_query == query) {
         _results = [];
         _isLoading = false;

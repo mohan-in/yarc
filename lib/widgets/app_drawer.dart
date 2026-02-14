@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
-import '../models/subreddit.dart';
-import '../utils/image_utils.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/utils/image_utils.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({
-    super.key,
     required this.subreddits,
-    this.currentSubreddit,
     required this.onSubredditSelected,
     required this.onLogout,
+    super.key,
+    this.currentSubreddit,
   });
 
   final List<Subreddit> subreddits;
   final String? currentSubreddit;
-  final Function(Subreddit?) onSubredditSelected;
+  final void Function(Subreddit?) onSubredditSelected;
   final VoidCallback onLogout;
 
   @override
@@ -21,9 +21,10 @@ class AppDrawer extends StatelessWidget {
     final children = <Widget>[];
     // Map from DESTINATION index (not child index) to action
     final indexToAction = <int, VoidCallback>{};
-    int destinationCount = 0;
+    var destinationCount = 0;
 
-    // Helper to add a plain widget (contributes to children but not destination index)
+    // Helper to add a plain widget
+    // (does not count as a destination)
     void addWidget(Widget widget) {
       children.add(widget);
     }
@@ -106,7 +107,7 @@ class AppDrawer extends StatelessWidget {
       ),
     );
 
-    int selectedIndex = 0;
+    var selectedIndex = 0;
 
     if (currentSubreddit != null) {
       final subIndex = subreddits.indexWhere(

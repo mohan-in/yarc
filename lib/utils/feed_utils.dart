@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../models/post.dart';
-import '../utils/constants.dart';
-import '../utils/image_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:yarc/models/post.dart';
+import 'package:yarc/utils/constants.dart';
+import 'package:yarc/utils/image_utils.dart';
 
 /// Utility class for feed-related operations.
 class FeedUtils {
   /// Precaches images for upcoming posts to ensure smooth scrolling.
   ///
   /// This calculates which posts are likely to be visible soon based on the
-  /// current scroll position and pre-fetches their images using [cached_network_image].
+  /// current scroll position and pre-fetches
+  /// their images using CachedNetworkImage.
   static void precachePostImages(
     BuildContext context,
     List<Post> posts,
@@ -23,13 +24,15 @@ class FeedUtils {
     // We start prefetching after the currently visible posts
     final startIndex = (estimatedVisibleIndex + kVisiblePostsBeforePrefetch)
         .clamp(0, posts.length);
-    // We prefetch a fixed number of posts ahead
+    // We prefetch a fixed number
+    // of posts ahead
     final endIndex = (startIndex + kPrefetchPostCount).clamp(0, posts.length);
 
     for (var i = startIndex; i < endIndex; i++) {
       final post = posts[i];
 
-      // Collect all image URLs for this post (carousel, single image, or thumbnail)
+      // Collect all image URLs for this post
+      // (carousel, single image, or thumbnail)
       final imagesToCache = <String>[];
 
       if (post.images.isNotEmpty) {
@@ -49,9 +52,9 @@ class FeedUtils {
             headers: ImageUtils.authHeaders,
           ),
           context,
+          // ignore: discarded_futures, catchError handles errors
         ).catchError((_) {
-          // Ignore errors during precaching (e.g. invalid URLs, network issues)
-          // We don't want to crash or disrupt the user for background optimization
+          // Ignore precaching errors
         });
       }
     }

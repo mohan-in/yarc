@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 /// A welcome screen prompting the user to log in with Reddit.
 class LoginPrompt extends StatelessWidget {
-  const LoginPrompt({super.key, required this.onLogin});
+  const LoginPrompt({required this.onLogin, super.key});
 
   final VoidCallback onLogin;
 

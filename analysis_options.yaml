@@ -1,74 +1,18 @@
-# This file configures the analyzer, which statically analyzes Dart code to
-# check for errors, warnings, and lints.
-#
-# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
-# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
-# invoked from the command line by running `flutter analyze`.
+include: package:very_good_analysis/analysis_options.yaml
 
-# The following line activates a set of recommended lints for Flutter apps,
-# packages, and plugins designed to encourage good coding practices.
-include: package:flutter_lints/flutter.yaml
+analyzer:
+  exclude:
+    - "build/**"
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
 
 linter:
   rules:
-    # Enforce declaring return types on all functions and methods
-    always_declare_return_types: true
+    # 1. OPT OUT: Don't force me to write docs for everything
+    public_member_api_docs: false
     
-    # Prefer const constructors for immutable objects
-    prefer_const_constructors: true
-    prefer_const_declarations: true
-    prefer_const_literals_to_create_immutables: true
-    
-    # Avoid print statements (use debugPrint instead)
-    avoid_print: true
-    
-    # Prefer final for local variables that are not reassigned
-    prefer_final_locals: true
-    
-    # Require trailing commas for better diff readability
+    # 2. OPT IN: Force vertical widgets (Great for AI & DeX)
     require_trailing_commas: true
     
-    # Prefer using isEmpty/isNotEmpty over length comparisons
-    prefer_is_empty: true
-    prefer_is_not_empty: true
-    
-    # Avoid redundant argument values that match defaults
-    avoid_redundant_argument_values: true
-    
-    # Use interpolation for string composition
-    prefer_interpolation_to_compose_strings: true
-
-    # --- Readability & Style ---
-    # Forces if, for, etc., to use new lines
-    always_put_control_body_on_new_line: true
-    # Enforces consistent string styling
-    prefer_single_quotes: true
-    # Keeps class structure predictable
-    sort_constructors_first: true
-    # Improves readability of nested Widget trees
-    sort_child_properties_last: true
-    # Removes redundant Widgets
-    avoid_unnecessary_containers: true
-    # Encourages SizedBox over Container for simple dimensions
-    sized_box_for_whitespace: true
-    # Clear indication of inherited methods
-    annotate_overrides: true
-
-    # --- Error Prevention & Safety ---
-    # Flags futures that are not awaited or explicitly ignored
-    unawaited_futures: true
-    # Encourages Future<void> over void for async functions
-    avoid_void_async: true
-    # Catches accidental infinite recursion
-    recursive_getters: true
-    # Prevents memory leaks from unclosed Streams
-    cancel_subscriptions: true
-    # Prevents memory leaks
-    close_sinks: true
-    # Removes redundant code (variables are null by default)
-    avoid_init_to_null: true
-    # Ensures Widgets integrate correctly with Flutter's element tree
-    use_key_in_widget_constructors: true
-
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+    # 3. OPT IN: Extra safety for your Repository logic
+    avoid_print: true

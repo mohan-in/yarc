@@ -1,8 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/subreddit.dart';
-import '../notifiers/search_notifier.dart';
-import '../utils/image_utils.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/notifiers/search_notifier.dart';
+import 'package:yarc/utils/image_utils.dart';
 
 /// A SearchDelegate for searching subreddits.
 /// Returns the selected subreddit when a result is tapped.
@@ -46,7 +48,9 @@ class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
   Widget buildSuggestions(BuildContext context) {
     // Trigger search when user types
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SearchNotifier>().search(query);
+      unawaited(
+        context.read<SearchNotifier>().search(query),
+      );
     });
 
     return _buildSearchResults(context);

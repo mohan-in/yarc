@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
-import '../repositories/post_repository.dart';
-import '../models/post.dart';
-import '../models/subreddit.dart';
+import 'package:yarc/models/post.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/repositories/post_repository.dart';
 
 /// Notifier for managing the post feed.
 class FeedNotifier extends ChangeNotifier {
@@ -31,6 +33,7 @@ class FeedNotifier extends ChangeNotifier {
   }
 
   /// Sets the repository. Called by ProxyProvider.
+  // ignore: use_setters_to_change_properties
   void setRepository(PostRepository repository) {
     _repository = repository;
   }
@@ -53,7 +56,8 @@ class FeedNotifier extends ChangeNotifier {
               after: _after,
             );
 
-      // Deduplicate posts when appending to avoid "duplicate key" errors in lists
+      // Deduplicate posts when appending to
+      // avoid "duplicate key" errors in lists
       final existingIds = _posts.map((p) => p.id).toSet();
       final uniqueNewPosts = result.posts
           .where((p) => !existingIds.contains(p.id))
@@ -63,7 +67,7 @@ class FeedNotifier extends ChangeNotifier {
       _after = result.nextAfter;
       _isLoading = false;
       notifyListeners();
-    } catch (e) {
+    } on Exception catch (_) {
       _isLoading = false;
       notifyListeners();
     }
@@ -86,7 +90,7 @@ class FeedNotifier extends ChangeNotifier {
     _currentSubredditInfo = null;
     _isLoading = false;
     notifyListeners();
-    loadPosts();
+    unawaited(loadPosts());
   }
 
   void selectSubredditWithInfo(Subreddit subreddit) {
@@ -96,7 +100,7 @@ class FeedNotifier extends ChangeNotifier {
     _currentSubredditInfo = subreddit;
     _isLoading = false;
     notifyListeners();
-    loadPosts();
+    unawaited(loadPosts());
   }
 
   Future<void> toggleHideRead() async {

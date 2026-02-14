@@ -1,14 +1,15 @@
+import 'dart:async';
+import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:video_player/video_player.dart';
-import 'package:chewie/chewie.dart';
 import 'package:provider/provider.dart';
-import '../notifiers/video_autoplay_notifier.dart';
+import 'package:video_player/video_player.dart';
+import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 
 class RedditVideoPlayer extends StatefulWidget {
   const RedditVideoPlayer({
-    super.key,
     required this.videoUrl,
+    super.key,
     this.autoPlay = false,
     this.aspectRatio = 16 / 9,
   });
@@ -33,7 +34,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   void initState() {
     super.initState();
     _playerId = widget.videoUrl;
-    _initializePlayer();
+    unawaited(_initializePlayer());
   }
 
   @override
@@ -50,7 +51,8 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       return;
     }
 
-    // Post-frame callback ensures the layout is complete before we calculate positions
+    // Post-frame callback ensures the layout is complete before we calculate
+    // positions
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) {
         return;
@@ -82,14 +84,17 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
           if (notifier.playingVideoId == null) {
             notifier.play(_playerId);
           }
-          // 2. Play it if WE are the ones supposed to be playing (resume if paused)
+          // 2. Play it if WE are the ones supposed to be playing
+          // (resume if paused)
           else if (notifier.playingVideoId == _playerId) {
             if (!_chewieController!.isPlaying) {
-              _chewieController!.play();
+              unawaited(_chewieController!.play());
             }
           }
-          // 3. Otherwise, if another video is playing, we do nothing (sticky behavior)
-          // This prevents rapid switching when two videos are briefly in the zone together
+          // 3. Otherwise, if another video is playing, we do nothing (sticky
+          // behavior)
+          // This prevents rapid switching when two videos are briefly in the
+          // zone together
         } else {
           // If this video is OUT of the safe zone:
           // We MUST stop it if it is currently the active one
@@ -97,10 +102,10 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
             notifier.stop(_playerId);
           }
           if (_chewieController!.isPlaying) {
-            _chewieController!.pause();
+            unawaited(_chewieController!.pause());
           }
         }
-      } catch (e) {
+      } on Object catch (_) {
         // Handle layout errors gracefully (e.g. during navigation transitions)
       }
     });
@@ -156,23 +161,26 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
         final notifier = context.read<VideoAutoplayNotifier>();
         _checkAutoplay(notifier);
       }
-    } catch (_) {}
+    } on Object catch (_) {}
   }
 
   @override
   void dispose() {
-    _videoPlayerController.dispose();
+    unawaited(_videoPlayerController.dispose());
     _chewieController?.dispose();
     // If we were playing, stop
-    // We can't access context here easily if unmounted, but ideally notifier cleans up or new player takes over
+    // We can't access context here easily if unmounted, but ideally notifier
+    // cleans up or new player takes over
     super.dispose();
   }
 
   void _enterFullScreen() {
     _isFullScreenActive = true;
     // Tell notifier to stop managing us for a moment (or just let it be)
-    // Actually, if we go fullscreen, we probably want to pause the specific inline player logic
-    // But Chewie handles fullscreen by creating a new controller usually or reparenting.
+    // Actually, if we go fullscreen, we probably want to pause the specific
+    // inline player logic
+    // But Chewie handles fullscreen by creating a new controller usually or
+    // reparenting.
     // Let's just pause our inline logic.
 
     final fullScreenController = ChewieController(
@@ -192,25 +200,29 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       ],
     );
 
-    Navigator.of(context)
-        .push(
-          MaterialPageRoute(
-            builder: (context) => Scaffold(
-              backgroundColor: Colors.black,
-              body: SafeArea(
-                child: Center(child: Chewie(controller: fullScreenController)),
+    unawaited(
+      Navigator.of(context)
+          .push(
+            MaterialPageRoute<void>(
+              builder: (context) => Scaffold(
+                backgroundColor: Colors.black,
+                body: SafeArea(
+                  child: Center(
+                    child: Chewie(controller: fullScreenController),
+                  ),
+                ),
               ),
             ),
-          ),
-        )
-        .then((_) {
-          _isFullScreenActive = false;
-          fullScreenController.dispose();
-          // Re-trigger auth check?
-          if (mounted && widget.autoPlay) {
-            context.read<VideoAutoplayNotifier>().notifyScroll();
-          }
-        });
+          )
+          .then((_) {
+            _isFullScreenActive = false;
+            fullScreenController.dispose();
+            // Re-trigger auth check?
+            if (mounted && widget.autoPlay) {
+              context.read<VideoAutoplayNotifier>().notifyScroll();
+            }
+          }),
+    );
   }
 
   @override
@@ -218,9 +230,9 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     if (!_isInit || _chewieController == null) {
       return AspectRatio(
         aspectRatio: widget.aspectRatio,
-        child: Container(
+        child: const ColoredBox(
           color: Colors.black12,
-          child: const Center(child: CircularProgressIndicator()),
+          child: Center(child: CircularProgressIndicator()),
         ),
       );
     }

@@ -1,12 +1,12 @@
 import 'package:draw/draw.dart' as draw;
 import 'package:flutter/foundation.dart';
-import '../utils/post_parser.dart';
-import '../models/post.dart';
-import '../models/comment.dart';
-import '../models/subreddit.dart';
-import '../models/types.dart';
-import '../utils/constants.dart';
-import 'auth_service.dart';
+import 'package:yarc/models/comment.dart';
+import 'package:yarc/models/post.dart';
+import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/models/types.dart';
+import 'package:yarc/services/auth_service.dart';
+import 'package:yarc/utils/constants.dart';
+import 'package:yarc/utils/post_parser.dart';
 
 /// Service for Reddit API calls.
 class RedditService {
@@ -22,7 +22,7 @@ class RedditService {
       throw Exception('Reddit client not initialized or logged out');
     }
 
-    final Map<String, String> params = {'limit': '$kDefaultPostLimit'};
+    final params = <String, String>{'limit': '$kDefaultPostLimit'};
     if (after != null) {
       params['after'] = after;
     }
@@ -33,7 +33,7 @@ class RedditService {
               .hot(limit: kDefaultPostLimit, params: params)
         : reddit.front.best(limit: kDefaultPostLimit, params: params);
 
-    final List<Post> posts = [];
+    final posts = <Post>[];
     String? nextAfterToken;
 
     try {
@@ -44,15 +44,20 @@ class RedditService {
         }
       }
       await _authService.persistCredentials();
-    } catch (e) {
+    } on Exception catch (e) {
       if (e.toString().contains('401')) {
         try {
           debugPrint('401 Unauthorized, refreshing session...');
           await _authService.refreshSession();
-          // Retry the request recursively (limited by stack in practice, but safe for single retry)
-          return fetchPosts(subreddit: subreddit, after: after);
-        } catch (refreshError) {
-          debugPrint('Failed to refresh session or retry: $refreshError');
+          // Retry the request recursively
+          return fetchPosts(
+            subreddit: subreddit,
+            after: after,
+          );
+        } on Exception catch (refreshError) {
+          debugPrint(
+            'Failed to refresh: $refreshError',
+          );
           // Retrying failed, so we fall through to return empty or rethrow
         }
       }
@@ -78,11 +83,11 @@ class RedditService {
       if (submission.comments != null) {
         return submission.comments!.comments
             .whereType<draw.Comment>()
-            .map((c) => Comment.fromDraw(c))
+            .map(Comment.fromDraw)
             .toList();
       }
       return [];
-    } catch (e) {
+    } on Exception catch (e) {
       if (e.toString().contains('401')) {
         try {
           debugPrint(
@@ -90,7 +95,7 @@ class RedditService {
           );
           await _authService.refreshSession();
           return fetchComments(postId);
-        } catch (_) {
+        } on Exception catch (_) {
           // Fall through to rethrow original or new error
         }
       }
@@ -112,13 +117,13 @@ class RedditService {
       await _authService.persistCredentials();
 
       return PostParser.parse(submission);
-    } catch (e) {
+    } on Exception catch (e) {
       if (e.toString().contains('401')) {
         try {
           debugPrint('401 Unauthorized in fetchPost, refreshing session...');
           await _authService.refreshSession();
           return fetchPost(postId);
-        } catch (_) {}
+        } on Exception catch (_) {}
       }
       debugPrint('Failed to fetch post $postId: $e');
       return null;
@@ -134,23 +139,27 @@ class RedditService {
     }
 
     try {
-      final List<Subreddit> subs = [];
+      final subs = <Subreddit>[];
       await for (final sub in reddit.user.subreddits()) {
         subs.add(Subreddit.fromDraw(sub));
       }
       await _authService.persistCredentials();
       return subs;
-    } catch (e) {
+    } on Exception catch (e) {
       if (e.toString().contains('401')) {
         try {
           debugPrint(
-            '401 Unauthorized in fetchSubscribedSubreddits, refreshing session...',
+            '401 Unauthorized in '
+            'fetchSubscribedSubreddits, '
+            'refreshing session...',
           );
           await _authService.refreshSession();
           return fetchSubscribedSubreddits();
-        } catch (_) {}
+        } on Exception catch (_) {}
       }
-      debugPrint('Failed to fetch subscribed subreddits: $e');
+      debugPrint(
+        'Failed to fetch subscribed subs: $e',
+      );
       return [];
     }
   }
@@ -168,18 +177,18 @@ class RedditService {
         query,
         includeNsfw: false,
       );
-      final List<Subreddit> subs = [];
+      final subs = <Subreddit>[];
       for (final ref in results) {
         try {
           final sub = await ref.populate();
           subs.add(Subreddit.fromDraw(sub));
-        } catch (_) {
+        } on Exception catch (_) {
           // Skip subreddits that fail to load
         }
       }
       await _authService.persistCredentials();
       return subs;
-    } catch (e) {
+    } on Exception catch (e) {
       if (e.toString().contains('401')) {
         try {
           debugPrint(
@@ -187,7 +196,10 @@ class RedditService {
           );
           await _authService.refreshSession();
           return searchSubreddits(query);
-        } catch (_) {}
+        } on Exception catch (refreshError) {
+          debugPrint('Failed to refresh in searchSubreddits: $refreshError');
+          // Fall through to return empty list
+        }
       }
       debugPrint('Failed to search subreddits: $e');
       return [];
