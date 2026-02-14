@@ -23,17 +23,17 @@ void main() async {
 
   await HistoryService.init();
 
-  runApp(const MyApp());
+  runApp(const YarcApp());
 }
 
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
+class YarcApp extends StatefulWidget {
+  const YarcApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  State<YarcApp> createState() => _YarcAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _YarcAppState extends State<YarcApp> {
   final DeepLinkService _deepLinkService = DeepLinkService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<DeepLinkResult>? _linkSubscription;
