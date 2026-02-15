@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:yarc/notifiers/video_autoplay_notifier.dart';
+import 'package:yarc/theme/theme.dart';
 
 class RedditVideoPlayer extends StatefulWidget {
   const RedditVideoPlayer({
@@ -160,7 +161,16 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(height: 8),
-                Text(errorMessage, style: const TextStyle(color: Colors.white)),
+                Text(
+                  errorMessage,
+                  style: TextStyle(
+                    color:
+                        Theme.of(
+                          context,
+                        ).extension<MediaViewerTheme>()?.labelColor ??
+                        Colors.white,
+                  ),
+                ),
               ],
             ),
           );

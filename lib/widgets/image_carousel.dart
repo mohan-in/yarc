@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/widgets/full_screen_image_view.dart';
+import 'package:yarc/theme/theme.dart';
 
 /// A horizontal carousel for displaying multiple images with swipe navigation.
 class ImageCarousel extends StatefulWidget {
@@ -73,13 +74,21 @@ class _ImageCarouselState extends State<ImageCarousel> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.7),
+                color:
+                    Theme.of(
+                      context,
+                    ).extension<MediaViewerTheme>()?.overlayColor ??
+                    Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '${_currentIndex + 1}/${widget.imageUrls.length}',
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Colors.white,
+                  color:
+                      Theme.of(
+                        context,
+                      ).extension<MediaViewerTheme>()?.labelColor ??
+                      Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),

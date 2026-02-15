@@ -80,9 +80,9 @@ class PostCard extends StatelessWidget {
   Widget _buildTitle(BuildContext context) {
     return Text(
       HtmlUtils.unescape(post.title),
-      style: Theme.of(
-        context,
-      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.bold,
+      ),
     );
   }
 

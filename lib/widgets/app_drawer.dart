@@ -98,8 +98,14 @@ class AppDrawer extends StatelessWidget {
     addWidget(
       ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 28),
-        leading: const Icon(Icons.logout, color: Colors.red),
-        title: const Text('Logout', style: TextStyle(color: Colors.red)),
+        leading: Icon(
+          Icons.logout,
+          color: Theme.of(context).colorScheme.error,
+        ),
+        title: Text(
+          'Logout',
+          style: TextStyle(color: Theme.of(context).colorScheme.error),
+        ),
         onTap: () {
           onLogout();
           Navigator.pop(context);

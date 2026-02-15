@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:yarc/models/comment.dart';
+import 'package:yarc/theme/theme.dart';
 import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/widgets/markdown_content.dart';
@@ -17,16 +18,6 @@ class CommentTile extends StatefulWidget {
 class _CommentTileState extends State<CommentTile> {
   bool _isCollapsed = false;
 
-  static const List<Color> _depthColors = [
-    Colors.red,
-    Colors.orange,
-    Colors.amber,
-    Colors.green,
-    Colors.blue,
-    Colors.indigo,
-    Colors.purple,
-  ];
-
   void _toggleCollapse() {
     setState(() {
       _isCollapsed = !_isCollapsed;
@@ -37,9 +28,21 @@ class _CommentTileState extends State<CommentTile> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final commentTheme = theme.extension<CommentTheme>();
+    final depthColors =
+        commentTheme?.depthColors ??
+        [
+          Colors.red,
+          Colors.orange,
+          Colors.amber,
+          Colors.green,
+          Colors.blue,
+          Colors.indigo,
+          Colors.purple,
+        ];
 
     final nextDepth = widget.depth + 1;
-    final depthColor = _depthColors[widget.depth % _depthColors.length];
+    final depthColor = depthColors[widget.depth % depthColors.length];
 
     final Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
