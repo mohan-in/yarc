@@ -1,5 +1,6 @@
 export 'app_drawer.dart';
 export 'cached_image.dart';
+export 'comment_list.dart';
 export 'comment_tile.dart';
 export 'faded_truncation.dart';
 export 'full_screen_image_view.dart';
@@ -9,5 +10,7 @@ export 'markdown_content.dart';
 export 'post_card.dart';
 export 'post_list.dart';
 export 'post_metadata.dart';
+export 'subreddit_info_card.dart';
+export 'subreddit_search_delegate.dart';
 export 'video_player.dart';
 export 'youtube_embed.dart';

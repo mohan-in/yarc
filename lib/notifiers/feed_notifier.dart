@@ -132,4 +132,13 @@ class FeedNotifier extends ChangeNotifier {
     _readPostIds = {};
     notifyListeners();
   }
+
+  /// Handles scroll events to trigger pagination.
+  void handleScroll(double currentPosition, double maxScroll) {
+    // 500 is a reasonable threshold, commonly defined as kPaginationThreshold
+    const threshold = 500.0;
+    if (currentPosition >= maxScroll - threshold) {
+      unawaited(loadPosts());
+    }
+  }
 }

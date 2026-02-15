@@ -30,24 +30,39 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   // Unique ID for this player instance to coordinate with notifier
   late final String _playerId;
 
+  late VideoAutoplayNotifier _notifier;
+
   @override
   void initState() {
     super.initState();
     _playerId = widget.videoUrl;
+    _notifier = context.read<VideoAutoplayNotifier>();
+    _notifier.addListener(_onNotifierUpdate);
     unawaited(_initializePlayer());
   }
 
+  void _onNotifierUpdate() {
+    _checkAutoplay();
+  }
+
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (widget.autoPlay) {
-      final notifier = context.watch<VideoAutoplayNotifier>();
-      _checkAutoplay(notifier);
+  void didUpdateWidget(covariant RedditVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.autoPlay != oldWidget.autoPlay) {
+      if (widget.autoPlay) {
+        _notifier.addListener(_onNotifierUpdate);
+        _checkAutoplay();
+      } else {
+        _notifier.removeListener(_onNotifierUpdate);
+      }
     }
   }
 
-  void _checkAutoplay(VideoAutoplayNotifier notifier) {
-    if (!_isInit || _chewieController == null || _isFullScreenActive) {
+  void _checkAutoplay() {
+    if (!widget.autoPlay ||
+        !_isInit ||
+        _chewieController == null ||
+        _isFullScreenActive) {
       return;
     }
 
@@ -81,12 +96,12 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
         if (isInZone) {
           // If this video is in the safe zone:
           // 1. Play it if no other video is playing
-          if (notifier.playingVideoId == null) {
-            notifier.play(_playerId);
+          if (_notifier.playingVideoId == null) {
+            _notifier.play(_playerId);
           }
           // 2. Play it if WE are the ones supposed to be playing
           // (resume if paused)
-          else if (notifier.playingVideoId == _playerId) {
+          else if (_notifier.playingVideoId == _playerId) {
             if (!_chewieController!.isPlaying) {
               unawaited(_chewieController!.play());
             }
@@ -98,8 +113,8 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
         } else {
           // If this video is OUT of the safe zone:
           // We MUST stop it if it is currently the active one
-          if (notifier.playingVideoId == _playerId) {
-            notifier.stop(_playerId);
+          if (_notifier.playingVideoId == _playerId) {
+            _notifier.stop(_playerId);
           }
           if (_chewieController!.isPlaying) {
             unawaited(_chewieController!.pause());
@@ -158,14 +173,14 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
 
       // Initial check in case we load directly into view
       if (widget.autoPlay && mounted) {
-        final notifier = context.read<VideoAutoplayNotifier>();
-        _checkAutoplay(notifier);
+        _checkAutoplay();
       }
     } on Object catch (_) {}
   }
 
   @override
   void dispose() {
+    _notifier.removeListener(_onNotifierUpdate);
     unawaited(_videoPlayerController.dispose());
     _chewieController?.dispose();
     // If we were playing, stop

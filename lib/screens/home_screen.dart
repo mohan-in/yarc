@@ -2,19 +2,15 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/auth_notifier.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/subreddits_notifier.dart';
 import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/services/reddit_service.dart';
-import 'package:yarc/utils/constants.dart';
-import 'package:yarc/utils/feed_utils.dart';
-import 'package:yarc/widgets/app_drawer.dart';
-import 'package:yarc/widgets/login_prompt.dart';
-import 'package:yarc/widgets/post_list.dart';
-import 'package:yarc/widgets/subreddit_search_delegate.dart';
+import 'package:yarc/utils/utils.dart';
+import 'package:yarc/widgets/widgets.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -59,24 +55,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _scrollListener() {
-    if (!_scrollController.hasClients) {
-      return;
-    }
+    if (!_scrollController.hasClients) return;
 
     final currentPosition = _scrollController.position.pixels;
     final maxScroll = _scrollController.position.maxScrollExtent;
 
-    // Infinite scroll: Load more posts when user is close to the bottom
-    if (currentPosition >= maxScroll - kPaginationThreshold) {
-      unawaited(context.read<FeedNotifier>().loadPosts());
-    }
+    // Logic extracted to FeedNotifier
+    context.read<FeedNotifier>().handleScroll(currentPosition, maxScroll);
 
-    // Video autoplay: Notify the manager to check which video is visible
+    // Video autoplay check
     context.read<VideoAutoplayNotifier>().notifyScroll();
 
-    // Image precaching: Prefetch images for smoother scrolling
-    if ((currentPosition - _lastPrecachePosition).abs() >=
-        kPrecacheScrollThreshold) {
+    // Image precaching (still UI/Rendering concern, but we can cleaner it up)
+    // We can delegate this to FeedNotifier if we want strict separation,
+    // but FeedNotifier shouldn't depend on context.
+    // So we keep the trigger here.
+    if ((currentPosition - _lastPrecachePosition).abs() >= 500) {
       _lastPrecachePosition = currentPosition;
       _precachePostImages();
     }
@@ -86,7 +80,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final feedNotifier = context.read<FeedNotifier>();
     final posts = feedNotifier.visiblePosts;
 
-    // Delegate complex precaching logic to utility class
     FeedUtils.precachePostImages(
       context,
       posts,
@@ -133,132 +126,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // context.watch() rebuilds this widget when the provider notifies listeners
-    final authNotifier = context.watch<AuthNotifier>();
-    final feedNotifier = context.watch<FeedNotifier>();
-    final subredditsNotifier = context.watch<SubredditsNotifier>();
-    final redditService = context.read<RedditService>();
-
-    return PopScope(
-      canPop: feedNotifier.currentSubreddit == null,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && feedNotifier.currentSubreddit != null) {
-          context.read<FeedNotifier>().selectSubreddit(null);
-        }
-      },
-      child: Scaffold(
-        drawer: !authNotifier.isLoggedIn
-            ? null
-            : AppDrawer(
-                subreddits: subredditsNotifier.subreddits,
-                currentSubreddit: feedNotifier.currentSubreddit,
-                onSubredditSelected: (sub) {
-                  if (sub == null) {
-                    context.read<FeedNotifier>().selectSubreddit(null);
-                  } else {
-                    context.read<FeedNotifier>().selectSubredditWithInfo(sub);
-                  }
-                  _scrollToTop();
-                  Navigator.pop(context);
-                },
-                onLogout: _handleLogout,
-              ),
-        body: RefreshIndicator(
-          onRefresh: () => context.read<FeedNotifier>().refresh(),
-          child: CustomScrollView(
-            // CustomScrollView allows mixing
-            // different scrollable areas (Slivers)
-            controller: _scrollController,
-            slivers: [
-              // SliverAppBar floats above the content and can snap/hide
-              SliverAppBar(
-                floating: true,
-                title: Text(
-                  feedNotifier.currentSubreddit != null
-                      ? 'r/${feedNotifier.currentSubreddit}'
-                      : (authNotifier.isLoggedIn ? 'Home' : 'YARC'),
-                ),
-                actions: _buildAppBarActions(
-                  context,
-                  authNotifier,
-                  feedNotifier,
-                ),
-              ),
-
-              // Show login prompt if not logged in
-              // and not viewing a specific subreddit
-              if (!authNotifier.isLoggedIn &&
-                  feedNotifier.currentSubreddit == null)
-                SliverFillRemaining(child: LoginPrompt(onLogin: _handleLogin))
-              else
-                // SliverPostList efficiently renders the list of posts
-                SliverPostList(
-                  posts: feedNotifier.visiblePosts,
-                  isLoading: feedNotifier.isLoading,
-                  subredditInfo: feedNotifier.currentSubredditInfo,
-                  onPostTap: (post) {
-                    unawaited(
-                      context.read<FeedNotifier>().markAsRead(post.id),
-                    );
-                    unawaited(
-                      Navigator.push<void>(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (context) => PostDetailScreen(
-                            post: post,
-                            redditService: redditService,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  List<Widget> _buildAppBarActions(
-    BuildContext context,
-    AuthNotifier authNotifier,
-    FeedNotifier feedNotifier,
-  ) {
-    return [
-      if (authNotifier.isLoggedIn || feedNotifier.currentSubreddit != null) ...[
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () => _openSearch(context),
-          tooltip: 'Search Subreddits',
-        ),
-        IconButton(
-          icon: Icon(
-            feedNotifier.hideRead ? Icons.visibility_off : Icons.visibility,
-          ),
-          onPressed: () {
-            unawaited(
-              context.read<FeedNotifier>().toggleHideRead(),
-            );
-            _scrollToTop();
-          },
-          tooltip: feedNotifier.hideRead ? 'Show All Posts' : 'Hide Read Posts',
-        ),
-        IconButton(
-          icon: const Icon(Icons.refresh),
-          onPressed: () {
-            unawaited(
-              context.read<FeedNotifier>().refresh(),
-            );
-            _scrollToTop();
-          },
-        ),
-      ],
-    ];
-  }
-
   Future<void> _openSearch(BuildContext context) async {
     final selectedSubreddit = await showSearch<Subreddit?>(
       context: context,
@@ -268,5 +135,213 @@ class _HomeScreenState extends State<HomeScreen> {
     if (selectedSubreddit != null && context.mounted) {
       context.read<FeedNotifier>().selectSubredditWithInfo(selectedSubreddit);
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final redditService = context.read<RedditService>();
+
+    return PopScope(
+      canPop: context.select<FeedNotifier, bool>(
+        (n) => n.currentSubreddit == null,
+      ),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          final feedNotifier = context.read<FeedNotifier>();
+          if (feedNotifier.currentSubreddit != null) {
+            feedNotifier.selectSubreddit(null);
+          }
+        }
+      },
+      child: Scaffold(
+        drawer: Selector<AuthNotifier, bool>(
+          selector: (_, auth) => auth.isLoggedIn,
+          builder: (context, isLoggedIn, _) {
+            if (!isLoggedIn) return const SizedBox.shrink();
+            return AppDrawer(
+              subreddits: context.select<SubredditsNotifier, List<Subreddit>>(
+                (n) => n.subreddits,
+              ),
+              currentSubreddit: context.select<FeedNotifier, String?>(
+                (n) => n.currentSubreddit,
+              ),
+              onSubredditSelected: (sub) {
+                if (sub == null) {
+                  context.read<FeedNotifier>().selectSubreddit(null);
+                } else {
+                  context.read<FeedNotifier>().selectSubredditWithInfo(sub);
+                }
+                _scrollToTop();
+                Navigator.pop(context);
+              },
+              onLogout: _handleLogout,
+            );
+          },
+        ),
+        body: RefreshIndicator(
+          onRefresh: () => context.read<FeedNotifier>().refresh(),
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              SliverAppBar(
+                floating: true,
+                title: Selector2<FeedNotifier, AuthNotifier, (String?, bool)>(
+                  selector: (_, feed, auth) => (
+                    feed.currentSubreddit,
+                    auth.isLoggedIn,
+                  ),
+                  builder: (context, data, _) {
+                    final (currentSubreddit, isLoggedIn) = data;
+                    return Text(
+                      currentSubreddit != null
+                          ? 'r/$currentSubreddit'
+                          : (isLoggedIn ? 'Home' : 'YARC'),
+                    );
+                  },
+                ),
+                actions: [
+                  _AppBarActions(
+                    onSearch: () => _openSearch(context),
+                    onScrollToTop: _scrollToTop,
+                  ),
+                ],
+              ),
+              Selector2<AuthNotifier, FeedNotifier, (bool, String?)>(
+                selector: (_, auth, feed) => (
+                  auth.isLoggedIn,
+                  feed.currentSubreddit,
+                ),
+                builder: (context, data, _) {
+                  final (isLoggedIn, currentSubreddit) = data;
+                  if (!isLoggedIn && currentSubreddit == null) {
+                    return SliverFillRemaining(
+                      child: LoginPrompt(onLogin: _handleLogin),
+                    );
+                  }
+                  return _PostListBuilder(
+                    redditService: redditService,
+                    onPostTap: (post) {
+                      unawaited(
+                        context.read<FeedNotifier>().markAsRead(post.id),
+                      );
+                      unawaited(
+                        Navigator.push<void>(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (context) => PostDetailScreen(
+                              post: post,
+                              redditService: redditService,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AppBarActions extends StatelessWidget {
+  const _AppBarActions({
+    required this.onSearch,
+    required this.onScrollToTop,
+  });
+
+  final VoidCallback onSearch;
+  final VoidCallback onScrollToTop;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Selector<AuthNotifier, bool>(
+          selector: (_, auth) => auth.isLoggedIn,
+          builder: (context, isLoggedIn, _) {
+            final currentSubreddit = context.select<FeedNotifier, String?>(
+              (n) => n.currentSubreddit,
+            );
+            if (isLoggedIn || currentSubreddit != null) {
+              return IconButton(
+                icon: const Icon(Icons.search),
+                onPressed: onSearch,
+                tooltip: 'Search Subreddits',
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        Selector<FeedNotifier, bool>(
+          selector: (_, feed) => feed.hideRead,
+          builder: (context, hideRead, _) {
+            final isLoggedIn = context.read<AuthNotifier>().isLoggedIn;
+            final currentSub = context.read<FeedNotifier>().currentSubreddit;
+
+            if (!isLoggedIn && currentSub == null) {
+              return const SizedBox.shrink();
+            }
+
+            return IconButton(
+              icon: Icon(
+                hideRead ? Icons.visibility_off : Icons.visibility,
+              ),
+              onPressed: () {
+                unawaited(context.read<FeedNotifier>().toggleHideRead());
+                onScrollToTop();
+              },
+              tooltip: hideRead ? 'Show All Posts' : 'Hide Read Posts',
+            );
+          },
+        ),
+        Selector2<AuthNotifier, FeedNotifier, bool>(
+          selector: (_, auth, feed) =>
+              auth.isLoggedIn || feed.currentSubreddit != null,
+          builder: (context, showRefresh, _) {
+            if (!showRefresh) return const SizedBox.shrink();
+            return IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () {
+                unawaited(context.read<FeedNotifier>().refresh());
+                onScrollToTop();
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _PostListBuilder extends StatelessWidget {
+  const _PostListBuilder({
+    required this.redditService,
+    required this.onPostTap,
+  });
+
+  final RedditService redditService;
+  final void Function(Post) onPostTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isLoading = context.select<FeedNotifier, bool>((n) => n.isLoading);
+    final posts = context.select<FeedNotifier, List<Post>>(
+      (n) => n.visiblePosts,
+    );
+    final subredditInfo = context.select<FeedNotifier, Subreddit?>(
+      (n) => n.currentSubredditInfo,
+    );
+
+    return SliverPostList(
+      posts: posts,
+      isLoading: isLoading,
+      subredditInfo: subredditInfo,
+      onPostTap: onPostTap,
+    );
   }
 }
