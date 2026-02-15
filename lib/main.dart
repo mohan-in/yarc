@@ -2,20 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:yarc/notifiers/auth_notifier.dart';
-import 'package:yarc/notifiers/feed_notifier.dart';
-import 'package:yarc/notifiers/search_notifier.dart';
-import 'package:yarc/notifiers/subreddits_notifier.dart';
-import 'package:yarc/notifiers/video_autoplay_notifier.dart';
-import 'package:yarc/repositories/auth_repository.dart';
-import 'package:yarc/repositories/post_repository.dart';
-import 'package:yarc/repositories/subreddit_repository.dart';
+import 'package:yarc/notifiers/notifiers.dart';
+import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/screens/home_screen.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
-import 'package:yarc/services/auth_service.dart';
-import 'package:yarc/services/deep_link_service.dart';
-import 'package:yarc/services/history_service.dart';
-import 'package:yarc/services/reddit_service.dart';
+import 'package:yarc/services/services.dart';
 import 'package:yarc/theme/theme.dart';
 
 void main() async {

@@ -3,12 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
-import 'package:yarc/notifiers/auth_notifier.dart';
-import 'package:yarc/notifiers/feed_notifier.dart';
-import 'package:yarc/notifiers/subreddits_notifier.dart';
-import 'package:yarc/notifiers/video_autoplay_notifier.dart';
+import 'package:yarc/notifiers/notifiers.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
-import 'package:yarc/services/reddit_service.dart';
+import 'package:yarc/services/services.dart';
 import 'package:yarc/utils/utils.dart';
 import 'package:yarc/widgets/widgets.dart';
 

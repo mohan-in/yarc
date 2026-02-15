@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:yarc/models/comment.dart';
-import 'package:yarc/models/post.dart';
-import 'package:yarc/services/reddit_service.dart';
-import 'package:yarc/widgets/comment_list.dart';
-import 'package:yarc/widgets/post_card.dart';
+import 'package:yarc/models/models.dart';
+import 'package:yarc/services/services.dart';
+import 'package:yarc/widgets/widgets.dart';
 
 class PostDetailScreen extends StatefulWidget {
   const PostDetailScreen({
