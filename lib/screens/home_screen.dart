@@ -255,61 +255,35 @@ class _AppBarActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    final isLoggedIn = context.select<AuthNotifier, bool>((n) => n.isLoggedIn);
+    final currentSubreddit = context.select<FeedNotifier, String?>(
+      (n) => n.currentSubreddit,
+    );
+    final hideRead = context.select<FeedNotifier, bool>((n) => n.hideRead);
+
+    final showSearch = isLoggedIn || currentSubreddit != null;
+    final showHideRead = isLoggedIn || currentSubreddit != null;
+
+    return ListBody(
+      mainAxis: Axis.horizontal,
       children: [
-        Selector<AuthNotifier, bool>(
-          selector: (_, auth) => auth.isLoggedIn,
-          builder: (context, isLoggedIn, _) {
-            final currentSubreddit = context.select<FeedNotifier, String?>(
-              (n) => n.currentSubreddit,
-            );
-            if (isLoggedIn || currentSubreddit != null) {
-              return IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: onSearch,
-                tooltip: 'Search Subreddits',
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-        Selector<FeedNotifier, bool>(
-          selector: (_, feed) => feed.hideRead,
-          builder: (context, hideRead, _) {
-            final isLoggedIn = context.read<AuthNotifier>().isLoggedIn;
-            final currentSub = context.read<FeedNotifier>().currentSubreddit;
-
-            if (!isLoggedIn && currentSub == null) {
-              return const SizedBox.shrink();
-            }
-
-            return IconButton(
-              icon: Icon(
-                hideRead ? Icons.visibility_off : Icons.visibility,
-              ),
-              onPressed: () {
-                unawaited(context.read<FeedNotifier>().toggleHideRead());
-                onScrollToTop();
-              },
-              tooltip: hideRead ? 'Show All Posts' : 'Hide Read Posts',
-            );
-          },
-        ),
-        Selector2<AuthNotifier, FeedNotifier, bool>(
-          selector: (_, auth, feed) =>
-              auth.isLoggedIn || feed.currentSubreddit != null,
-          builder: (context, showRefresh, _) {
-            if (!showRefresh) return const SizedBox.shrink();
-            return IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: () {
-                unawaited(context.read<FeedNotifier>().refresh());
-                onScrollToTop();
-              },
-            );
-          },
-        ),
+        if (showSearch)
+          IconButton(
+            icon: const Icon(Icons.search),
+            onPressed: onSearch,
+            tooltip: 'Search Subreddits',
+          ),
+        if (showHideRead)
+          IconButton(
+            icon: Icon(
+              hideRead ? Icons.visibility_off : Icons.visibility,
+            ),
+            onPressed: () {
+              unawaited(context.read<FeedNotifier>().toggleHideRead());
+              onScrollToTop();
+            },
+            tooltip: hideRead ? 'Show All Posts' : 'Hide Read Posts',
+          ),
       ],
     );
   }
