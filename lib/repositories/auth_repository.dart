@@ -9,6 +9,9 @@ class AuthRepository {
   /// Whether the user is currently logged in.
   bool get isLoggedIn => _service.isLoggedIn;
 
+  /// Stream to listen to auth state changes.
+  Stream<AuthState> get authStateStream => _service.authStateStream;
+
   /// Initializes the auth system and restores session if available.
   Future<void> init() async {
     await _service.init();

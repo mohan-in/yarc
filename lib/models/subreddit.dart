@@ -9,9 +9,11 @@ class Subreddit {
   Subreddit({
     required this.displayName,
     required this.title,
-    required this.url, this.iconImg,
+    required this.url,
+    this.iconImg,
     this.subscriberCount,
     this.description,
+    this.userIsSubscriber,
   });
 
   /// Creates a [Subreddit] from a DRAW library subreddit object.
@@ -49,6 +51,11 @@ class Subreddit {
       }
     }
 
+    bool? userIsSubscriber;
+    if (sub.data != null && sub.data!['user_is_subscriber'] != null) {
+      userIsSubscriber = sub.data!['user_is_subscriber'] as bool?;
+    }
+
     return Subreddit(
       displayName: sub.displayName,
       title: HtmlUtils.unescape(sub.title),
@@ -56,6 +63,7 @@ class Subreddit {
       url: sub.path,
       subscriberCount: subscribers,
       description: description != null ? HtmlUtils.unescape(description) : null,
+      userIsSubscriber: userIsSubscriber,
     );
   }
 
@@ -72,4 +80,6 @@ class Subreddit {
   final int? subscriberCount;
 
   final String? description;
+
+  final bool? userIsSubscriber;
 }

@@ -1,6 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/notifiers/subreddits_notifier.dart';
 import 'package:yarc/utils/image_utils.dart';
 
 /// A card displaying subreddit information at the top of the feed.
@@ -75,6 +77,7 @@ class SubredditInfoCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                _JoinLeaveButton(subreddit: subreddit),
               ],
             ),
             if (subreddit.description != null &&
@@ -95,5 +98,69 @@ class SubredditInfoCard extends StatelessWidget {
       return '${(count / 1000).toStringAsFixed(1)}K members';
     }
     return '$count members';
+  }
+}
+
+class _JoinLeaveButton extends StatefulWidget {
+  const _JoinLeaveButton({required this.subreddit});
+
+  final Subreddit subreddit;
+
+  @override
+  State<_JoinLeaveButton> createState() => _JoinLeaveButtonState();
+}
+
+class _JoinLeaveButtonState extends State<_JoinLeaveButton> {
+  bool _isLoading = false;
+
+  Future<void> _toggle() async {
+    setState(() => _isLoading = true);
+    try {
+      await context.read<SubredditsNotifier>().toggleSubscription(
+        widget.subreddit,
+      );
+    } on Exception catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update subscription')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSubscribed = context.select<SubredditsNotifier, bool>(
+      (n) => n.isSubscribed(widget.subreddit.displayName),
+    );
+
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: SizedBox(
+          width: 20,
+          height: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+
+    if (isSubscribed) {
+      return OutlinedButton.icon(
+        onPressed: _toggle,
+        icon: const Icon(Icons.check, size: 18),
+        label: const Text('Joined'),
+      );
+    }
+
+    return FilledButton.icon(
+      onPressed: _toggle,
+      icon: const Icon(Icons.add, size: 18),
+      label: const Text('Join'),
+    );
   }
 }

@@ -5,7 +5,8 @@ import 'package:yarc/utils/image_utils.dart';
 /// A full-screen image viewer that supports zooming and panning.
 class FullScreenImageView extends StatefulWidget {
   const FullScreenImageView({
-    required this.imageUrls, super.key,
+    required this.imageUrls,
+    super.key,
     this.initialIndex = 0,
   });
 

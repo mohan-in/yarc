@@ -32,7 +32,8 @@ void main() {
     // bodyMedium is 15 in appTheme
     expect(markdownWidget.style?.fontSize, 15.0);
 
-    // Check depth colors if possible (hard to verify purely via widget test without deeper inspection)
+    // Check depth colors if possible (hard to verify purely via widget test
+    // without deeper inspection)
     // But ensuring it builds without error confirms extension is found.
   });
 }

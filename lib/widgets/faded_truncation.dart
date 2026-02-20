@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 /// at the bottom to indicate truncation.
 class FadedTruncation extends StatelessWidget {
   const FadedTruncation({
-    required this.child, super.key,
+    required this.child,
+    super.key,
     this.maxHeight = 120.0,
   });
 

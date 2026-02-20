@@ -10,6 +10,13 @@ class SubredditsNotifier extends ChangeNotifier {
 
   List<Subreddit> get subreddits => _subreddits;
 
+  /// Checks if a subreddit is currently subscribed.
+  bool isSubscribed(String name) {
+    return _subreddits.any(
+      (s) => s.displayName.toLowerCase() == name.toLowerCase(),
+    );
+  }
+
   // ignore: use_setters_to_change_properties, method does more than set
   void setRepository(SubredditRepository repository) {
     _repository = repository;
@@ -31,5 +38,36 @@ class SubredditsNotifier extends ChangeNotifier {
   void clear() {
     _subreddits = [];
     notifyListeners();
+  }
+
+  /// Toggles the subscription status of a subreddit.
+  Future<void> toggleSubscription(Subreddit subreddit) async {
+    if (_repository == null) {
+      return;
+    }
+    final name = subreddit.displayName;
+    final currentlySubscribed = isSubscribed(name);
+
+    try {
+      if (currentlySubscribed) {
+        await _repository!.unsubscribe(name);
+        _subreddits.removeWhere(
+          (s) => s.displayName.toLowerCase() == name.toLowerCase(),
+        );
+      } else {
+        await _repository!.subscribe(name);
+        _subreddits
+          ..add(subreddit)
+          ..sort(
+            (a, b) => a.displayName.toLowerCase().compareTo(
+              b.displayName.toLowerCase(),
+            ),
+          );
+      }
+      notifyListeners();
+    } on Exception catch (e) {
+      debugPrint('Error toggling subscription: $e');
+      rethrow;
+    }
   }
 }

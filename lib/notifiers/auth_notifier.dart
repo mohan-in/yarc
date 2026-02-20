@@ -1,9 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:yarc/repositories/auth_repository.dart';
+import 'package:yarc/services/auth_service.dart';
 
 /// Notifier for managing authentication state.
 class AuthNotifier extends ChangeNotifier {
   AuthRepository? _repository;
+  StreamSubscription<AuthState>? _authSubscription;
 
   bool _isLoggedIn = false;
   bool _isInitialized = false;
@@ -11,9 +15,18 @@ class AuthNotifier extends ChangeNotifier {
   bool get isLoggedIn => _isLoggedIn;
   bool get isInitialized => _isInitialized;
 
-  // ignore: use_setters_to_change_properties, method does more than set
   void setRepository(AuthRepository repository) {
     _repository = repository;
+    _authSubscription = _repository!.authStateStream.listen((state) {
+      if (state == AuthState.loggedIn) {
+        _isLoggedIn = true;
+      } else {
+        if (_isLoggedIn) {
+          _isLoggedIn = false;
+        }
+      }
+      notifyListeners();
+    });
   }
 
   /// Initializes auth and restores session if available.
@@ -48,5 +61,11 @@ class AuthNotifier extends ChangeNotifier {
     await _repository!.logout();
     _isLoggedIn = false;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    unawaited(_authSubscription?.cancel());
+    super.dispose();
   }
 }

@@ -3,9 +3,9 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:yarc/theme/theme.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/widgets/full_screen_image_view.dart';
-import 'package:yarc/theme/theme.dart';
 
 /// A horizontal carousel for displaying multiple images with swipe navigation.
 class ImageCarousel extends StatefulWidget {

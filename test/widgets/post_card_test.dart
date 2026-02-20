@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/theme/theme.dart';
-import 'package:yarc/widgets/post_card.dart';
 import 'package:yarc/widgets/markdown_content.dart';
+import 'package:yarc/widgets/post_card.dart';
 
 void main() {
   testWidgets('PostCard uses appTheme font sizes', (tester) async {

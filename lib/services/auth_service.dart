@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:draw/draw.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+enum AuthState { loggedIn, loggedOut, unauthenticated }
 
 /// Service responsible for Reddit OAuth2 authentication.
 class AuthService {
@@ -15,6 +19,7 @@ class AuthService {
     'mysubreddits',
     'vote',
     'history',
+    'subscribe',
   ];
 
   static const String _redirectUri = 'com.mohan.reddit.client://callback';
@@ -22,12 +27,19 @@ class AuthService {
   Reddit? _reddit;
   String? _lastSavedCredentials;
 
+  final _authStateController = StreamController<AuthState>.broadcast();
+
+  /// Stream to listen to major authentication state blockages,
+  /// like revoked tokens.
+  Stream<AuthState> get authStateStream => _authStateController.stream;
+
   /// Returns the Reddit client instance.
   Reddit? get reddit => _reddit;
 
   /// Checks if the user is currently logged in.
   /// Returns true if we have valid credentials with a refresh token,
-  /// even if the access token has expired (it will be refreshed automatically).
+  /// even if the access token has expired.
+  /// It will be refreshed automatically.
   bool get isLoggedIn {
     if (_reddit == null) {
       return false;
@@ -58,7 +70,6 @@ class AuthService {
   }
 
   /// Initializes the data source, restoring the session if available.
-  /// If the access token has expired, it will be refreshed automatically.
   Future<void> init() async {
     final prefs = await SharedPreferences.getInstance();
     final credentialsJson = prefs.getString(_credentialsKey);
@@ -75,10 +86,14 @@ class AuthService {
 
         if (!_reddit!.auth.isValid && isLoggedIn) {
           await refreshSession();
+        } else {
+          _authStateController.add(AuthState.loggedIn);
         }
       } on Exception catch (_) {
         await logout();
       }
+    } else {
+      _authStateController.add(AuthState.loggedOut);
     }
   }
 
@@ -86,11 +101,16 @@ class AuthService {
   /// receiving 401 errors despite the client
   /// thinking the token is valid.
   Future<void> refreshSession() async {
-    if (_reddit != null && isLoggedIn) {
+    if (_reddit != null) {
       try {
         await _reddit!.auth.refresh();
         await persistCredentials();
-      } on Exception catch (_) {
+        _authStateController.add(AuthState.loggedIn);
+      } on Exception catch (e) {
+        debugPrint('Critical refresh failure: $e');
+        // If we fail to refresh completely, we are unauthenticated.
+        await logout();
+        _authStateController.add(AuthState.unauthenticated);
         rethrow;
       }
     }
@@ -129,6 +149,7 @@ class AuthService {
       final code = Uri.parse(result).queryParameters['code'];
       if (code != null) {
         await _exchangeCodeForToken(code, redditConfig);
+        _authStateController.add(AuthState.loggedIn);
         return null; // Success
       } else {
         return 'Login cancelled or no code returned.';
@@ -158,5 +179,6 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_credentialsKey);
     _reddit = null;
+    _authStateController.add(AuthState.loggedOut);
   }
 }

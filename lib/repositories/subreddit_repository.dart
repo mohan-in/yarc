@@ -24,4 +24,12 @@ class SubredditRepository {
     }
     return _redditService.searchSubreddits(query);
   }
+
+  /// Subscribes to a subreddit by name.
+  Future<void> subscribe(String subredditName) =>
+      _redditService.subscribeToSubreddit(subredditName);
+
+  /// Unsubscribes from a subreddit by name.
+  Future<void> unsubscribe(String subredditName) =>
+      _redditService.unsubscribeFromSubreddit(subredditName);
 }
