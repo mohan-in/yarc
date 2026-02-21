@@ -11,6 +11,8 @@ dependencies:
   cached_network_image: ^3.3.1
   chewie: ^1.13.0
   cupertino_icons: ^1.0.8
+  dex_compat:
+    path: ../../packages/dex_compat
   draw: ^1.0.2
   flutter:
     sdk: flutter

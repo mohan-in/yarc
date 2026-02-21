@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dex_compat/dex_compat.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/notifiers/notifiers.dart';
@@ -13,12 +14,15 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await HistoryService.init();
+  final isDesktopMode = await DexCompat.isDesktopMode();
 
-  runApp(const YarcApp());
+  runApp(YarcApp(isDesktopMode: isDesktopMode));
 }
 
 class YarcApp extends StatefulWidget {
-  const YarcApp({super.key});
+  const YarcApp({required this.isDesktopMode, super.key});
+
+  final bool isDesktopMode;
 
   @override
   State<YarcApp> createState() => _YarcAppState();
@@ -64,9 +68,7 @@ class _YarcAppState extends State<YarcApp> {
       case DeepLinkType.post:
         if (result.postId != null) {
           final messenger = ScaffoldMessenger.of(context)
-            ..showSnackBar(
-              const SnackBar(content: Text('Opening post...')),
-            );
+            ..showSnackBar(const SnackBar(content: Text('Opening post...')));
 
           try {
             final redditService = context.read<RedditService>();
@@ -99,9 +101,7 @@ class _YarcAppState extends State<YarcApp> {
             }
           } on Object catch (e) {
             if (context.mounted) {
-              messenger.showSnackBar(
-                SnackBar(content: Text('Error: $e')),
-              );
+              messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
             }
           }
         }
@@ -176,6 +176,7 @@ class _YarcAppState extends State<YarcApp> {
             title: 'YARC - Yet Another Reddit Client',
             theme: appTheme,
             home: const HomeScreen(),
+            builder: DexCompat.builder(widget.isDesktopMode),
           );
         },
       ),
