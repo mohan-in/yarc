@@ -54,8 +54,10 @@ class AuthService {
 
   /// Persists the current credentials to storage.
   /// Should be called after API operations that may trigger a token refresh.
+  /// We intentionally do NOT guard on `auth.isValid` here because the DRAW
+  /// library may not reflect the updated state immediately after a refresh.
   Future<void> persistCredentials() async {
-    if (_reddit == null || !_reddit!.auth.isValid) {
+    if (_reddit == null) {
       return;
     }
 
@@ -84,13 +86,23 @@ class AuthService {
         );
         _lastSavedCredentials = credentialsJson;
 
-        if (!_reddit!.auth.isValid && isLoggedIn) {
-          await refreshSession();
+        // Check `isLoggedIn` first (has a refresh token) before checking
+        // `isValid` (access token not expired). The access token expires every
+        // ~1h; an expired access token is NOT a reason to destroy the session.
+        if (isLoggedIn) {
+          if (!_reddit!.auth.isValid) {
+            await refreshSession();
+          } else {
+            _authStateController.add(AuthState.loggedIn);
+          }
         } else {
-          _authStateController.add(AuthState.loggedIn);
+          _authStateController.add(AuthState.loggedOut);
         }
       } on Exception catch (_) {
-        await logout();
+        // Do NOT call logout() here. The stored credentials may still be
+        // valid. Only emit loggedOut so the UI shows a login prompt without
+        // destroying the refresh token — the user can retry without re-auth.
+        _authStateController.add(AuthState.loggedOut);
       }
     } else {
       _authStateController.add(AuthState.loggedOut);
@@ -108,8 +120,10 @@ class AuthService {
         _authStateController.add(AuthState.loggedIn);
       } on Exception catch (e) {
         debugPrint('Critical refresh failure: $e');
-        // If we fail to refresh completely, we are unauthenticated.
-        await logout();
+        // Do NOT call logout() here. logout() deletes stored credentials,
+        // which would destroy the refresh token on a transient network error.
+        // Only emit unauthenticated so the UI can prompt the user, while
+        // still keeping the refresh token available for recovery.
         _authStateController.add(AuthState.unauthenticated);
         rethrow;
       }
