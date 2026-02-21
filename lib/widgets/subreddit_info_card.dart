@@ -43,12 +43,14 @@ class SubredditInfoCard extends StatelessWidget {
                     ),
                   ),
                 const SizedBox(width: 12),
+                // Name + member count — takes all remaining space, pushes
+                // the button to the trailing edge.
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'r/${subreddit.displayName}',
+                      _FadingText(
+                        text: 'r/${subreddit.displayName}',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -77,6 +79,7 @@ class SubredditInfoCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 _JoinLeaveButton(subreddit: subreddit),
               ],
             ),
@@ -98,6 +101,56 @@ class SubredditInfoCard extends StatelessWidget {
       return '${(count / 1000).toStringAsFixed(1)}K members';
     }
     return '$count members';
+  }
+}
+
+/// Single-line text that fades out on the trailing edge **only when** the text
+/// overflows the available width. Short names render with no gradient.
+class _FadingText extends StatelessWidget {
+  const _FadingText({required this.text, this.style});
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final resolvedStyle =
+            style?.merge(DefaultTextStyle.of(context).style) ??
+            DefaultTextStyle.of(context).style;
+
+        // Measure the text at single-line to see if it actually overflows.
+        final painter = TextPainter(
+          text: TextSpan(text: text, style: resolvedStyle),
+          maxLines: 1,
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        final overflows = painter.width > constraints.maxWidth;
+
+        final child = Text(
+          text,
+          style: style,
+          maxLines: 1,
+          softWrap: false,
+          overflow: TextOverflow.clip,
+        );
+
+        if (!overflows) {
+          return child;
+        }
+
+        return ShaderMask(
+          shaderCallback: (bounds) => const LinearGradient(
+            stops: [0.0, 0.75, 1.0],
+            colors: [Colors.white, Colors.white, Colors.transparent],
+          ).createShader(bounds),
+          blendMode: BlendMode.dstIn,
+          child: child,
+        );
+      },
+    );
   }
 }
 
@@ -138,29 +191,61 @@ class _JoinLeaveButtonState extends State<_JoinLeaveButton> {
       (n) => n.isSubscribed(widget.subreddit.displayName),
     );
 
-    if (_isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+    // A fixed-width container keeps the card layout stable during the
+    // transition between states — no layout jumps as the button swaps.
+    return SizedBox(
+      width: 96,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
         ),
-      );
-    }
-
-    if (isSubscribed) {
-      return OutlinedButton.icon(
-        onPressed: _toggle,
-        icon: const Icon(Icons.check, size: 18),
-        label: const Text('Joined'),
-      );
-    }
-
-    return FilledButton.icon(
-      onPressed: _toggle,
-      icon: const Icon(Icons.add, size: 18),
-      label: const Text('Join'),
+        child: _isLoading
+            ? const Center(
+                key: ValueKey<String>('loading'),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : isSubscribed
+            ? OutlinedButton(
+                key: const ValueKey<String>('joined'),
+                onPressed: _toggle,
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.check, size: 14),
+                    SizedBox(width: 4),
+                    Text('Joined'),
+                  ],
+                ),
+              )
+            : FilledButton(
+                key: const ValueKey<String>('join'),
+                onPressed: _toggle,
+                style: FilledButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  visualDensity: VisualDensity.compact,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add, size: 14),
+                    SizedBox(width: 4),
+                    Text('Join'),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 }
