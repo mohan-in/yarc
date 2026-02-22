@@ -10,20 +10,16 @@ class PostRepository {
   final RedditService _redditService;
   final HistoryService _historyService;
 
-  /// Fetches posts.
+  /// Fetches posts, optionally for a specific subreddit.
   ///
   /// Returns a [PostsResult] containing posts and the pagination cursor.
   Future<PostsResult> getPosts({String? subreddit, String? after}) async {
-    return _fetchFromApi(subreddit, after);
+    return _redditService.fetchPosts(subreddit: subreddit, after: after);
   }
 
-  /// Fetches fresh posts from API.
+  /// Fetches fresh posts from API (resets pagination).
   Future<PostsResult> refresh({String? subreddit}) async {
     return _redditService.fetchPosts(subreddit: subreddit);
-  }
-
-  Future<PostsResult> _fetchFromApi(String? subreddit, String? after) async {
-    return _redditService.fetchPosts(subreddit: subreddit, after: after);
   }
 
   /// Fetches comments for a post.

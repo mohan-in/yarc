@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:yarc/theme/theme.dart';
+import 'package:yarc/utils/constants.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/widgets/full_screen_image_view.dart';
 
@@ -149,7 +150,7 @@ class _ImageCarouselState extends State<ImageCarousel> {
     if (widget.aspectRatio != null) {
       return AspectRatio(aspectRatio: widget.aspectRatio!, child: content);
     } else {
-      return SizedBox(height: 400, child: content);
+      return SizedBox(height: kCarouselFallbackHeight, child: content);
     }
   }
 }

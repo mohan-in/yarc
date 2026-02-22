@@ -1,12 +1,14 @@
 import 'package:draw/draw.dart' as draw;
+import 'package:flutter/foundation.dart';
 import 'package:yarc/utils/html_utils.dart';
 
 /// Represents a Reddit subreddit with its metadata.
 ///
 /// Contains display information like name, title, icon, and subscriber count.
 /// Used for displaying subreddit lists and info cards.
+@immutable
 class Subreddit {
-  Subreddit({
+  const Subreddit({
     required this.displayName,
     required this.title,
     required this.url,
@@ -82,4 +84,12 @@ class Subreddit {
   final String? description;
 
   final bool? userIsSubscriber;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Subreddit && other.displayName == displayName);
+
+  @override
+  int get hashCode => displayName.hashCode;
 }

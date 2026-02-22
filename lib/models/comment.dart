@@ -1,8 +1,10 @@
 import 'package:draw/draw.dart' as draw;
+import 'package:flutter/foundation.dart';
 import 'package:yarc/utils/html_utils.dart';
 
+@immutable
 class Comment {
-  Comment({
+  const Comment({
     required this.id,
     required this.author,
     required this.body,
@@ -37,4 +39,11 @@ class Comment {
   final int ups;
   final double createdUtc;
   final List<Comment> replies;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Comment && other.id == id);
+
+  @override
+  int get hashCode => id.hashCode;
 }

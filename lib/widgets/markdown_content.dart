@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:yarc/utils/constants.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/widgets/faded_truncation.dart';
 import 'package:yarc/widgets/full_screen_image_view.dart';
@@ -112,11 +113,7 @@ class _TapToOpenImageBuilder extends MarkdownElementBuilder {
           borderRadius: BorderRadius.circular(8),
           child: Image.network(
             ImageUtils.getCorsUrl(url),
-            headers: kIsWeb
-                ? null
-                : const {
-                    'User-Agent': 'flutter_reddit/1.0.0', // Basic User-Agent
-                  },
+            headers: kIsWeb ? null : const {'User-Agent': kUserAgent},
             height: 200,
             fit: BoxFit.contain,
             errorBuilder: (context, error, stackTrace) {

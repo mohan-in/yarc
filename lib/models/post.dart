@@ -1,6 +1,9 @@
+import 'package:flutter/foundation.dart';
+
 /// A data model representing a Reddit post.
+@immutable
 class Post {
-  Post({
+  const Post({
     required this.id,
     required this.title,
     required this.author,
@@ -62,4 +65,11 @@ class Post {
   final String? youtubeId;
 
   final double? aspectRatio;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Post && other.id == id);
+
+  @override
+  int get hashCode => id.hashCode;
 }

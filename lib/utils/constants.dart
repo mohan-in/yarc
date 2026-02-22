@@ -24,3 +24,19 @@ const int kVisiblePostsBeforePrefetch = 3;
 
 /// Maximum subreddits to fetch for subscriptions list.
 const int kMaxSubscribedSubreddits = 100;
+
+/// Reddit API user-agent string.
+/// Reddit requires a descriptive user-agent for API compliance.
+const String kUserAgent = 'flutter_reddit_demo/1.0.0 (by /u/antigravity)';
+
+/// Top fraction of the viewport for the video autoplay safe zone.
+const double kVideoSafeZoneTop = 0.15;
+
+/// Bottom fraction of the viewport for the video autoplay safe zone.
+const double kVideoSafeZoneBottom = 0.85;
+
+/// Fallback height (in pixels) for image carousels without an aspect ratio.
+const double kCarouselFallbackHeight = 400;
+
+/// Debounce duration for subreddit search input.
+const Duration kSearchDebounceDuration = Duration(milliseconds: 300);

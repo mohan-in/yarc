@@ -5,6 +5,9 @@ import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/widgets/markdown_content.dart';
 
+/// Pre-compiled regex for splitting comment body into paragraphs.
+final _paragraphSplitRegex = RegExp(r'\n\s*\n');
+
 class CommentTile extends StatefulWidget {
   const CommentTile({required this.comment, super.key, this.depth = 0});
 
@@ -27,7 +30,6 @@ class _CommentTileState extends State<CommentTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final commentTheme = theme.extension<CommentTheme>();
     final depthColors =
         commentTheme?.depthColors ??
@@ -41,13 +43,12 @@ class _CommentTileState extends State<CommentTile> {
           Colors.purple,
         ];
 
-    final nextDepth = widget.depth + 1;
     final depthColor = depthColors[widget.depth % depthColors.length];
+    final nextDepth = widget.depth + 1;
 
     final Widget content = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Comment Content
         InkWell(
           onTap: _toggleCollapse,
           child: Padding(
@@ -59,58 +60,13 @@ class _CommentTileState extends State<CommentTile> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Text(
-                            'u/${widget.comment.author}',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            DateUtilsHelper.formatTimeAgo(
-                              widget.comment.createdUtc,
-                            ),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                          ),
-                          if (_isCollapsed) ...[
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.expand_more,
-                              size: 16,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${widget.comment.replies.length} replies',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ],
+                      _CommentHeader(
+                        comment: widget.comment,
+                        isCollapsed: _isCollapsed,
                       ),
-
                       if (!_isCollapsed) ...[
                         const SizedBox(height: 4),
-                        ...widget.comment.body
-                            .split(RegExp(r'\n\s*\n'))
-                            .where((p) => p.trim().isNotEmpty)
-                            .expand(
-                              (p) => [
-                                MarkdownContent(
-                                  text: HtmlUtils.unescape(p.trim()),
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 6),
-                              ],
-                            )
-                            .toList()
-                          ..removeLast(),
+                        _CommentBody(body: widget.comment.body),
                       ],
                     ],
                   ),
@@ -119,34 +75,11 @@ class _CommentTileState extends State<CommentTile> {
             ),
           ),
         ),
-
         if (!_isCollapsed && widget.comment.replies.isNotEmpty)
-          IntrinsicHeight(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.only(left: 8),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: depthColor.withAlpha(128),
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                    child: Column(
-                      children: widget.comment.replies
-                          .map(
-                            (reply) =>
-                                CommentTile(comment: reply, depth: nextDepth),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _CommentReplies(
+            replies: widget.comment.replies,
+            depth: nextDepth,
+            depthColor: depthColor,
           ),
       ],
     );
@@ -162,5 +95,132 @@ class _CommentTileState extends State<CommentTile> {
     }
 
     return content;
+  }
+}
+
+/// Displays the comment author, timestamp, and collapse indicator.
+class _CommentHeader extends StatelessWidget {
+  const _CommentHeader({
+    required this.comment,
+    required this.isCollapsed,
+  });
+
+  final Comment comment;
+  final bool isCollapsed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      children: [
+        Text(
+          'u/${comment.author}',
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          DateUtilsHelper.formatTimeAgo(comment.createdUtc),
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        if (isCollapsed) ...[
+          const SizedBox(width: 8),
+          Icon(
+            Icons.expand_more,
+            size: 16,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${comment.replies.length} replies',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Renders the comment body as markdown paragraphs.
+class _CommentBody extends StatelessWidget {
+  const _CommentBody({required this.body});
+
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final paragraphs = body
+        .split(_paragraphSplitRegex)
+        .where((p) => p.trim().isNotEmpty)
+        .toList();
+
+    if (paragraphs.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (var i = 0; i < paragraphs.length; i++) ...[
+          MarkdownContent(
+            text: HtmlUtils.unescape(paragraphs[i].trim()),
+            style: theme.textTheme.bodyMedium,
+          ),
+          if (i < paragraphs.length - 1) const SizedBox(height: 6),
+        ],
+      ],
+    );
+  }
+}
+
+/// Renders nested comment replies with a depth-colored left border.
+class _CommentReplies extends StatelessWidget {
+  const _CommentReplies({
+    required this.replies,
+    required this.depth,
+    required this.depthColor,
+  });
+
+  final List<Comment> replies;
+  final int depth;
+  final Color depthColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              margin: const EdgeInsets.only(left: 8),
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: depthColor.withAlpha(128),
+                    width: 2,
+                  ),
+                ),
+              ),
+              child: Column(
+                children: replies
+                    .map(
+                      (reply) => CommentTile(comment: reply, depth: depth),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

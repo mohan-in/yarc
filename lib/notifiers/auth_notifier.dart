@@ -20,7 +20,7 @@ class AuthNotifier extends ChangeNotifier {
     // ChangeNotifierProxyProvider calls this method every time the upstream
     // AuthRepository is recreated, so without this guard we accumulate
     // duplicate listeners on the same stream.
-    _authSubscription?.cancel();
+    unawaited(_authSubscription?.cancel());
     _repository = repository;
     _authSubscription = _repository!.authStateStream.listen((state) {
       if (state == AuthState.loggedIn) {

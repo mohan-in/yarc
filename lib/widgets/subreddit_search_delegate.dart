@@ -4,12 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/notifiers/search_notifier.dart';
+import 'package:yarc/utils/constants.dart';
 import 'package:yarc/utils/image_utils.dart';
 
 /// A SearchDelegate for searching subreddits.
 /// Returns the selected subreddit when a result is tapped.
 class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
   SubredditSearchDelegate();
+
+  Timer? _debounceTimer;
 
   @override
   String get searchFieldLabel => 'Search subreddits';
@@ -22,6 +25,7 @@ class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
           icon: const Icon(Icons.clear),
           onPressed: () {
             query = '';
+            _debounceTimer?.cancel();
             context.read<SearchNotifier>().clear();
           },
         ),
@@ -33,6 +37,7 @@ class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
     return IconButton(
       icon: const Icon(Icons.arrow_back),
       onPressed: () {
+        _debounceTimer?.cancel();
         context.read<SearchNotifier>().clear();
         close(context, null);
       },
@@ -46,14 +51,21 @@ class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // Trigger search when user types
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(
-        context.read<SearchNotifier>().search(query),
-      );
+    // Debounce search to avoid firing a network request on every keystroke
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(kSearchDebounceDuration, () {
+      if (context.mounted) {
+        unawaited(context.read<SearchNotifier>().search(query));
+      }
     });
 
     return _buildSearchResults(context);
+  }
+
+  @override
+  void close(BuildContext context, Subreddit? result) {
+    _debounceTimer?.cancel();
+    super.close(context, result);
   }
 
   Widget _buildSearchResults(BuildContext context) {
@@ -77,14 +89,32 @@ class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
           itemCount: searchNotifier.results.length,
           itemBuilder: (context, index) {
             final subreddit = searchNotifier.results[index];
-            return _buildSubredditTile(context, subreddit);
+            return _SubredditTile(
+              subreddit: subreddit,
+              onTap: () {
+                _debounceTimer?.cancel();
+                context.read<SearchNotifier>().clear();
+                close(context, subreddit);
+              },
+            );
           },
         );
       },
     );
   }
+}
 
-  Widget _buildSubredditTile(BuildContext context, Subreddit subreddit) {
+class _SubredditTile extends StatelessWidget {
+  const _SubredditTile({
+    required this.subreddit,
+    required this.onTap,
+  });
+
+  final Subreddit subreddit;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return ListTile(
       leading: subreddit.iconImg != null
@@ -116,15 +146,12 @@ class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
               ),
             )
           : null,
-      onTap: () {
-        context.read<SearchNotifier>().clear();
-        close(context, subreddit);
-      },
+      onTap: onTap,
     );
   }
 
   /// Formats the subscriber count in a human-readable way (e.g., 1.2M, 45.3K)
-  String _formatSubscriberCount(int count) {
+  static String _formatSubscriberCount(int count) {
     if (count >= 1000000) {
       return '${(count / 1000000).toStringAsFixed(1)}M members';
     } else if (count >= 1000) {

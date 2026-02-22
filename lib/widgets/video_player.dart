@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/theme/theme.dart';
+import 'package:yarc/utils/constants.dart';
 
 class RedditVideoPlayer extends StatefulWidget {
   const RedditVideoPlayer({
@@ -89,8 +90,8 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
 
         // Define the "Safe Zone" in the middle of the screen (15% to 85%)
         // We only want to play videos when they are mostly centered
-        final safeZoneTop = viewportHeight * 0.15;
-        final safeZoneBottom = viewportHeight * 0.85;
+        final safeZoneTop = viewportHeight * kVideoSafeZoneTop;
+        final safeZoneBottom = viewportHeight * kVideoSafeZoneBottom;
 
         final isInZone = center >= safeZoneTop && center <= safeZoneBottom;
 

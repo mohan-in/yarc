@@ -1,17 +1,16 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:draw/draw.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:yarc/utils/constants.dart';
 
 enum AuthState { loggedIn, loggedOut, unauthenticated }
 
 /// Service responsible for Reddit OAuth2 authentication.
 class AuthService {
   static const String _clientId = String.fromEnvironment('REDDIT_CLIENT_ID');
-  static const String _userAgent =
-      'flutter_reddit_demo/1.0.0 (by /u/antigravity)';
   static const String _credentialsKey = 'reddit_credentials';
   static const List<String> _oauthScopes = [
     'read',
@@ -81,7 +80,7 @@ class AuthService {
         _reddit = Reddit.restoreAuthenticatedInstance(
           credentialsJson,
           clientId: _clientId,
-          userAgent: _userAgent,
+          userAgent: kUserAgent,
           redirectUri: Uri.parse(_redirectUri),
         );
         _lastSavedCredentials = credentialsJson;
@@ -119,7 +118,10 @@ class AuthService {
         await persistCredentials();
         _authStateController.add(AuthState.loggedIn);
       } on Exception catch (e) {
-        debugPrint('Critical refresh failure: $e');
+        developer.log(
+          'Critical refresh failure: $e',
+          name: 'AuthService',
+        );
         // Do NOT call logout() here. logout() deletes stored credentials,
         // which would destroy the refresh token on a transient network error.
         // Only emit unauthenticated so the UI can prompt the user, while
@@ -142,7 +144,7 @@ class AuthService {
     try {
       final redditConfig = Reddit.createInstalledFlowInstance(
         clientId: _clientId,
-        userAgent: _userAgent,
+        userAgent: kUserAgent,
         redirectUri: Uri.parse(_redirectUri),
       );
 
@@ -152,8 +154,7 @@ class AuthService {
         compactLogin: true,
       );
 
-      debugPrint('Authenticating with URL: $url');
-      debugPrint('Expecting callback at: com.mohan.reddit.client://callback');
+      developer.log('Authenticating with URL: $url', name: 'AuthService');
 
       final result = await FlutterWebAuth2.authenticate(
         url: url.toString(),
@@ -194,5 +195,10 @@ class AuthService {
     await prefs.remove(_credentialsKey);
     _reddit = null;
     _authStateController.add(AuthState.loggedOut);
+  }
+
+  /// Closes the auth state stream controller.
+  void dispose() {
+    unawaited(_authStateController.close());
   }
 }

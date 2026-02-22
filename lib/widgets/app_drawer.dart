@@ -18,127 +18,89 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final children = <Widget>[];
-    // Map from DESTINATION index (not child index) to action
-    final indexToAction = <int, VoidCallback>{};
-    var destinationCount = 0;
-
-    // Helper to add a plain widget
-    // (does not count as a destination)
-    void addWidget(Widget widget) {
-      children.add(widget);
-    }
-
-    // Helper to associate a destination widget with an action
-    void addDestination(Widget widget, VoidCallback action) {
-      children.add(widget);
-      indexToAction[destinationCount] = action;
-      destinationCount++;
-    }
-
-    addDestination(
-      const NavigationDrawerDestination(
-        icon: Icon(Icons.home_outlined),
-        selectedIcon: Icon(Icons.home),
-        label: Text('Home'),
-      ),
-      () {
-        debugPrint('Selecting Home');
-        onSubredditSelected(null);
-      },
-    );
-
-    addWidget(
-      const Padding(
-        padding: EdgeInsets.fromLTRB(28, 16, 28, 10),
-        child: Divider(),
-      ),
-    );
-
-    addWidget(
-      Padding(
-        padding: const EdgeInsets.fromLTRB(28, 10, 16, 10),
-        child: Text(
-          'Subscriptions',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-      ),
-    );
-
-    for (final sub in subreddits) {
-      addDestination(
-        NavigationDrawerDestination(
-          icon: sub.iconImg != null
-              ? CircleAvatar(
-                  radius: 12,
-                  backgroundImage: NetworkImage(
-                    ImageUtils.getCorsUrl(sub.iconImg!),
-                  ),
-                )
-              : const Icon(Icons.reddit),
-          label: Text(sub.displayName),
-        ),
-        () {
-          debugPrint('Selecting Subreddit: ${sub.displayName}');
-          onSubredditSelected(sub);
-        },
-      );
-    }
-
-    addWidget(
-      const Padding(
-        padding: EdgeInsets.fromLTRB(28, 16, 28, 10),
-        child: Divider(),
-      ),
-    );
-
-    // IMPORTANT: Standard ListTiles in the children list of NavigationDrawer
-    // generally do NOT count as destinations for selectedIndex logic.
-    // We treat Logout as a distinct action (Footer).
-    addWidget(
-      ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 28),
-        leading: Icon(
-          Icons.logout,
-          color: Theme.of(context).colorScheme.error,
-        ),
-        title: Text(
-          'Logout',
-          style: TextStyle(color: Theme.of(context).colorScheme.error),
-        ),
-        onTap: () {
-          onLogout();
-          Navigator.pop(context);
-        },
-      ),
-    );
-
+    // Calculate selected index: 0 = Home, 1+ = subreddits
     var selectedIndex = 0;
-
     if (currentSubreddit != null) {
       final subIndex = subreddits.indexWhere(
         (s) => s.displayName == currentSubreddit,
       );
       if (subIndex != -1) {
-        // Home is 0. Subreddits start at 1.
         selectedIndex = 1 + subIndex;
       }
-    } else {
-      selectedIndex = 0;
     }
 
     return NavigationDrawer(
       selectedIndex: selectedIndex,
       onDestinationSelected: (index) {
-        debugPrint('NavigationDrawer destination selection: $index');
-        final action = indexToAction[index];
-        if (action != null) {
-          action();
+        if (index == 0) {
+          onSubredditSelected(null);
         } else {
-          debugPrint('No action for destination index $index');
+          final subIndex = index - 1;
+          if (subIndex < subreddits.length) {
+            onSubredditSelected(subreddits[subIndex]);
+          }
         }
       },
-      children: children,
+      children: [
+        // Home destination
+        const NavigationDrawerDestination(
+          icon: Icon(Icons.home_outlined),
+          selectedIcon: Icon(Icons.home),
+          label: Text('Home'),
+        ),
+
+        // Section divider
+        const Padding(
+          padding: EdgeInsets.fromLTRB(28, 16, 28, 10),
+          child: Divider(),
+        ),
+
+        // Subscriptions header
+        Padding(
+          padding: const EdgeInsets.fromLTRB(28, 10, 16, 10),
+          child: Text(
+            'Subscriptions',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+        ),
+
+        // Subreddit destinations
+        for (final sub in subreddits)
+          NavigationDrawerDestination(
+            icon: sub.iconImg != null
+                ? CircleAvatar(
+                    radius: 12,
+                    backgroundImage: NetworkImage(
+                      ImageUtils.getCorsUrl(sub.iconImg!),
+                    ),
+                  )
+                : const Icon(Icons.reddit),
+            label: Text(sub.displayName),
+          ),
+
+        // Footer divider
+        const Padding(
+          padding: EdgeInsets.fromLTRB(28, 16, 28, 10),
+          child: Divider(),
+        ),
+
+        // Logout (not a destination — uses ListTile)
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: Icon(
+            Icons.logout,
+            color: Theme.of(context).colorScheme.error,
+          ),
+          title: Text(
+            'Logout',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+          onTap: () {
+            onLogout();
+            Navigator.pop(context);
+          },
+        ),
+      ],
     );
   }
 }

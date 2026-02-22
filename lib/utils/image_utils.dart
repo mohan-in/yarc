@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:yarc/utils/constants.dart';
 
 /// Utility class for image URL processing and CORS handling.
 class ImageUtils {
@@ -54,7 +55,6 @@ class ImageUtils {
   ///
   /// Returns null on web (CORS proxy handles auth), otherwise returns
   /// a User-Agent header for Reddit API compliance.
-  static Map<String, String>? get authHeaders => kIsWeb
-      ? null
-      : const {'User-Agent': 'flutter_reddit_demo/1.0.0 (by /u/antigravity)'};
+  static Map<String, String>? get authHeaders =>
+      kIsWeb ? null : const {'User-Agent': kUserAgent};
 }

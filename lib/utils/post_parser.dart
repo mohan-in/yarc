@@ -32,7 +32,7 @@ class PostParser {
     String? youtubeId;
     double? aspectRatio;
 
-    // Attempt to find the main image URL
+    // Attempt to find the main image URL from preview
     final preview = submission.preview;
     if (preview.isNotEmpty) {
       final image = preview[0].source;
@@ -42,111 +42,60 @@ class PostParser {
       }
     }
 
-    // Check for direct URL if it's an image
-    // If imageUrl creates a static preview but url is a gif,
-    // prefer the gif!
+    // Prefer GIF URL over static preview
     final url = submission.url.toString();
     if (!isVideo) {
-      if (url.endsWith('.gif')) {
-        imageUrl = url; // Force use the GIF url
-      } else if (imageUrl == null) {
-        if (url.endsWith('.jpg') ||
-            url.endsWith('.jpeg') ||
-            url.endsWith('.png')) {
-          imageUrl = url;
-        }
-      }
+      imageUrl = _resolveDirectImageUrl(url, imageUrl);
     }
 
     if (submission.data != null) {
       final data = submission.data!.cast<String, dynamic>();
+
+      // Extract gallery images
       final galleryRatio = _parseGalleryData(data, images);
-      if (aspectRatio == null && galleryRatio != null) {
-        aspectRatio = galleryRatio;
+      aspectRatio ??= galleryRatio;
+
+      // Extract video URL from main post or preview
+      final videoResult = _resolveVideoUrl(data);
+      videoUrl = videoResult.url;
+      if (videoResult.isVideo) {
+        isVideo = true;
       }
 
-      // 1. Try extracting from main post data
-      videoUrl = _extractVideoUrl(data);
-
-      // If no video found yet, check for MP4 variant
-      // in preview (common for GIFs)
-      if (videoUrl == null) {
-        videoUrl = _extractMp4FromPreview(data);
-        if (videoUrl != null) isVideo = true;
-      }
-
-      // 2. If no video found, check crosspost
+      // Check crosspost parent for additional media
       if (data['crosspost_parent_list'] != null) {
-        final crossposts = data['crosspost_parent_list'] as List<dynamic>;
-        if (crossposts.isNotEmpty) {
-          final parentData = (crossposts[0] as Map<dynamic, dynamic>)
-              .cast<String, dynamic>();
-
-          // Try to get video from parent
-          videoUrl ??= _extractVideoUrl(parentData);
-
-          if (videoUrl != null) {
-            isVideo = true;
-          }
-
-          // Check parent for MP4 variant in preview
-          if (videoUrl == null) {
-            videoUrl = _extractMp4FromPreview(parentData);
-            if (videoUrl != null) isVideo = true;
-          }
-
-          // Try to extract images/gallery from parent
-          if (images.isEmpty && imageUrl == null) {
-            final parentGalleryRatio = _parseGalleryData(parentData, images);
-            if (aspectRatio == null && parentGalleryRatio != null) {
-              aspectRatio = parentGalleryRatio;
-            }
-
-            // Check parent URL for direct image
-            if (parentData['url'] != null) {
-              final pUrl = parentData['url'].toString();
-              if (pUrl.endsWith('.jpg') ||
-                  pUrl.endsWith('.jpeg') ||
-                  pUrl.endsWith('.png') ||
-                  pUrl.endsWith('.gif')) {
-                imageUrl = pUrl;
-              }
-            }
-
-            // Check parent preview if still no image
-            if (imageUrl == null) {
-              final result = _extractImageFromPreview(
-                parentData,
-              );
-              if (result != null) {
-                imageUrl = result.url;
-                aspectRatio ??= result.aspectRatio;
-              }
-            }
-          }
+        final crosspostResult = _parseCrosspostMedia(
+          data['crosspost_parent_list'] as List<dynamic>,
+          images: images,
+          imageUrl: imageUrl,
+          videoUrl: videoUrl,
+          aspectRatio: aspectRatio,
+        );
+        videoUrl ??= crosspostResult.videoUrl;
+        if (crosspostResult.isVideo) {
+          isVideo = true;
         }
+        imageUrl ??= crosspostResult.imageUrl;
+        aspectRatio ??= crosspostResult.aspectRatio;
       }
 
       if (videoUrl != null) {
         isVideo = true;
       }
 
-      // Check for YouTube in main data
+      // Check for YouTube in main data, then crosspost
       if (!isVideo) {
         youtubeId = _extractYoutubeId(data);
-        if (youtubeId != null) {
-          isYoutube = true;
-        } else if (data['crosspost_parent_list'] != null) {
-          // Check for YouTube in crosspost parent
+        if (youtubeId == null && data['crosspost_parent_list'] != null) {
           final crossposts = data['crosspost_parent_list'] as List<dynamic>;
           if (crossposts.isNotEmpty) {
             final parentData = (crossposts[0] as Map<dynamic, dynamic>)
                 .cast<String, dynamic>();
             youtubeId = _extractYoutubeId(parentData);
-            if (youtubeId != null) {
-              isYoutube = true;
-            }
           }
+        }
+        if (youtubeId != null) {
+          isYoutube = true;
         }
       }
     }
@@ -156,21 +105,7 @@ class PostParser {
     }
 
     // Extract image URLs from selftext content
-    final selftext = submission.selftext ?? '';
-    if (selftext.isNotEmpty) {
-      for (final match in _imageUrlRegex.allMatches(selftext)) {
-        final matchUrl = HtmlUtils.unescape(match.group(0)!);
-        if (!images.contains(matchUrl)) {
-          images.add(matchUrl);
-        }
-      }
-      for (final match in _redditPreviewRegex.allMatches(selftext)) {
-        final matchUrl = HtmlUtils.unescape(match.group(0)!);
-        if (!images.contains(matchUrl)) {
-          images.add(matchUrl);
-        }
-      }
-    }
+    _extractSelftextImages(submission.selftext, images);
 
     // Only use thumbnail if no high-res images
     final thumbnailUrl =
@@ -199,6 +134,134 @@ class PostParser {
       youtubeId: youtubeId,
       aspectRatio: aspectRatio,
     );
+  }
+
+  /// Resolves the direct image URL, preferring GIF over static preview.
+  static String? _resolveDirectImageUrl(String url, String? currentImageUrl) {
+    if (url.endsWith('.gif')) {
+      return url;
+    }
+    if (currentImageUrl == null) {
+      if (url.endsWith('.jpg') ||
+          url.endsWith('.jpeg') ||
+          url.endsWith('.png')) {
+        return url;
+      }
+    }
+    return currentImageUrl;
+  }
+
+  /// Resolves video URL from main post data or preview.
+  static ({String? url, bool isVideo}) _resolveVideoUrl(
+    Map<String, dynamic> data,
+  ) {
+    var videoUrl = _extractVideoUrl(data);
+    if (videoUrl != null) {
+      return (url: videoUrl, isVideo: true);
+    }
+    videoUrl = _extractMp4FromPreview(data);
+    if (videoUrl != null) {
+      return (url: videoUrl, isVideo: true);
+    }
+    return (url: null, isVideo: false);
+  }
+
+  /// Parses media from crosspost parent data.
+  static ({
+    String? videoUrl,
+    bool isVideo,
+    String? imageUrl,
+    double? aspectRatio,
+  })
+  _parseCrosspostMedia(
+    List<dynamic> crossposts, {
+    required List<String> images,
+    required String? imageUrl,
+    required String? videoUrl,
+    required double? aspectRatio,
+  }) {
+    if (crossposts.isEmpty) {
+      return (
+        videoUrl: null,
+        isVideo: false,
+        imageUrl: null,
+        aspectRatio: null,
+      );
+    }
+
+    final parentData = (crossposts[0] as Map<dynamic, dynamic>)
+        .cast<String, dynamic>();
+
+    // Try video from parent
+    var resolvedVideoUrl = videoUrl;
+    var isVideo = false;
+    if (resolvedVideoUrl == null) {
+      resolvedVideoUrl = _extractVideoUrl(parentData);
+      if (resolvedVideoUrl != null) {
+        isVideo = true;
+      }
+    }
+    if (resolvedVideoUrl == null) {
+      resolvedVideoUrl = _extractMp4FromPreview(parentData);
+      if (resolvedVideoUrl != null) {
+        isVideo = true;
+      }
+    }
+
+    String? resolvedImageUrl;
+    double? resolvedAspectRatio;
+
+    // Try images/gallery from parent only if we have none
+    if (images.isEmpty && imageUrl == null) {
+      final parentGalleryRatio = _parseGalleryData(parentData, images);
+      resolvedAspectRatio = parentGalleryRatio;
+
+      // Check parent URL for direct image
+      if (parentData['url'] != null) {
+        final pUrl = parentData['url'].toString();
+        if (pUrl.endsWith('.jpg') ||
+            pUrl.endsWith('.jpeg') ||
+            pUrl.endsWith('.png') ||
+            pUrl.endsWith('.gif')) {
+          resolvedImageUrl = pUrl;
+        }
+      }
+
+      // Check parent preview if still no image
+      if (resolvedImageUrl == null) {
+        final result = _extractImageFromPreview(parentData);
+        if (result != null) {
+          resolvedImageUrl = result.url;
+          resolvedAspectRatio ??= result.aspectRatio;
+        }
+      }
+    }
+
+    return (
+      videoUrl: resolvedVideoUrl != videoUrl ? resolvedVideoUrl : null,
+      isVideo: isVideo,
+      imageUrl: resolvedImageUrl,
+      aspectRatio: resolvedAspectRatio,
+    );
+  }
+
+  /// Extracts image URLs from selftext content.
+  static void _extractSelftextImages(String? selftext, List<String> images) {
+    if (selftext == null || selftext.isEmpty) {
+      return;
+    }
+    for (final match in _imageUrlRegex.allMatches(selftext)) {
+      final matchUrl = HtmlUtils.unescape(match.group(0)!);
+      if (!images.contains(matchUrl)) {
+        images.add(matchUrl);
+      }
+    }
+    for (final match in _redditPreviewRegex.allMatches(selftext)) {
+      final matchUrl = HtmlUtils.unescape(match.group(0)!);
+      if (!images.contains(matchUrl)) {
+        images.add(matchUrl);
+      }
+    }
   }
 
   static double? _parseGalleryData(

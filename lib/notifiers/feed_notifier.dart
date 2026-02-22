@@ -17,6 +17,9 @@ class FeedNotifier extends ChangeNotifier {
   bool _hideRead = false;
   Set<String> _readPostIds = {};
 
+  /// Cached filtered list, invalidated by [_invalidateVisiblePosts].
+  List<Post>? _cachedVisiblePosts;
+
   List<Post> get posts => _posts;
   bool get isLoading => _isLoading;
   String? get currentSubreddit => _currentSubreddit;
@@ -25,11 +28,23 @@ class FeedNotifier extends ChangeNotifier {
   Set<String> get readPostIds => _readPostIds;
 
   /// Returns filtered posts based on hideRead flag.
+  /// Cached to avoid creating a new list on every Selector evaluation.
   List<Post> get visiblePosts {
-    if (!_hideRead) {
-      return _posts;
+    if (_cachedVisiblePosts != null) {
+      return _cachedVisiblePosts!;
     }
-    return _posts.where((p) => !_readPostIds.contains(p.id)).toList();
+    if (!_hideRead) {
+      _cachedVisiblePosts = _posts;
+    } else {
+      _cachedVisiblePosts = _posts
+          .where((p) => !_readPostIds.contains(p.id))
+          .toList();
+    }
+    return _cachedVisiblePosts!;
+  }
+
+  void _invalidateVisiblePosts() {
+    _cachedVisiblePosts = null;
   }
 
   /// Sets the repository. Called by ProxyProvider.
@@ -44,6 +59,7 @@ class FeedNotifier extends ChangeNotifier {
     }
 
     _readPostIds = await _repository!.getReadPostIds();
+    _invalidateVisiblePosts();
 
     _isLoading = true;
     notifyListeners();
@@ -66,6 +82,7 @@ class FeedNotifier extends ChangeNotifier {
       _posts = refresh ? result.posts : [..._posts, ...uniqueNewPosts];
       _after = result.nextAfter;
       _isLoading = false;
+      _invalidateVisiblePosts();
       notifyListeners();
     } on Exception catch (_) {
       _isLoading = false;
@@ -78,6 +95,7 @@ class FeedNotifier extends ChangeNotifier {
       return;
     }
     _after = null;
+    _invalidateVisiblePosts();
     notifyListeners();
 
     await loadPosts(refresh: true);
@@ -89,6 +107,7 @@ class FeedNotifier extends ChangeNotifier {
     _currentSubreddit = subreddit;
     _currentSubredditInfo = null;
     _isLoading = false;
+    _invalidateVisiblePosts();
     notifyListeners();
     unawaited(loadPosts());
   }
@@ -99,6 +118,7 @@ class FeedNotifier extends ChangeNotifier {
     _currentSubreddit = subreddit.displayName;
     _currentSubredditInfo = subreddit;
     _isLoading = false;
+    _invalidateVisiblePosts();
     notifyListeners();
     unawaited(loadPosts());
   }
@@ -109,6 +129,7 @@ class FeedNotifier extends ChangeNotifier {
     }
     _readPostIds = await _repository!.getReadPostIds();
     _hideRead = !_hideRead;
+    _invalidateVisiblePosts();
     notifyListeners();
   }
 
@@ -118,6 +139,7 @@ class FeedNotifier extends ChangeNotifier {
     }
     await _repository!.markAsRead(postId);
     _readPostIds = await _repository!.getReadPostIds();
+    _invalidateVisiblePosts();
     notifyListeners();
   }
 
@@ -130,12 +152,12 @@ class FeedNotifier extends ChangeNotifier {
     _isLoading = false;
     _hideRead = false;
     _readPostIds = {};
+    _invalidateVisiblePosts();
     notifyListeners();
   }
 
   /// Handles scroll events to trigger pagination.
   void handleScroll(double currentPosition, double maxScroll) {
-    // 500 is a reasonable threshold, commonly defined as kPaginationThreshold
     const threshold = 500.0;
     if (currentPosition >= maxScroll - threshold) {
       unawaited(loadPosts());

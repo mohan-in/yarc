@@ -1,5 +1,6 @@
+import 'dart:developer' as developer;
+
 import 'package:draw/draw.dart' as draw;
-import 'package:flutter/foundation.dart';
 import 'package:yarc/models/comment.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/models/subreddit.dart';
@@ -16,6 +17,22 @@ class RedditService {
 
   draw.Reddit? get _reddit => _authService.reddit;
 
+  /// Returns true if the exception represents an authentication error
+  /// (401 or 403). Checks typed exceptions first and falls back to
+  /// string matching only as a last resort.
+  static bool _isAuthException(Exception e) {
+    if (e is draw.DRAWAuthenticationError) {
+      return true;
+    }
+    if (e is draw.DRAWUnknownResponseException) {
+      return e.status == 401 || e.status == 403;
+    }
+    // Last resort: string check for untyped HTTP errors from the DRAW library.
+    final message = e.toString();
+    return message.contains('401 Unauthorized') ||
+        message.contains('403 Forbidden');
+  }
+
   /// A wrapper that catches authentication errors
   /// (e.g. 401 Unauthorized or 403 Forbidden)
   /// and attempts to refresh the session and retry the [action].
@@ -28,28 +45,27 @@ class RedditService {
       await _authService.persistCredentials();
       return result;
     } on Exception catch (e) {
-      final isAuthError =
-          e.toString().contains('401') ||
-          e.toString().contains('403') ||
-          e is draw.DRAWAuthenticationError ||
-          (e is draw.DRAWUnknownResponseException &&
-              (e.status == 401 || e.status == 403));
-
-      if (isAuthError) {
+      if (_isAuthException(e)) {
         try {
-          debugPrint('Auth error in $actionName, refreshing session...');
+          developer.log(
+            'Auth error in $actionName, refreshing session...',
+            name: 'RedditService',
+          );
           await _authService.refreshSession();
           // Retry the action after successful refresh
           final retryResult = await action();
           await _authService.persistCredentials();
           return retryResult;
         } on Exception catch (refreshError) {
-          debugPrint('Failed to refresh in $actionName: $refreshError');
+          developer.log(
+            'Failed to refresh in $actionName: $refreshError',
+            name: 'RedditService',
+          );
           // If refresh fails or retry fails, rethrow
           rethrow;
         }
       }
-      debugPrint('Failed in $actionName: $e');
+      developer.log('Failed in $actionName: $e', name: 'RedditService');
       rethrow;
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:flutter/foundation.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/repositories/subreddit_repository.dart';
@@ -51,13 +53,15 @@ class SubredditsNotifier extends ChangeNotifier {
     try {
       if (currentlySubscribed) {
         await _repository!.unsubscribe(name);
-        _subreddits.removeWhere(
-          (s) => s.displayName.toLowerCase() == name.toLowerCase(),
-        );
+        // Create a new list so Selector detects the change by identity
+        _subreddits = _subreddits
+            .where(
+              (s) => s.displayName.toLowerCase() != name.toLowerCase(),
+            )
+            .toList();
       } else {
         await _repository!.subscribe(name);
-        _subreddits
-          ..add(subreddit)
+        _subreddits = [..._subreddits, subreddit]
           ..sort(
             (a, b) => a.displayName.toLowerCase().compareTo(
               b.displayName.toLowerCase(),
@@ -66,7 +70,10 @@ class SubredditsNotifier extends ChangeNotifier {
       }
       notifyListeners();
     } on Exception catch (e) {
-      debugPrint('Error toggling subscription: $e');
+      developer.log(
+        'Error toggling subscription: $e',
+        name: 'SubredditsNotifier',
+      );
       rethrow;
     }
   }

@@ -24,6 +24,12 @@ class PostCard extends StatelessWidget {
   final VoidCallback? onTap;
   final bool expanded;
 
+  /// Matches markdown image syntax: `![alt](url)`
+  static final _markdownImageRegex = RegExp(r'!\[[^\]]*\]\([^)]+\)');
+
+  /// Matches 3+ consecutive newlines for collapsing whitespace.
+  static final _excessiveNewlinesRegex = RegExp(r'\n{3,}');
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -37,12 +43,12 @@ class PostCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(context),
+              _PostHeader(post: post),
               const SizedBox(height: 8),
-              _buildTitle(context),
+              _PostTitle(post: post),
               if (post.content.isNotEmpty) _buildContent(context),
               const SizedBox(height: 12),
-              _buildMedia(),
+              _PostMedia(post: post),
               PostMetadata(
                 createdUtc: post.createdUtc,
                 numComments: post.numComments,
@@ -56,7 +62,54 @@ class PostCard extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildContent(BuildContext context) {
+    var content = HtmlUtils.unescape(post.content);
+
+    final mediaUrls = <String>{...post.images};
+    if (post.thumbnail != null) {
+      mediaUrls.add(post.thumbnail!);
+    }
+
+    // Remove image URLs that match media URLs to prevent duplicates
+    for (final url in mediaUrls) {
+      final unescapedUrl = url.replaceAll('&amp;', '&');
+      final escapedUrl = url.replaceAll('&', '&amp;');
+
+      for (final urlVariant in [url, unescapedUrl, escapedUrl]) {
+        // Remove markdown image syntax referencing this URL
+        content = content.replaceAll(
+          _markdownImageRegex,
+          '',
+        );
+        content = content.replaceAll(urlVariant, '');
+      }
+      content = content.replaceAll(Uri.encodeFull(url), '');
+    }
+
+    content = content.replaceAll(_excessiveNewlinesRegex, '\n\n').trim();
+
+    if (content.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: MarkdownContent(
+        text: content,
+        maxLines: expanded ? null : 3,
+        style: Theme.of(context).textTheme.bodyMedium,
+      ),
+    );
+  }
+}
+
+class _PostHeader extends StatelessWidget {
+  const _PostHeader({required this.post});
+
+  final Post post;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Row(
       children: [
@@ -76,8 +129,15 @@ class PostCard extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _buildTitle(BuildContext context) {
+class _PostTitle extends StatelessWidget {
+  const _PostTitle({required this.post});
+
+  final Post post;
+
+  @override
+  Widget build(BuildContext context) {
     return Text(
       HtmlUtils.unescape(post.title),
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -85,47 +145,15 @@ class PostCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildContent(BuildContext context) {
-    var content = HtmlUtils.unescape(post.content);
+class _PostMedia extends StatelessWidget {
+  const _PostMedia({required this.post});
 
-    final mediaUrls = <String>{...post.images};
-    if (post.thumbnail != null) {
-      mediaUrls.add(post.thumbnail!);
-    }
+  final Post post;
 
-    // Remove image URLs that match media URLs to prevent duplicates
-    for (final url in mediaUrls) {
-      final unescapedUrl = url.replaceAll('&amp;', '&');
-      final escapedUrl = url.replaceAll('&', '&amp;');
-
-      for (final urlVariant in [url, unescapedUrl, escapedUrl]) {
-        content = content.replaceAll(
-          RegExp(r'!\[[^\]]*\]\(' + RegExp.escape(urlVariant) + r'\)'),
-          '',
-        );
-        content = content.replaceAll(urlVariant, '');
-      }
-      content = content.replaceAll(Uri.encodeFull(url), '');
-    }
-
-    content = content.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
-
-    if (content.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: MarkdownContent(
-        text: content,
-        maxLines: expanded ? null : 3,
-        style: Theme.of(context).textTheme.bodyMedium,
-      ),
-    );
-  }
-
-  Widget _buildMedia() {
+  @override
+  Widget build(BuildContext context) {
     final showVideo = post.isVideo && post.videoUrl != null;
     final showYoutube = post.isYoutube && post.youtubeId != null;
 

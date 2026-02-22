@@ -13,7 +13,6 @@ void main() {
       body: 'Test comment',
       createdUtc: DateTime.now().millisecondsSinceEpoch / 1000,
       ups: 10,
-      replies: [],
     );
 
     await tester.pumpWidget(

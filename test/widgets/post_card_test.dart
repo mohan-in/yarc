@@ -17,7 +17,6 @@ void main() {
       ups: 100,
       numComments: 10,
       permalink: '/r/flutter/comments/123/test',
-      images: [],
     );
 
     await tester.pumpWidget(
