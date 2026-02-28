@@ -127,10 +127,29 @@ class FeedNotifier extends ChangeNotifier {
     if (_repository == null) {
       return;
     }
-    _readPostIds = await _repository!.getReadPostIds();
+
     _hideRead = !_hideRead;
-    _invalidateVisiblePosts();
-    notifyListeners();
+
+    if (_hideRead) {
+      // Mark all currently loaded posts as read — the user has seen them.
+      for (final post in _posts) {
+        if (!_readPostIds.contains(post.id)) {
+          await _repository!.markAsRead(post.id);
+        }
+      }
+      _readPostIds = await _repository!.getReadPostIds();
+      _invalidateVisiblePosts();
+      notifyListeners();
+
+      // If no unread posts remain, load the next page.
+      if (visiblePosts.isEmpty) {
+        await loadPosts();
+      }
+    } else {
+      _readPostIds = await _repository!.getReadPostIds();
+      _invalidateVisiblePosts();
+      notifyListeners();
+    }
   }
 
   Future<void> markAsRead(String postId) async {

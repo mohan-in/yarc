@@ -310,9 +310,6 @@ class _PostListBuilder extends StatelessWidget {
       isLoading: isLoading,
       subredditInfo: subredditInfo,
       onPostTap: onPostTap,
-      onPostVisible: (post) {
-        unawaited(context.read<FeedNotifier>().markAsRead(post.id));
-      },
     );
   }
 }
