@@ -134,7 +134,7 @@ class FeedNotifier extends ChangeNotifier {
   }
 
   Future<void> markAsRead(String postId) async {
-    if (_repository == null) {
+    if (_repository == null || _readPostIds.contains(postId)) {
       return;
     }
     await _repository!.markAsRead(postId);

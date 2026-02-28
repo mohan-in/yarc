@@ -14,12 +14,16 @@ class SliverPostList extends StatelessWidget {
     required this.onPostTap,
     super.key,
     this.subredditInfo,
+    this.onPostVisible,
   });
 
   final List<Post> posts;
   final bool isLoading;
   final void Function(Post post) onPostTap;
   final Subreddit? subredditInfo;
+
+  /// Called when a post becomes visible (is built) in the list.
+  final void Function(Post post)? onPostVisible;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +61,7 @@ class SliverPostList extends StatelessWidget {
 
         // 3. Render Post Card
         final post = posts[postIndex];
+        onPostVisible?.call(post);
         return PostCard(
           // Key helps Flutter efficiently update the list when items change
           key: ValueKey(post.id),

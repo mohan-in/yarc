@@ -29,6 +29,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final crosspostParent = widget.post.crosspostParent;
     return Scaffold(
       body: CustomScrollView(
         // CustomScrollView enables complex
@@ -40,6 +41,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           SliverToBoxAdapter(
             child: PostCard(post: widget.post, expanded: true),
           ),
+
+          // Original post for crossposts
+          if (crosspostParent != null)
+            SliverToBoxAdapter(
+              child: _OriginalPostSection(originalPost: crosspostParent),
+            ),
 
           // Comments Header
           SliverToBoxAdapter(
@@ -60,6 +67,44 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           CommentList(commentsFuture: _commentsFuture),
         ],
       ),
+    );
+  }
+}
+
+class _OriginalPostSection extends StatelessWidget {
+  const _OriginalPostSection({required this.originalPost});
+
+  final Post originalPost;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.repeat,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Original Post',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PostCard(post: originalPost, expanded: true),
+      ],
     );
   }
 }

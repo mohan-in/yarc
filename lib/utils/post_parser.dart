@@ -113,6 +113,25 @@ class PostParser {
         ? submission.thumbnail.toString()
         : null;
 
+    // Capture external link URL for non-self posts
+    String? externalUrl;
+    if (!submission.isSelf) {
+      final postUrl = submission.url.toString();
+      // Only store as external link if it's not media we already handle
+      final isHandledMedia =
+          isVideo || isYoutube || images.isNotEmpty || thumbnailUrl != null;
+      if (!isHandledMedia && postUrl.isNotEmpty) {
+        externalUrl = postUrl;
+      }
+    }
+
+    // Parse crosspost parent for repost display
+    Post? crosspostParent;
+    if (submission.data != null) {
+      final data = submission.data!.cast<String, dynamic>();
+      crosspostParent = _parseCrosspostParent(data);
+    }
+
     return Post(
       id: submission.id ?? '',
       title: HtmlUtils.unescape(submission.title),
@@ -133,6 +152,51 @@ class PostParser {
       isYoutube: isYoutube,
       youtubeId: youtubeId,
       aspectRatio: aspectRatio,
+      url: externalUrl,
+      crosspostParent: crosspostParent,
+    );
+  }
+
+  /// Parses the first crosspost parent into a lightweight Post.
+  static Post? _parseCrosspostParent(Map<String, dynamic> data) {
+    if (data['crosspost_parent_list'] == null) {
+      return null;
+    }
+    final crossposts = data['crosspost_parent_list'] as List<dynamic>;
+    if (crossposts.isEmpty) {
+      return null;
+    }
+    final parent = (crossposts[0] as Map<dynamic, dynamic>)
+        .cast<String, dynamic>();
+
+    final selftext = parent['selftext'] as String? ?? '';
+    final title = parent['title'] as String? ?? '';
+    final author = parent['author'] as String? ?? '';
+    final subreddit = parent['subreddit'] as String? ?? '';
+    final permalink = parent['permalink'] as String? ?? '';
+    final ups = parent['ups'] as int? ?? 0;
+    final numComments = parent['num_comments'] as int? ?? 0;
+    final createdUtc = (parent['created_utc'] as num?)?.toDouble() ?? 0;
+    final isSelf = parent['is_self'] as bool? ?? true;
+    final parentUrl = parent['url'] as String?;
+
+    // Determine external URL for link-type parent posts
+    String? externalUrl;
+    if (!isSelf && parentUrl != null && parentUrl.isNotEmpty) {
+      externalUrl = parentUrl;
+    }
+
+    return Post(
+      id: parent['id'] as String? ?? '',
+      title: HtmlUtils.unescape(title),
+      author: author,
+      subreddit: subreddit,
+      ups: ups,
+      numComments: numComments,
+      permalink: permalink,
+      content: HtmlUtils.unescape(selftext),
+      createdUtc: createdUtc,
+      url: externalUrl,
     );
   }
 

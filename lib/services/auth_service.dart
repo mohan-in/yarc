@@ -90,7 +90,14 @@ class AuthService {
         // ~1h; an expired access token is NOT a reason to destroy the session.
         if (isLoggedIn) {
           if (!_reddit!.auth.isValid) {
-            await refreshSession();
+            try {
+              await refreshSession();
+            } on Exception catch (_) {
+              // Transient network error on startup. Emit loggedIn anyway —
+              // the DRAW library will auto-refresh on the next API call
+              // when connectivity is restored.
+              _authStateController.add(AuthState.loggedIn);
+            }
           } else {
             _authStateController.add(AuthState.loggedIn);
           }
@@ -124,10 +131,10 @@ class AuthService {
         );
         // Do NOT call logout() here. logout() deletes stored credentials,
         // which would destroy the refresh token on a transient network error.
-        // Only emit unauthenticated so the UI can prompt the user, while
-        // still keeping the refresh token available for recovery.
+        // Do NOT rethrow — callers use the stream emission as the signal.
+        // Rethrowing would cascade unhandled exceptions through API call
+        // chains and trigger additional logout-like behavior.
         _authStateController.add(AuthState.unauthenticated);
-        rethrow;
       }
     }
   }

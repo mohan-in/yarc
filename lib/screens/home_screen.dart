@@ -219,9 +219,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     redditService: redditService,
                     onPostTap: (post) {
                       unawaited(
-                        context.read<FeedNotifier>().markAsRead(post.id),
-                      );
-                      unawaited(
                         Navigator.push<void>(
                           context,
                           MaterialPageRoute<void>(
@@ -313,6 +310,9 @@ class _PostListBuilder extends StatelessWidget {
       isLoading: isLoading,
       subredditInfo: subredditInfo,
       onPostTap: onPostTap,
+      onPostVisible: (post) {
+        unawaited(context.read<FeedNotifier>().markAsRead(post.id));
+      },
     );
   }
 }

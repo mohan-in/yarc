@@ -16,11 +16,13 @@ class Post {
     this.thumbnail,
     this.imageUrl,
     this.images = const [],
+    this.url,
     this.isVideo = false,
     this.videoUrl,
     this.isYoutube = false,
     this.youtubeId,
     this.aspectRatio,
+    this.crosspostParent,
   });
 
   /// The unique ID of the post (e.g., "t3_12345").
@@ -65,6 +67,12 @@ class Post {
   final String? youtubeId;
 
   final double? aspectRatio;
+
+  /// The external URL for link-type posts (non-self posts).
+  final String? url;
+
+  /// The original post for crossposts/reposts.
+  final Post? crosspostParent;
 
   @override
   bool operator ==(Object other) =>

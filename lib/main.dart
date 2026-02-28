@@ -129,17 +129,18 @@ class _YarcAppState extends State<YarcApp> {
         Provider(create: (_) => AuthService()),
         Provider(create: (_) => HistoryService()),
         ProxyProvider<AuthService, RedditService>(
-          update: (_, auth, prev) => RedditService(auth),
+          update: (_, auth, prev) => prev ?? RedditService(auth),
         ),
 
         ProxyProvider<AuthService, AuthRepository>(
-          update: (_, auth, prev) => AuthRepository(auth),
+          update: (_, auth, prev) => prev ?? AuthRepository(auth),
         ),
         ProxyProvider2<RedditService, HistoryService, PostRepository>(
-          update: (_, reddit, history, prev) => PostRepository(reddit, history),
+          update: (_, reddit, history, prev) =>
+              prev ?? PostRepository(reddit, history),
         ),
         ProxyProvider<RedditService, SubredditRepository>(
-          update: (_, reddit, prev) => SubredditRepository(reddit),
+          update: (_, reddit, prev) => prev ?? SubredditRepository(reddit),
         ),
 
         ChangeNotifierProxyProvider<AuthRepository, AuthNotifier>(

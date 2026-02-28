@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/widgets/cached_image.dart';
@@ -44,8 +45,13 @@ class PostCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _PostHeader(post: post),
+              if (post.crosspostParent != null)
+                _CrosspostIndicator(
+                  originalSubreddit: post.crosspostParent!.subreddit,
+                ),
               const SizedBox(height: 8),
               _PostTitle(post: post),
+              if (post.url != null) _ExternalLink(url: post.url!),
               if (post.content.isNotEmpty) _buildContent(context),
               const SizedBox(height: 12),
               _PostMedia(post: post),
@@ -203,5 +209,87 @@ class _PostMedia extends StatelessWidget {
     }
 
     return const SizedBox.shrink();
+  }
+}
+
+class _ExternalLink extends StatelessWidget {
+  const _ExternalLink({required this.url});
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final uri = Uri.tryParse(url);
+    final displayHost = uri?.host.replaceFirst('www.', '') ?? url;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: () async {
+          if (uri != null && await canLaunchUrl(uri)) {
+            await launchUrl(uri);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.link,
+                size: 16,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  displayHost,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CrosspostIndicator extends StatelessWidget {
+  const _CrosspostIndicator({required this.originalSubreddit});
+
+  final String originalSubreddit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(
+        children: [
+          Icon(
+            Icons.repeat,
+            size: 14,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Crossposted from r/$originalSubreddit',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
