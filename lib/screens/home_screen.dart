@@ -57,8 +57,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final currentPosition = _scrollController.position.pixels;
     final maxScroll = _scrollController.position.maxScrollExtent;
 
-    // Logic extracted to FeedNotifier
-    context.read<FeedNotifier>().handleScroll(currentPosition, maxScroll);
+    // Trigger pagination when close to bottom
+    const threshold = 500.0;
+    if (currentPosition >= maxScroll - threshold) {
+      unawaited(context.read<FeedNotifier>().loadPosts());
+    }
 
     // Video autoplay check
     context.read<VideoAutoplayNotifier>().notifyScroll();
@@ -337,11 +340,18 @@ class _PostListBuilder extends StatelessWidget {
     final subredditInfo = context.select<FeedNotifier, Subreddit?>(
       (n) => n.currentSubredditInfo,
     );
+    final readPostIds = context.select<FeedNotifier, Set<String>>(
+      (n) => n.readPostIds,
+    );
 
     return SliverPostList(
       posts: posts,
       isLoading: isLoading,
       subredditInfo: subredditInfo,
+      readPostIds: readPostIds,
+      onPostVisible: (post) {
+        unawaited(context.read<FeedNotifier>().markAsRead(post.id));
+      },
       onPostTap: onPostTap,
     );
   }

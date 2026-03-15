@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/widgets/post_card.dart';
@@ -12,6 +13,8 @@ class SliverPostList extends StatelessWidget {
     required this.posts,
     required this.isLoading,
     required this.onPostTap,
+    required this.readPostIds,
+    required this.onPostVisible,
     super.key,
     this.subredditInfo,
   });
@@ -19,6 +22,8 @@ class SliverPostList extends StatelessWidget {
   final List<Post> posts;
   final bool isLoading;
   final void Function(Post post) onPostTap;
+  final Set<String> readPostIds;
+  final void Function(Post post) onPostVisible;
   final Subreddit? subredditInfo;
 
   @override
@@ -57,11 +62,28 @@ class SliverPostList extends StatelessWidget {
 
         // 3. Render Post Card
         final post = posts[postIndex];
-        return PostCard(
-          // Key helps Flutter efficiently update the list when items change
-          key: ValueKey(post.id),
-          post: post,
-          onTap: () => onPostTap(post),
+        final isRead = readPostIds.contains(post.id);
+
+        return VisibilityDetector(
+          key: ValueKey('visibility_${post.id}'),
+          onVisibilityChanged: (info) {
+            // If the post is mostly visible and not yet read, mark it read.
+            if (!isRead && info.visibleFraction > 0.5) {
+              onPostVisible(post);
+            }
+          },
+          child: PostCard(
+            // Key helps Flutter efficiently update the list when items change
+            key: ValueKey(post.id),
+            post: post,
+            isRead: isRead,
+            onTap: () {
+              // Ensure it's marked as read if tapped before scrolling
+              // fully into view
+              if (!isRead) onPostVisible(post);
+              onPostTap(post);
+            },
+          ),
         );
       }, childCount: itemCount),
     );

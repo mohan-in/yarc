@@ -16,6 +16,7 @@ class FeedNotifier extends ChangeNotifier {
   String? _after;
   bool _hideRead = false;
   Set<String> _readPostIds = {};
+  Set<String> _hiddenPostIds = {};
 
   /// Cached filtered list, invalidated by [_invalidateVisiblePosts].
   List<Post>? _cachedVisiblePosts;
@@ -37,7 +38,7 @@ class FeedNotifier extends ChangeNotifier {
       _cachedVisiblePosts = _posts;
     } else {
       _cachedVisiblePosts = _posts
-          .where((p) => !_readPostIds.contains(p.id))
+          .where((p) => !_hiddenPostIds.contains(p.id))
           .toList();
     }
     return _cachedVisiblePosts!;
@@ -58,7 +59,11 @@ class FeedNotifier extends ChangeNotifier {
       return;
     }
 
-    _readPostIds = await _repository!.getReadPostIds();
+    final dbReadIds = await _repository!.getReadPostIds();
+    _readPostIds.addAll(dbReadIds);
+    if (refresh && _hideRead) {
+      _hiddenPostIds = Set.from(_readPostIds);
+    }
     _invalidateVisiblePosts();
 
     _isLoading = true;
@@ -78,6 +83,14 @@ class FeedNotifier extends ChangeNotifier {
       final uniqueNewPosts = result.posts
           .where((p) => !existingIds.contains(p.id))
           .toList();
+
+      if (!refresh && _hideRead) {
+        for (final p in uniqueNewPosts) {
+          if (_readPostIds.contains(p.id)) {
+            _hiddenPostIds.add(p.id);
+          }
+        }
+      }
 
       _posts = refresh ? result.posts : [..._posts, ...uniqueNewPosts];
       _after = result.nextAfter;
@@ -131,22 +144,35 @@ class FeedNotifier extends ChangeNotifier {
     _hideRead = !_hideRead;
 
     if (_hideRead) {
-      // Mark all currently loaded posts as read — the user has seen them.
-      for (final post in _posts) {
-        if (!_readPostIds.contains(post.id)) {
-          await _repository!.markAsRead(post.id);
-        }
+      _hiddenPostIds = Set.from(_readPostIds);
+
+      // Mark all currently loaded posts as read efficiently.
+      final unreadIds = _posts.map((p) => p.id).where(
+            (id) => !_readPostIds.contains(id),
+          ).toList();
+
+      if (unreadIds.isNotEmpty) {
+        // Optimistically update fast
+        _readPostIds.addAll(unreadIds);
+        _hiddenPostIds.addAll(unreadIds);
+        _invalidateVisiblePosts();
+        notifyListeners();
+        
+        // Persist in background
+        await _repository!.markMultipleAsRead(unreadIds);
+      } else {
+        _invalidateVisiblePosts();
+        notifyListeners();
       }
-      _readPostIds = await _repository!.getReadPostIds();
-      _invalidateVisiblePosts();
-      notifyListeners();
 
       // If no unread posts remain, load the next page.
       if (visiblePosts.isEmpty) {
         await loadPosts();
       }
     } else {
-      _readPostIds = await _repository!.getReadPostIds();
+      final dbReadIds = await _repository!.getReadPostIds();
+      _readPostIds.addAll(dbReadIds);
+      _hiddenPostIds.clear();
       _invalidateVisiblePosts();
       notifyListeners();
     }
@@ -156,10 +182,14 @@ class FeedNotifier extends ChangeNotifier {
     if (_repository == null || _readPostIds.contains(postId)) {
       return;
     }
-    await _repository!.markAsRead(postId);
-    _readPostIds = await _repository!.getReadPostIds();
+    
+    // Fast optimistic UI update
+    _readPostIds.add(postId);
     _invalidateVisiblePosts();
     notifyListeners();
+
+    // Persist
+    await _repository!.markAsRead(postId);
   }
 
   /// Clears the feed (e.g., on logout).
@@ -171,15 +201,8 @@ class FeedNotifier extends ChangeNotifier {
     _isLoading = false;
     _hideRead = false;
     _readPostIds = {};
+    _hiddenPostIds = {};
     _invalidateVisiblePosts();
     notifyListeners();
-  }
-
-  /// Handles scroll events to trigger pagination.
-  void handleScroll(double currentPosition, double maxScroll) {
-    const threshold = 500.0;
-    if (currentPosition >= maxScroll - threshold) {
-      unawaited(loadPosts());
-    }
   }
 }

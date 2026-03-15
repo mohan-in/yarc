@@ -143,8 +143,12 @@ Every layer uses a barrel file (`models.dart`, `services.dart`, `repositories.da
 
 ### Local Storage (Hive)
 - **Service**: `HistoryService` manages Hive boxes for tracking read posts.
-- **Usage**: Simple key-value storage for post IDs marked as read.
+- **Usage**: Simple key-value storage for post IDs marked as read. Uses bulk inserts (`putAll`) for performant multi-post toggles.
 - **Init**: `HistoryService.init()` is called in `main()` before `runApp`.
+
+### Read State Decoupling
+- **Logic**: `FeedNotifier` decouples what is "read" (`_readPostIds`) from what is actively "hidden" (`_hiddenPostIds`).
+- **Effect**: Allows scrolling past posts to optimistically mark them as read visually without unexpectedly dropping them from the UI when the "Hide Read" filter is engaged.
 
 ### Deep Linking
 - **Service**: `DeepLinkService` uses `app_links` to handle universal links and custom schemes.

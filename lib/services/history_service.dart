@@ -16,6 +16,12 @@ class HistoryService {
     await _box.put(postId, true);
   }
 
+  /// Marks multiple posts as read.
+  Future<void> markMultipleAsRead(Iterable<String> postIds) async {
+    final entries = {for (final id in postIds) id: true};
+    await _box.putAll(entries);
+  }
+
   /// Checks if a post has been read.
   Future<bool> isRead(String postId) async {
     return _box.get(postId) ?? false;

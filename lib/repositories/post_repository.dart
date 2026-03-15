@@ -32,6 +32,11 @@ class PostRepository {
     await _historyService.markAsRead(postId);
   }
 
+  /// Marks multiple posts as read.
+  Future<void> markMultipleAsRead(Iterable<String> postIds) async {
+    await _historyService.markMultipleAsRead(postIds);
+  }
+
   /// Gets all read post IDs.
   Future<Set<String>> getReadPostIds() async {
     return _historyService.getReadPostIds();

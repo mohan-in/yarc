@@ -19,11 +19,13 @@ class PostCard extends StatelessWidget {
     super.key,
     this.onTap,
     this.expanded = false,
+    this.isRead = false,
   });
 
   final Post post;
   final VoidCallback? onTap;
   final bool expanded;
+  final bool isRead;
 
   /// Matches markdown image syntax: `![alt](url)`
   static final _markdownImageRegex = RegExp(r'!\[[^\]]*\]\([^)]+\)');
@@ -44,13 +46,13 @@ class PostCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _PostHeader(post: post),
+              _PostHeader(post: post, isRead: isRead),
               if (post.crosspostParent != null)
                 _CrosspostIndicator(
                   originalSubreddit: post.crosspostParent!.subreddit,
                 ),
               const SizedBox(height: 8),
-              _PostTitle(post: post),
+              _PostTitle(post: post, isRead: isRead),
               if (post.url != null) _ExternalLink(url: post.url!),
               if (post.content.isNotEmpty) _buildContent(context),
               const SizedBox(height: 12),
@@ -110,9 +112,13 @@ class PostCard extends StatelessWidget {
 }
 
 class _PostHeader extends StatelessWidget {
-  const _PostHeader({required this.post});
+  const _PostHeader({
+    required this.post,
+    required this.isRead,
+  });
 
   final Post post;
+  final bool isRead;
 
   @override
   Widget build(BuildContext context) {
@@ -124,6 +130,14 @@ class _PostHeader extends StatelessWidget {
             Icons.push_pin,
             size: 14,
             color: theme.colorScheme.tertiary,
+          ),
+          const SizedBox(width: 4),
+        ],
+        if (isRead) ...[
+          Icon(
+            Icons.check,
+            size: 14,
+            color: theme.colorScheme.primary,
           ),
           const SizedBox(width: 4),
         ],
@@ -146,15 +160,20 @@ class _PostHeader extends StatelessWidget {
 }
 
 class _PostTitle extends StatelessWidget {
-  const _PostTitle({required this.post});
+  const _PostTitle({
+    required this.post,
+    required this.isRead,
+  });
 
   final Post post;
+  final bool isRead;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Text(
       HtmlUtils.unescape(post.title),
-      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      style: theme.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.bold,
       ),
     );
