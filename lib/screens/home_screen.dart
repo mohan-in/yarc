@@ -124,13 +124,29 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openSearch(BuildContext context) async {
-    final selectedSubreddit = await showSearch<Subreddit?>(
+    final result = await showSearch<SearchResult?>(
       context: context,
       delegate: SubredditSearchDelegate(),
     );
 
-    if (selectedSubreddit != null && context.mounted) {
-      context.read<FeedNotifier>().selectSubredditWithInfo(selectedSubreddit);
+    if (result == null || !context.mounted) {
+      return;
+    }
+
+    if (result.subreddit != null) {
+      context.read<FeedNotifier>().selectSubredditWithInfo(result.subreddit!);
+    } else if (result.username != null) {
+      // Navigate to the user's profile feed using the u_{username} subreddit.
+      context.read<FeedNotifier>().selectSubreddit('u_${result.username}');
+    }
+  }
+
+  Future<void> _handleRetry() async {
+    final authNotifier = context.read<AuthNotifier>();
+    final success = await authNotifier.tryReauthenticate();
+    if (success && mounted) {
+      unawaited(context.read<FeedNotifier>().loadPosts());
+      unawaited(context.read<SubredditsNotifier>().fetch());
     }
   }
 
@@ -203,18 +219,35 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              Selector2<AuthNotifier, FeedNotifier, (bool, String?)>(
+              Selector2<AuthNotifier, FeedNotifier,
+                  (bool, bool, String?)>(
                 selector: (_, auth, feed) => (
                   auth.isLoggedIn,
+                  auth.isUnauthenticated,
                   feed.currentSubreddit,
                 ),
                 builder: (context, data, _) {
-                  final (isLoggedIn, currentSubreddit) = data;
+                  final (isLoggedIn, isUnauthenticated, currentSubreddit) =
+                      data;
+
+                  // Session expired — show retry / re-login
+                  if (isUnauthenticated && currentSubreddit == null) {
+                    return SliverFillRemaining(
+                      child: LoginPrompt(
+                        onLogin: _handleLogin,
+                        onRetry: _handleRetry,
+                        isSessionExpired: true,
+                      ),
+                    );
+                  }
+
+                  // Not logged in — show initial login prompt
                   if (!isLoggedIn && currentSubreddit == null) {
                     return SliverFillRemaining(
                       child: LoginPrompt(onLogin: _handleLogin),
                     );
                   }
+
                   return _PostListBuilder(
                     redditService: redditService,
                     onPostTap: (post) {

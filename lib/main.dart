@@ -155,9 +155,13 @@ class _YarcAppState extends State<YarcApp> {
           create: (_) => SubredditsNotifier(),
           update: (_, repo, notifier) => notifier!..setRepository(repo),
         ),
-        ChangeNotifierProxyProvider<SubredditRepository, SearchNotifier>(
+        ChangeNotifierProxyProvider2<SubredditRepository, RedditService,
+            SearchNotifier>(
           create: (_) => SearchNotifier(),
-          update: (_, repo, notifier) => notifier!..setRepository(repo),
+          update: (_, repo, reddit, notifier) =>
+              notifier!
+                ..setRepository(repo)
+                ..setRedditService(reddit),
         ),
         ChangeNotifierProvider(create: (_) => VideoAutoplayNotifier()),
       ],

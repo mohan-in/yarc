@@ -23,6 +23,7 @@ class Post {
     this.youtubeId,
     this.aspectRatio,
     this.crosspostParent,
+    this.isStickied = false,
   });
 
   /// The unique ID of the post (e.g., "t3_12345").
@@ -73,6 +74,9 @@ class Post {
 
   /// The original post for crossposts/reposts.
   final Post? crosspostParent;
+
+  /// Whether this post is stickied (pinned) by a moderator.
+  final bool isStickied;
 
   @override
   bool operator ==(Object other) =>

@@ -5,15 +5,26 @@ import 'package:yarc/repositories/auth_repository.dart';
 import 'package:yarc/services/auth_service.dart';
 
 /// Notifier for managing authentication state.
+///
+/// Distinguishes between three states:
+/// - **loggedIn**: User has valid credentials.
+/// - **loggedOut**: No credentials stored (initial state or explicit logout).
+/// - **unauthenticated**: Had credentials but the refresh token was
+///   revoked/invalid. Shows a "session expired" UI with retry option.
 class AuthNotifier extends ChangeNotifier {
   AuthRepository? _repository;
   StreamSubscription<AuthState>? _authSubscription;
 
   bool _isLoggedIn = false;
   bool _isInitialized = false;
+  bool _isUnauthenticated = false;
 
   bool get isLoggedIn => _isLoggedIn;
   bool get isInitialized => _isInitialized;
+
+  /// True when the session has expired or the token was revoked.
+  /// The user should see a "session expired" screen with Retry/Re-login.
+  bool get isUnauthenticated => _isUnauthenticated;
 
   void setRepository(AuthRepository repository) {
     // Cancel any existing subscription before creating a new one.
@@ -22,14 +33,22 @@ class AuthNotifier extends ChangeNotifier {
     // duplicate listeners on the same stream.
     unawaited(_authSubscription?.cancel());
     _repository = repository;
-    _authSubscription = _repository!.authStateStream.listen((state) {
-      if (state == AuthState.loggedIn) {
+    _authSubscription = _repository!.authStateStream.listen(_onAuthState);
+  }
+
+  void _onAuthState(AuthState state) {
+    switch (state) {
+      case AuthState.loggedIn:
         _isLoggedIn = true;
-      } else {
+        _isUnauthenticated = false;
+      case AuthState.loggedOut:
         _isLoggedIn = false;
-      }
-      notifyListeners();
-    });
+        _isUnauthenticated = false;
+      case AuthState.unauthenticated:
+        _isLoggedIn = false;
+        _isUnauthenticated = true;
+    }
+    notifyListeners();
   }
 
   /// Initializes auth and restores session if available.
@@ -52,9 +71,19 @@ class AuthNotifier extends ChangeNotifier {
     final error = await _repository!.login();
     if (error == null) {
       _isLoggedIn = true;
+      _isUnauthenticated = false;
       notifyListeners();
     }
     return error;
+  }
+
+  /// Attempts to restore the session using stored credentials.
+  /// Returns true on success.
+  Future<bool> tryReauthenticate() async {
+    if (_repository == null) {
+      return false;
+    }
+    return _repository!.tryRestoreSession();
   }
 
   Future<void> logout() async {
@@ -63,6 +92,7 @@ class AuthNotifier extends ChangeNotifier {
     }
     await _repository!.logout();
     _isLoggedIn = false;
+    _isUnauthenticated = false;
     notifyListeners();
   }
 

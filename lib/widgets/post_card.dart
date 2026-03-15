@@ -119,6 +119,14 @@ class _PostHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
+        if (post.isStickied) ...[
+          Icon(
+            Icons.push_pin,
+            size: 14,
+            color: theme.colorScheme.tertiary,
+          ),
+          const SizedBox(width: 4),
+        ],
         Text(
           'r/${post.subreddit}',
           style: theme.textTheme.labelMedium?.copyWith(

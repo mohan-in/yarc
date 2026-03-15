@@ -77,7 +77,7 @@ class AuthService {
 
     if (credentialsJson != null) {
       try {
-        _reddit = Reddit.restoreAuthenticatedInstance(
+        _reddit = Reddit.restoreInstalledAuthenticatedInstance(
           credentialsJson,
           clientId: _clientId,
           userAgent: kUserAgent,
@@ -115,9 +115,24 @@ class AuthService {
     }
   }
 
+  /// Returns true if the error indicates the refresh token itself has been
+  /// revoked or is invalid (as opposed to a transient network error).
+  static bool _isTokenRevocationError(Exception e) {
+    final message = e.toString().toLowerCase();
+    return message.contains('invalid_grant') ||
+        message.contains('token has been revoked') ||
+        message.contains('token is expired') ||
+        message.contains('unauthorized_client') ||
+        message.contains('access_denied');
+  }
+
   /// Forces a session refresh. Useful when
   /// receiving 401 errors despite the client
   /// thinking the token is valid.
+  ///
+  /// Only emits [AuthState.unauthenticated] when the refresh token itself is
+  /// invalid/revoked. For transient network errors the state is left unchanged
+  /// so the UI does not flash a login screen.
   Future<void> refreshSession() async {
     if (_reddit != null) {
       try {
@@ -126,16 +141,52 @@ class AuthService {
         _authStateController.add(AuthState.loggedIn);
       } on Exception catch (e) {
         developer.log(
-          'Critical refresh failure: $e',
+          'Refresh failure: $e',
           name: 'AuthService',
         );
-        // Do NOT call logout() here. logout() deletes stored credentials,
-        // which would destroy the refresh token on a transient network error.
+        // Only signal unauthenticated when the refresh token is genuinely
+        // revoked. Transient network errors should NOT flip the UI to the
+        // login screen — the stored credentials may still be valid.
+        if (_isTokenRevocationError(e)) {
+          _authStateController.add(AuthState.unauthenticated);
+        }
+        // Do NOT call logout() — that would delete stored credentials.
         // Do NOT rethrow — callers use the stream emission as the signal.
-        // Rethrowing would cascade unhandled exceptions through API call
-        // chains and trigger additional logout-like behavior.
+      }
+    }
+  }
+
+  /// Attempts to restore an existing session using stored credentials.
+  /// Called from the notifier when recovering from an unauthenticated state.
+  /// Returns true on success.
+  Future<bool> tryRestoreSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final credentialsJson = prefs.getString(_credentialsKey);
+    if (credentialsJson == null) {
+      return false;
+    }
+
+    try {
+      _reddit = Reddit.restoreInstalledAuthenticatedInstance(
+        credentialsJson,
+        clientId: _clientId,
+        userAgent: kUserAgent,
+        redirectUri: Uri.parse(_redirectUri),
+      );
+      _lastSavedCredentials = credentialsJson;
+      await _reddit!.auth.refresh();
+      await persistCredentials();
+      _authStateController.add(AuthState.loggedIn);
+      return true;
+    } on Exception catch (e) {
+      developer.log(
+        'Session restore failed: $e',
+        name: 'AuthService',
+      );
+      if (_isTokenRevocationError(e)) {
         _authStateController.add(AuthState.unauthenticated);
       }
+      return false;
     }
   }
 

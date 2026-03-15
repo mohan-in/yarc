@@ -2,20 +2,31 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/notifiers/search_notifier.dart';
 import 'package:yarc/utils/constants.dart';
 import 'package:yarc/utils/image_utils.dart';
 
-/// A SearchDelegate for searching subreddits.
-/// Returns the selected subreddit when a result is tapped.
-class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
+/// Result type returned by the search delegate.
+/// Contains either a selected subreddit or a selected user (not both).
+@immutable
+class SearchResult {
+  const SearchResult({this.subreddit, this.username});
+
+  final Subreddit? subreddit;
+  final String? username;
+}
+
+/// A SearchDelegate for searching subreddits and users.
+/// Returns a [SearchResult] when a result is tapped.
+class SubredditSearchDelegate extends SearchDelegate<SearchResult?> {
   SubredditSearchDelegate();
 
   Timer? _debounceTimer;
 
   @override
-  String get searchFieldLabel => 'Search subreddits';
+  String get searchFieldLabel => 'Search subreddits or users';
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -46,56 +57,178 @@ class SubredditSearchDelegate extends SearchDelegate<Subreddit?> {
 
   @override
   Widget buildResults(BuildContext context) {
-    return _buildSearchResults(context);
+    return _SearchBody(
+      query: query,
+      debounceTimer: _debounceTimer,
+      onDebounce: (timer) => _debounceTimer = timer,
+      onSelectSubreddit: (sub) {
+        _debounceTimer?.cancel();
+        context.read<SearchNotifier>().clear();
+        close(context, SearchResult(subreddit: sub));
+      },
+      onSelectUser: (username) {
+        _debounceTimer?.cancel();
+        context.read<SearchNotifier>().clear();
+        close(context, SearchResult(username: username));
+      },
+    );
   }
 
   @override
   Widget buildSuggestions(BuildContext context) {
-    // Debounce search to avoid firing a network request on every keystroke
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(kSearchDebounceDuration, () {
-      if (context.mounted) {
-        unawaited(context.read<SearchNotifier>().search(query));
-      }
-    });
-
-    return _buildSearchResults(context);
+    return _SearchBody(
+      query: query,
+      debounceTimer: _debounceTimer,
+      onDebounce: (timer) => _debounceTimer = timer,
+      onSelectSubreddit: (sub) {
+        _debounceTimer?.cancel();
+        context.read<SearchNotifier>().clear();
+        close(context, SearchResult(subreddit: sub));
+      },
+      onSelectUser: (username) {
+        _debounceTimer?.cancel();
+        context.read<SearchNotifier>().clear();
+        close(context, SearchResult(username: username));
+      },
+    );
   }
 
   @override
-  void close(BuildContext context, Subreddit? result) {
+  void close(BuildContext context, SearchResult? result) {
     _debounceTimer?.cancel();
     super.close(context, result);
   }
+}
 
-  Widget _buildSearchResults(BuildContext context) {
+/// The body of the search — a TabBar with Subreddits and Users tabs.
+class _SearchBody extends StatefulWidget {
+  const _SearchBody({
+    required this.query,
+    required this.debounceTimer,
+    required this.onDebounce,
+    required this.onSelectSubreddit,
+    required this.onSelectUser,
+  });
+
+  final String query;
+  final Timer? debounceTimer;
+  final ValueChanged<Timer> onDebounce;
+  final ValueChanged<Subreddit> onSelectSubreddit;
+  final ValueChanged<String> onSelectUser;
+
+  @override
+  State<_SearchBody> createState() => _SearchBodyState();
+}
+
+class _SearchBodyState extends State<_SearchBody>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+  String _lastQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  @override
+  void dispose() {
+    _tabController
+      ..removeListener(_onTabChanged)
+      ..dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(_SearchBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.query != _lastQuery) {
+      _lastQuery = widget.query;
+      _triggerSearch();
+    }
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging) {
+      _triggerSearch();
+    }
+  }
+
+  void _triggerSearch() {
+    widget.debounceTimer?.cancel();
+    final timer = Timer(kSearchDebounceDuration, () {
+      if (mounted) {
+        final notifier = context.read<SearchNotifier>();
+        if (_tabController.index == 0) {
+          unawaited(notifier.search(widget.query));
+        } else {
+          unawaited(notifier.searchUser(widget.query));
+        }
+      }
+    });
+    widget.onDebounce(timer);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'Subreddits'),
+            Tab(text: 'Users'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _SubredditResults(onSelect: widget.onSelectSubreddit),
+              _UserResults(onSelect: widget.onSelectUser),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Subreddit results tab
+// ---------------------------------------------------------------------------
+
+class _SubredditResults extends StatelessWidget {
+  const _SubredditResults({required this.onSelect});
+
+  final ValueChanged<Subreddit> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
     return Consumer<SearchNotifier>(
-      builder: (context, searchNotifier, child) {
-        if (searchNotifier.query.length < 2) {
+      builder: (context, notifier, _) {
+        if (notifier.query.length < 2) {
           return const Center(
             child: Text('Type at least 2 characters to search'),
           );
         }
 
-        if (searchNotifier.isLoading) {
+        if (notifier.isLoading) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        if (searchNotifier.results.isEmpty) {
+        if (notifier.results.isEmpty) {
           return const Center(child: Text('No subreddits found'));
         }
 
         return ListView.builder(
-          itemCount: searchNotifier.results.length,
+          itemCount: notifier.results.length,
           itemBuilder: (context, index) {
-            final subreddit = searchNotifier.results[index];
+            final subreddit = notifier.results[index];
             return _SubredditTile(
               subreddit: subreddit,
-              onTap: () {
-                _debounceTimer?.cancel();
-                context.read<SearchNotifier>().clear();
-                close(context, subreddit);
-              },
+              onTap: () => onSelect(subreddit),
             );
           },
         );
@@ -150,7 +283,6 @@ class _SubredditTile extends StatelessWidget {
     );
   }
 
-  /// Formats the subscriber count in a human-readable way (e.g., 1.2M, 45.3K)
   static String _formatSubscriberCount(int count) {
     if (count >= 1000000) {
       return '${(count / 1000000).toStringAsFixed(1)}M members';
@@ -158,5 +290,102 @@ class _SubredditTile extends StatelessWidget {
       return '${(count / 1000).toStringAsFixed(1)}K members';
     }
     return '$count members';
+  }
+}
+
+// ---------------------------------------------------------------------------
+// User results tab
+// ---------------------------------------------------------------------------
+
+class _UserResults extends StatelessWidget {
+  const _UserResults({required this.onSelect});
+
+  final ValueChanged<String> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<SearchNotifier>(
+      builder: (context, notifier, _) {
+        if (notifier.isUserLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (!notifier.userSearched) {
+          return const Center(
+            child: Text('Type a username to look up'),
+          );
+        }
+
+        final user = notifier.userResult;
+        if (user == null) {
+          return const Center(child: Text('User not found'));
+        }
+
+        return ListView(
+          children: [_UserTile(user: user, onTap: () => onSelect(user.name))],
+        );
+      },
+    );
+  }
+}
+
+class _UserTile extends StatelessWidget {
+  const _UserTile({
+    required this.user,
+    required this.onTap,
+  });
+
+  final RedditorInfo user;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: theme.colorScheme.primaryContainer,
+        child: Icon(
+          Icons.person,
+          color: theme.colorScheme.onPrimaryContainer,
+        ),
+      ),
+      title: Text(
+        'u/${user.name}',
+        style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        '${_formatKarma(user.totalKarma)} karma'
+        '${user.createdUtc != null ? '\nJoined ${_formatAge(user.createdUtc!)}'
+            : ''}',
+        style: textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: onTap,
+    );
+  }
+
+  static String _formatKarma(int karma) {
+    if (karma >= 1000000) {
+      return '${(karma / 1000000).toStringAsFixed(1)}M';
+    } else if (karma >= 1000) {
+      return '${(karma / 1000).toStringAsFixed(1)}K';
+    }
+    return karma.toString();
+  }
+
+  static String _formatAge(DateTime created) {
+    final age = DateTime.now().difference(created);
+    if (age.inDays >= 365) {
+      final years = age.inDays ~/ 365;
+      return '$years${years == 1 ? 'y' : 'y'} old';
+    } else if (age.inDays >= 30) {
+      final months = age.inDays ~/ 30;
+      return '${months}mo old';
+    }
+    return '${age.inDays}d old';
   }
 }

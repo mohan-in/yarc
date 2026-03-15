@@ -14,6 +14,18 @@ class PostParser {
     caseSensitive: false,
   );
 
+  /// Matches URLs that point to direct media files we render inline.
+  static final _directMediaUrlRegex = RegExp(
+    r'\.(?:jpg|jpeg|png|gif|webp|mp4)(?:\?.*)?$',
+    caseSensitive: false,
+  );
+
+  /// Matches Reddit-hosted media domains (galleries, videos, images).
+  static final _redditMediaDomainRegex = RegExp(
+    r'(?:i\.redd\.it|v\.redd\.it|preview\.redd\.it|reddit\.com/gallery)',
+    caseSensitive: false,
+  );
+
   static final _youtubeRegex = RegExp(
     r'^.*((youtu.be\/)|(v\/)|'
     r'(\/u\/\w\/)|(embed\/)|'
@@ -31,6 +43,7 @@ class PostParser {
     var isYoutube = false;
     String? youtubeId;
     double? aspectRatio;
+    final isStickied = submission.data?['stickied'] as bool? ?? false;
 
     // Attempt to find the main image URL from preview
     final preview = submission.preview;
@@ -113,14 +126,17 @@ class PostParser {
         ? submission.thumbnail.toString()
         : null;
 
-    // Capture external link URL for non-self posts
+    // Capture external link URL for non-self posts.
+    // Only skip if the URL itself is a direct media file or Reddit/YouTube
+    // media domain that we already render inline.
     String? externalUrl;
     if (!submission.isSelf) {
       final postUrl = submission.url.toString();
-      // Only store as external link if it's not media we already handle
-      final isHandledMedia =
-          isVideo || isYoutube || images.isNotEmpty || thumbnailUrl != null;
-      if (!isHandledMedia && postUrl.isNotEmpty) {
+      final isMediaUrl = isVideo ||
+          _directMediaUrlRegex.hasMatch(postUrl) ||
+          _redditMediaDomainRegex.hasMatch(postUrl) ||
+          isYoutube;
+      if (!isMediaUrl && postUrl.isNotEmpty) {
         externalUrl = postUrl;
       }
     }
@@ -154,6 +170,7 @@ class PostParser {
       aspectRatio: aspectRatio,
       url: externalUrl,
       crosspostParent: crosspostParent,
+      isStickied: isStickied,
     );
   }
 

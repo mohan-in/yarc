@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'package:draw/draw.dart' as draw;
 import 'package:yarc/models/comment.dart';
 import 'package:yarc/models/post.dart';
+import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/models/types.dart';
 import 'package:yarc/services/auth_service.dart';
@@ -46,22 +47,28 @@ class RedditService {
       return result;
     } on Exception catch (e) {
       if (_isAuthException(e)) {
+        developer.log(
+          'Auth error in $actionName, refreshing session...',
+          name: 'RedditService',
+        );
+        await _authService.refreshSession();
+
+        // Only retry if the refresh actually succeeded. If the token was
+        // revoked, refreshSession() emits unauthenticated on the stream
+        // and we should not attempt a doomed retry.
+        if (!_authService.isLoggedIn) {
+          rethrow;
+        }
+
         try {
-          developer.log(
-            'Auth error in $actionName, refreshing session...',
-            name: 'RedditService',
-          );
-          await _authService.refreshSession();
-          // Retry the action after successful refresh
           final retryResult = await action();
           await _authService.persistCredentials();
           return retryResult;
-        } on Exception catch (refreshError) {
+        } on Exception catch (retryError) {
           developer.log(
-            'Failed to refresh in $actionName: $refreshError',
+            'Retry failed in $actionName: $retryError',
             name: 'RedditService',
           );
-          // If refresh fails or retry fails, rethrow
           rethrow;
         }
       }
@@ -233,6 +240,29 @@ class RedditService {
       });
     } catch (e) {
       throw Exception('Failed to unsubscribe from $subredditName: $e');
+    }
+  }
+
+  /// Fetches a user by exact username.
+  /// Returns null if the user doesn't exist or on error.
+  Future<RedditorInfo?> fetchUser(String username) async {
+    final reddit = _reddit;
+    if (reddit == null || username.isEmpty) {
+      return null;
+    }
+
+    try {
+      return await _withAuthRetry('fetchUser', () async {
+        final redditor = await reddit.redditor(username).populate();
+        return RedditorInfo(
+          name: redditor.displayName,
+          commentKarma: redditor.commentKarma ?? 0,
+          linkKarma: redditor.linkKarma ?? 0,
+          createdUtc: redditor.createdUtc,
+        );
+      });
+    } on Exception catch (_) {
+      return null;
     }
   }
 }

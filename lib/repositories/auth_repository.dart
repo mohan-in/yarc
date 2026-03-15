@@ -27,4 +27,10 @@ class AuthRepository {
   Future<void> logout() async {
     await _service.logout();
   }
+
+  /// Attempts to restore the session using stored credentials.
+  /// Returns true on success.
+  Future<bool> tryRestoreSession() async {
+    return _service.tryRestoreSession();
+  }
 }
