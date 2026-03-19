@@ -76,6 +76,15 @@ class AuthService {
     final credentialsJson = prefs.getString(_credentialsKey);
 
     if (credentialsJson != null) {
+      if (_clientId.isEmpty) {
+        developer.log(
+          'Client ID missing. Cannot restore session.',
+          name: 'AuthService',
+        );
+        _authStateController.add(AuthState.loggedOut);
+        return;
+      }
+      
       try {
         _reddit = Reddit.restoreInstalledAuthenticatedInstance(
           credentialsJson,
@@ -160,6 +169,10 @@ class AuthService {
   /// Called from the notifier when recovering from an unauthenticated state.
   /// Returns true on success.
   Future<bool> tryRestoreSession() async {
+    if (_clientId.isEmpty) {
+      return false;
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final credentialsJson = prefs.getString(_credentialsKey);
     if (credentialsJson == null) {
