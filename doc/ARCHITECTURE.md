@@ -39,6 +39,8 @@ lib/
 ├── models/                  # Data classes & type aliases
 │   ├── comment.dart
 │   ├── post.dart
+│   ├── redditor_info.dart       # User profile data
+│   ├── search_result.dart       # Search result (subreddit or user)
 │   ├── subreddit.dart
 │   ├── types.dart               # PostsResult typedef
 │   └── models.dart              # Barrel file
@@ -87,10 +89,11 @@ lib/
 │   ├── feed_utils.dart          # Feed filtering helpers
 │   ├── html_utils.dart          # HTML entity decoding
 │   ├── image_utils.dart         # Image URL resolution
+│   ├── number_format_utils.dart # Compact number formatting (1.2K, 3.4M)
 │   ├── post_parser.dart         # Reddit post content parser
 │   └── utils.dart               # Barrel file
 └── theme/                   # App theming
-    └── theme.dart               # Material 3 ThemeData
+    └── theme.dart               # Material 3 ThemeData + extensions
 ```
 
 ---
@@ -103,9 +106,9 @@ Raw data access—no business logic.
 | Service | Responsibility |
 |---------|---------------|
 | `AuthService` | OAuth2 flow, token storage/refresh, `AuthState` stream for session events |
-| `RedditService` | Reddit API calls via `draw` package |
-| `HistoryService` | Hive-based read history tracking |
-| `DeepLinkService` | Handles incoming deep links (cold/warm start) via `app_links` |
+| `RedditService` | Reddit API calls via `draw` package, with automatic auth-retry on 401 |
+| `HistoryService` | Hive-based read history tracking. Read operations (`isRead`, `getReadPostIds`) are synchronous in-memory lookups; only writes (`markAsRead`, `markAllAsRead`) are async |
+| `DeepLinkService` | Handles incoming deep links (cold/warm start) via `app_links`. Parses subreddit, post, user, and home link types |
 
 ### Repositories
 Orchestrate services, apply business rules.
@@ -113,7 +116,7 @@ Orchestrate services, apply business rules.
 | Repository | Dependencies | Purpose |
 |------------|--------------|---------|
 | `AuthRepository` | AuthService | Login/logout abstraction, exposes `authStateStream` |
-| `PostRepository` | RedditService, HistoryService | Post fetching, pagination, read history tracking |
+| `PostRepository` | RedditService, HistoryService | Post fetching, comment fetching, pagination, read history tracking |
 | `SubredditRepository` | RedditService | Subscribed subreddits, search, subscribe/unsubscribe |
 
 ### Notifiers
@@ -122,10 +125,10 @@ Hold reactive state, notify UI of changes.
 | Notifier | State | Key Actions |
 |----------|-------|-------------|
 | `AuthNotifier` | `isLoggedIn`, `isInitialized` | `login()`, `logout()`, listens to `AuthState` stream |
-| `FeedNotifier` | `posts`, `visiblePosts`, `currentSubreddit`, `hideRead`, `readPostIds` | `loadPosts()`, `refresh()`, `selectSubreddit()`, `selectSubredditWithInfo()`, `toggleHideRead()`, `markAsRead()`, `handleScroll()` |
+| `FeedNotifier` | `posts`, `visiblePosts`, `currentSubreddit`, `hideRead`, `readPostIds` | `loadPosts()`, `refresh()`, `selectSubreddit()`, `selectSubredditWithInfo()`, `toggleHideRead()`, `markAsRead()`, `handleScroll()`. Returns `readPostIds` as `UnmodifiableSetView` and creates new set instances on mutation for reliable `context.select` change detection |
 | `SubredditsNotifier` | `subreddits` | `fetch()`, `clear()`, `toggleSubscription()`, `isSubscribed()` |
-| `SearchNotifier` | `query`, `results`, `isLoading` | `search()`, `clear()` |
-| `VideoAutoplayNotifier` | `playingVideoId` | `play()`, `stop()`, `notifyScroll()` — coordinates single-video-at-a-time autoplay |
+| `SearchNotifier` | `query`, `results`, `isLoading`, `userResult`, `isUserLoading` | `search()`, `searchUser()`, `clear()` — validates minimum query length before triggering API calls |
+| `VideoAutoplayNotifier` | `playingVideoId` | `play()`, `stop()`, `notifyScroll()` — coordinates single-video-at-a-time autoplay. Scroll events are throttled (100ms debounce) to avoid excessive layout calculations across loaded video players |
 
 ---
 
@@ -143,6 +146,7 @@ Every layer uses a barrel file (`models.dart`, `services.dart`, `repositories.da
 
 ### Local Storage (Hive)
 - **Service**: `HistoryService` manages Hive boxes for tracking read posts.
+- **Sync vs Async**: Read operations (`isRead()`, `getReadPostIds()`) are **synchronous** since Hive boxes are in-memory after initialization. Only writes (`markAsRead()`, `markAllAsRead()`) are async.
 - **Usage**: Simple key-value storage for post IDs marked as read. Uses bulk inserts (`putAll`) for performant multi-post toggles.
 - **Init**: `HistoryService.init()` is called in `main()` before `runApp`.
 
@@ -152,8 +156,9 @@ Every layer uses a barrel file (`models.dart`, `services.dart`, `repositories.da
 
 ### Deep Linking
 - **Service**: `DeepLinkService` uses `app_links` to handle universal links and custom schemes.
-- **Logic**: Parses URLs (e.g., `/r/flutter`, `/r/flutter/comments/xyz`) into `DeepLinkResult` objects.
-- **Handling**: `_YarcAppState` manages both cold-start (pending link) and warm-start (stream listener) deep links.
+- **Logic**: Parses URLs (e.g., `/r/flutter`, `/r/flutter/comments/xyz`, `/u/username`) into `DeepLinkResult` objects.
+- **Types**: Supports `subreddit`, `post`, `user`, `home`, and `unknown` deep link types.
+- **Handling**: `_YarcAppState` manages both cold-start (pending link) and warm-start (stream listener) deep links. User deep links navigate to the `u_{username}` feed.
 
 ### Samsung DeX Compatibility
 - **Plugin**: `dex_compat` (local path dependency) detects desktop mode on Samsung DeX.
@@ -161,7 +166,18 @@ Every layer uses a barrel file (`models.dart`, `services.dart`, `repositories.da
 
 ### Video Autoplay
 - `VideoAutoplayNotifier` enforces single-video-at-a-time playback across the feed.
-- Feed scroll events trigger `notifyScroll()`, and individual `VideoPlayer` widgets check their visibility to auto-play/stop.
+- Feed scroll events trigger `notifyScroll()`, which is **throttled at 100ms** to avoid triggering layout calculations across all loaded video players on every scroll pixel.
+- Individual `VideoPlayer` widgets check their viewport position via `localToGlobal` to determine if they're in the "safe zone" (center 70% of screen) and auto-play/stop accordingly.
+
+### Widget Extraction
+- Large widget build methods are broken into smaller, private extracted widgets (e.g., `_PostContent`, `_PostHeader`, `_PostMedia`, `_PostTitle`, `_CommentBody`, `_CommentReplies`).
+- This enables Flutter's element-level caching — subtrees won't rebuild when only sibling state changes.
+- **Rule**: Prefer `StatelessWidget` subclasses over instance helper methods that return `Widget`, as the latter bypass the element tree.
+
+### Shared Utilities
+- `NumberFormatUtils.formatCompact()` provides consistent compact number formatting (e.g., `1.2K members`, `3.4M karma`) across all widgets.
+- `ImageUtils` centralizes CORS URL handling and auth headers for all image loading.
+- All image rendering (including inline markdown images) uses `CachedNetworkImage` for consistent disk caching.
 
 ---
 

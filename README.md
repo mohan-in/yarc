@@ -3,13 +3,15 @@
 A clean and modern Reddit client built with Flutter, designed to provide a seamless browsing experience.
 
 ## Features
-- **Feed Browsing**: Seamlessly browse your favorite subreddits and custom feeds.
-- **Rich Media Support**: Native support for high-quality images, galleries, videos, and YouTube embeds.
-- **Markdown Rendering**: Beautiful rendering of text posts and nested comments with proper formatting.
-- **Search**: Easily discover new communities with subreddit search.
-- **Subreddit Info**: View details, subscriber counts, and descriptions for subreddits.
-- **Authentication**: Secure login to access your personal front page and subscriptions.
-- **Modern UI**: Polished interface following Material Design guidelines properly adapted for mobile.
+- **Feed Browsing**: Seamlessly browse your favorite subreddits, custom feeds, and user profiles.
+- **Rich Media Support**: Native support for high-quality images, galleries, videos, and YouTube embeds — all cached for fast reloads.
+- **Markdown Rendering**: Beautiful rendering of text posts and nested comments with proper formatting and inline images.
+- **Search**: Easily discover new communities and users with dual-tab search (subreddits + users).
+- **Subreddit Info**: View details, subscriber counts, and descriptions for subreddits with join/leave controls.
+- **Authentication**: Secure OAuth2 login to access your personal front page and subscriptions.
+- **Deep Linking**: Open Reddit links directly in the app — supports subreddit, post, and user profile links.
+- **Read History**: Track which posts you've read, with an option to hide them from the feed.
+- **Modern UI**: Polished Material 3 interface with adaptive layouts for phones, foldables, and Samsung DeX.
 
 ## Technology Stack
 - **Framework**: Flutter & Dart
@@ -43,7 +45,7 @@ To run this app, you need a Reddit API Client ID to access Reddit's data.
    - **About url**: (Optional)
    - **Redirect uri**: `com.mohan.reddit.client://callback` (**Crucial**: This must match exactly!)
 5. Click **"create app"**.
-6. Copy the string listed just under your app name (e.g., `yaXeM_ZPOGgDbkeLobupJw`). This is your **Client ID**.
+6. Copy the string listed just under your app name. This is your **Client ID**.
 
 ### 2. Run the App
 Run the app using the following command in your terminal:
@@ -54,15 +56,6 @@ flutter run --dart-define=REDDIT_CLIENT_ID=YOUR_CLIENT_ID
 
 Replace `YOUR_CLIENT_ID` with the actual ID you obtained from Reddit.
 
-**Example:**
-```bash
-flutter run --dart-define=REDDIT_CLIENT_ID=yaXeM_ZPOGgDbkeLobupJw
-```
-
 ## Documentation
 
 For detailed architecture and project structure, see [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests to us.
