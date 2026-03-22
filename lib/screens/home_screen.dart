@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/notifiers.dart';
+import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
-import 'package:yarc/services/services.dart';
 import 'package:yarc/utils/utils.dart';
 import 'package:yarc/widgets/widgets.dart';
 
@@ -155,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final redditService = context.read<RedditService>();
+    final postRepository = context.read<PostRepository>();
 
     return PopScope(
       canPop: context.select<FeedNotifier, bool>(
@@ -222,8 +222,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              Selector2<AuthNotifier, FeedNotifier,
-                  (bool, bool, String?)>(
+              Selector2<AuthNotifier, FeedNotifier, (bool, bool, String?)>(
                 selector: (_, auth, feed) => (
                   auth.isLoggedIn,
                   auth.isUnauthenticated,
@@ -252,7 +251,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
 
                   return _PostListBuilder(
-                    redditService: redditService,
+                    postRepository: postRepository,
                     onPostTap: (post) {
                       unawaited(
                         Navigator.push<void>(
@@ -260,7 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           MaterialPageRoute<void>(
                             builder: (context) => PostDetailScreen(
                               post: post,
-                              redditService: redditService,
+                              postRepository: postRepository,
                             ),
                           ),
                         ),
@@ -324,11 +323,11 @@ class _AppBarActions extends StatelessWidget {
 
 class _PostListBuilder extends StatelessWidget {
   const _PostListBuilder({
-    required this.redditService,
+    required this.postRepository,
     required this.onPostTap,
   });
 
-  final RedditService redditService;
+  final PostRepository postRepository;
   final void Function(Post) onPostTap;
 
   @override

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/notifiers/subreddits_notifier.dart';
 import 'package:yarc/utils/image_utils.dart';
+import 'package:yarc/utils/number_format_utils.dart';
 
 /// A card displaying subreddit information at the top of the feed.
 class SubredditInfoCard extends StatelessWidget {
@@ -95,12 +96,7 @@ class SubredditInfoCard extends StatelessWidget {
   }
 
   String _formatSubscriberCount(int count) {
-    if (count >= 1000000) {
-      return '${(count / 1000000).toStringAsFixed(1)}M members';
-    } else if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}K members';
-    }
-    return '$count members';
+    return NumberFormatUtils.formatCompact(count, suffix: ' members');
   }
 }
 

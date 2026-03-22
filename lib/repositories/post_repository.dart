@@ -38,7 +38,7 @@ class PostRepository {
   }
 
   /// Gets all read post IDs.
-  Future<Set<String>> getReadPostIds() async {
+  Set<String> getReadPostIds() {
     return _historyService.getReadPostIds();
   }
 }

@@ -20,8 +20,7 @@ class RedditorInfo {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is RedditorInfo && other.name == name);
+      identical(this, other) || (other is RedditorInfo && other.name == name);
 
   @override
   int get hashCode => name.hashCode;

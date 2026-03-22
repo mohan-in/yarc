@@ -84,7 +84,7 @@ class AuthService {
         _authStateController.add(AuthState.loggedOut);
         return;
       }
-      
+
       try {
         _reddit = Reddit.restoreInstalledAuthenticatedInstance(
           credentialsJson,
@@ -123,8 +123,6 @@ class AuthService {
       _authStateController.add(AuthState.loggedOut);
     }
   }
-
-
 
   /// Forces a session refresh. Useful when
   /// receiving 401 errors despite the client
@@ -224,17 +222,13 @@ class AuthService {
 
   /// Exchanges the authorization code for an access token.
   Future<void> _exchangeCodeForToken(String code, Reddit redditInstance) async {
-    try {
-      await redditInstance.auth.authorize(code);
-      _reddit = redditInstance;
+    await redditInstance.auth.authorize(code);
+    _reddit = redditInstance;
 
-      final credentialsJson = _reddit!.auth.credentials.toJson();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_credentialsKey, credentialsJson);
-      _lastSavedCredentials = credentialsJson;
-    } on Exception catch (_) {
-      rethrow;
-    }
+    final credentialsJson = _reddit!.auth.credentials.toJson();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_credentialsKey, credentialsJson);
+    _lastSavedCredentials = credentialsJson;
   }
 
   /// Logs out the user by clearing stored credentials.

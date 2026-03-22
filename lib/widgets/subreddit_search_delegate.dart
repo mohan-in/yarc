@@ -2,21 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:yarc/models/redditor_info.dart';
-import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/search_notifier.dart';
 import 'package:yarc/utils/constants.dart';
 import 'package:yarc/utils/image_utils.dart';
-
-/// Result type returned by the search delegate.
-/// Contains either a selected subreddit or a selected user (not both).
-@immutable
-class SearchResult {
-  const SearchResult({this.subreddit, this.username});
-
-  final Subreddit? subreddit;
-  final String? username;
-}
+import 'package:yarc/utils/number_format_utils.dart';
 
 /// A SearchDelegate for searching subreddits and users.
 /// Returns a [SearchResult] when a result is tapped.
@@ -284,12 +274,7 @@ class _SubredditTile extends StatelessWidget {
   }
 
   static String _formatSubscriberCount(int count) {
-    if (count >= 1000000) {
-      return '${(count / 1000000).toStringAsFixed(1)}M members';
-    } else if (count >= 1000) {
-      return '${(count / 1000).toStringAsFixed(1)}K members';
-    }
-    return '$count members';
+    return NumberFormatUtils.formatCompact(count, suffix: ' members');
   }
 }
 
@@ -357,8 +342,8 @@ class _UserTile extends StatelessWidget {
       ),
       subtitle: Text(
         '${_formatKarma(user.totalKarma)} karma'
-        '${user.createdUtc != null ? '\nJoined ${_formatAge(user.createdUtc!)}'
-            : ''}',
+        '${user.createdUtc != null ? '\nJoined '
+            '${_formatAge(user.createdUtc!)}' : ''}',
         style: textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -369,19 +354,14 @@ class _UserTile extends StatelessWidget {
   }
 
   static String _formatKarma(int karma) {
-    if (karma >= 1000000) {
-      return '${(karma / 1000000).toStringAsFixed(1)}M';
-    } else if (karma >= 1000) {
-      return '${(karma / 1000).toStringAsFixed(1)}K';
-    }
-    return karma.toString();
+    return NumberFormatUtils.formatCompact(karma);
   }
 
   static String _formatAge(DateTime created) {
     final age = DateTime.now().difference(created);
     if (age.inDays >= 365) {
       final years = age.inDays ~/ 365;
-      return '$years${years == 1 ? 'y' : 'y'} old';
+      return '${years}y old';
     } else if (age.inDays >= 30) {
       final months = age.inDays ~/ 30;
       return '${months}mo old';

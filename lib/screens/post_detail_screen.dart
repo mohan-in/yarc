@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:yarc/models/models.dart';
-import 'package:yarc/services/services.dart';
+import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/widgets/widgets.dart';
 
 class PostDetailScreen extends StatefulWidget {
   const PostDetailScreen({
     required this.post,
-    required this.redditService,
+    required this.postRepository,
     super.key,
   });
 
   final Post post;
-  final RedditService redditService;
+  final PostRepository postRepository;
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
@@ -24,7 +24,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
   void initState() {
     super.initState();
     // Start fetching comments as soon as the screen initializes
-    _commentsFuture = widget.redditService.fetchComments(widget.post.id);
+    _commentsFuture = widget.postRepository.getComments(widget.post.id);
   }
 
   @override

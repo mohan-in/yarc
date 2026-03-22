@@ -132,7 +132,8 @@ class PostParser {
     String? externalUrl;
     if (!submission.isSelf) {
       final postUrl = submission.url.toString();
-      final isMediaUrl = isVideo ||
+      final isMediaUrl =
+          isVideo ||
           _directMediaUrlRegex.hasMatch(postUrl) ||
           _redditMediaDomainRegex.hasMatch(postUrl) ||
           isYoutube;

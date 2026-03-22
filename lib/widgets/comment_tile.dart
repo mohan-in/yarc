@@ -5,9 +5,6 @@ import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/widgets/markdown_content.dart';
 
-/// Pre-compiled regex for splitting comment body into paragraphs.
-final _paragraphSplitRegex = RegExp(r'\n\s*\n');
-
 class CommentTile extends StatefulWidget {
   const CommentTile({required this.comment, super.key, this.depth = 0});
 
@@ -153,6 +150,9 @@ class _CommentHeader extends StatelessWidget {
 class _CommentBody extends StatelessWidget {
   const _CommentBody({required this.body});
 
+  /// Pre-compiled regex for splitting comment body into paragraphs.
+  static final _paragraphSplitRegex = RegExp(r'\n\s*\n');
+
   final String body;
 
   @override
@@ -196,30 +196,22 @@ class _CommentReplies extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IntrinsicHeight(
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(left: 8),
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: depthColor.withAlpha(128),
-                    width: 2,
-                  ),
-                ),
-              ),
-              child: Column(
-                children: replies
-                    .map(
-                      (reply) => CommentTile(comment: reply, depth: depth),
-                    )
-                    .toList(),
-              ),
-            ),
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: depthColor.withAlpha(128),
+            width: 2,
           ),
-        ],
+        ),
+      ),
+      child: Column(
+        children: replies
+            .map(
+              (reply) => CommentTile(comment: reply, depth: depth),
+            )
+            .toList(),
       ),
     );
   }

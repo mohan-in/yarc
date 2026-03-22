@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
 import 'package:yarc/models/post.dart';
@@ -26,7 +27,7 @@ class FeedNotifier extends ChangeNotifier {
   String? get currentSubreddit => _currentSubreddit;
   Subreddit? get currentSubredditInfo => _currentSubredditInfo;
   bool get hideRead => _hideRead;
-  Set<String> get readPostIds => _readPostIds;
+  Set<String> get readPostIds => UnmodifiableSetView(_readPostIds);
 
   /// Returns filtered posts based on hideRead flag.
   /// Cached to avoid creating a new list on every Selector evaluation.
@@ -59,8 +60,8 @@ class FeedNotifier extends ChangeNotifier {
       return;
     }
 
-    final dbReadIds = await _repository!.getReadPostIds();
-    _readPostIds.addAll(dbReadIds);
+    final dbReadIds = _repository!.getReadPostIds();
+    _readPostIds = {..._readPostIds, ...dbReadIds};
     if (refresh && _hideRead) {
       _hiddenPostIds = Set.from(_readPostIds);
     }
@@ -147,9 +148,12 @@ class FeedNotifier extends ChangeNotifier {
       _hiddenPostIds = Set.from(_readPostIds);
 
       // Mark all currently loaded posts as read efficiently.
-      final unreadIds = _posts.map((p) => p.id).where(
+      final unreadIds = _posts
+          .map((p) => p.id)
+          .where(
             (id) => !_readPostIds.contains(id),
-          ).toList();
+          )
+          .toList();
 
       if (unreadIds.isNotEmpty) {
         // Optimistically update fast
@@ -157,7 +161,7 @@ class FeedNotifier extends ChangeNotifier {
         _hiddenPostIds.addAll(unreadIds);
         _invalidateVisiblePosts();
         notifyListeners();
-        
+
         // Persist in background
         await _repository!.markMultipleAsRead(unreadIds);
       } else {
@@ -170,8 +174,8 @@ class FeedNotifier extends ChangeNotifier {
         await loadPosts();
       }
     } else {
-      final dbReadIds = await _repository!.getReadPostIds();
-      _readPostIds.addAll(dbReadIds);
+      final dbReadIds = _repository!.getReadPostIds();
+      _readPostIds = {..._readPostIds, ...dbReadIds};
       _hiddenPostIds.clear();
       _invalidateVisiblePosts();
       notifyListeners();
@@ -182,9 +186,9 @@ class FeedNotifier extends ChangeNotifier {
     if (_repository == null || _readPostIds.contains(postId)) {
       return;
     }
-    
-    // Fast optimistic UI update
-    _readPostIds.add(postId);
+
+    // Fast optimistic UI update — create a new set so Selector detects change
+    _readPostIds = {..._readPostIds, postId};
     _invalidateVisiblePosts();
     notifyListeners();
 

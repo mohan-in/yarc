@@ -23,40 +23,28 @@ class Subreddit {
   /// Extracts icon from either `iconImage` or `community_icon` fields,
   /// and parses subscriber count and description from raw data.
   factory Subreddit.fromDraw(draw.Subreddit sub) {
-    String? icon;
-    final iconUri = sub.iconImage;
-    if (iconUri != null) {
-      icon = HtmlUtils.unescape(iconUri.toString());
-    }
+    final data = sub.data;
 
-    if ((icon == null || icon.isEmpty) && sub.data != null) {
-      final commIcon = sub.data!['community_icon'];
-      if (commIcon != null && commIcon is String && commIcon.isNotEmpty) {
+    // Resolve icon: prefer iconImage, fall back to community_icon
+    var icon = sub.iconImage != null
+        ? HtmlUtils.unescape(sub.iconImage.toString())
+        : null;
+    if (icon == null || icon.isEmpty) {
+      final commIcon = data?['community_icon'];
+      if (commIcon is String && commIcon.isNotEmpty) {
         icon = HtmlUtils.unescape(commIcon);
       }
     }
-
     if (icon != null && icon.isEmpty) {
       icon = null;
     }
 
-    int? subscribers;
-    if (sub.data != null && sub.data!['subscribers'] != null) {
-      subscribers = sub.data!['subscribers'] as int?;
-    }
-
-    String? description;
-    if (sub.data != null && sub.data!['public_description'] != null) {
-      description = sub.data!['public_description'] as String?;
-      if (description != null && description.isEmpty) {
-        description = null;
-      }
-    }
-
-    bool? userIsSubscriber;
-    if (sub.data != null && sub.data!['user_is_subscriber'] != null) {
-      userIsSubscriber = sub.data!['user_is_subscriber'] as bool?;
-    }
+    final subscribers = data?['subscribers'] as int?;
+    final rawDescription = data?['public_description'] as String?;
+    final description = (rawDescription != null && rawDescription.isNotEmpty)
+        ? HtmlUtils.unescape(rawDescription)
+        : null;
+    final userIsSubscriber = data?['user_is_subscriber'] as bool?;
 
     return Subreddit(
       displayName: sub.displayName,
@@ -64,7 +52,7 @@ class Subreddit {
       iconImg: icon,
       url: sub.path,
       subscriberCount: subscribers,
-      description: description != null ? HtmlUtils.unescape(description) : null,
+      description: description,
       userIsSubscriber: userIsSubscriber,
     );
   }

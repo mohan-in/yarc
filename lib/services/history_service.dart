@@ -23,12 +23,12 @@ class HistoryService {
   }
 
   /// Checks if a post has been read.
-  Future<bool> isRead(String postId) async {
+  bool isRead(String postId) {
     return _box.get(postId) ?? false;
   }
 
   /// Gets all read post IDs.
-  Future<Set<String>> getReadPostIds() async {
+  Set<String> getReadPostIds() {
     return _box.keys.cast<String>().toSet();
   }
 

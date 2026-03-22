@@ -72,6 +72,7 @@ class _YarcAppState extends State<YarcApp> {
 
           try {
             final redditService = context.read<RedditService>();
+            final postRepository = context.read<PostRepository>();
             final post = await redditService.fetchPost(result.postId!);
 
             if (post != null && context.mounted) {
@@ -86,7 +87,7 @@ class _YarcAppState extends State<YarcApp> {
                   MaterialPageRoute(
                     builder: (context) => PostDetailScreen(
                       post: post,
-                      redditService: redditService,
+                      postRepository: postRepository,
                     ),
                   ),
                 ),
@@ -106,7 +107,12 @@ class _YarcAppState extends State<YarcApp> {
           }
         }
       case DeepLinkType.user:
-        break;
+        if (result.username != null) {
+          context.read<FeedNotifier>().selectSubreddit(
+            'u_${result.username}',
+          );
+          _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+        }
       case DeepLinkType.home:
         context.read<FeedNotifier>().selectSubreddit(null);
         _navigatorKey.currentState?.popUntil((route) => route.isFirst);
@@ -155,13 +161,15 @@ class _YarcAppState extends State<YarcApp> {
           create: (_) => SubredditsNotifier(),
           update: (_, repo, notifier) => notifier!..setRepository(repo),
         ),
-        ChangeNotifierProxyProvider2<SubredditRepository, RedditService,
-            SearchNotifier>(
+        ChangeNotifierProxyProvider2<
+          SubredditRepository,
+          RedditService,
+          SearchNotifier
+        >(
           create: (_) => SearchNotifier(),
-          update: (_, repo, reddit, notifier) =>
-              notifier!
-                ..setRepository(repo)
-                ..setRedditService(reddit),
+          update: (_, repo, reddit, notifier) => notifier!
+            ..setRepository(repo)
+            ..setRedditService(reddit),
         ),
         ChangeNotifierProvider(create: (_) => VideoAutoplayNotifier()),
       ],

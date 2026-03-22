@@ -1,14 +1,23 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 class VideoAutoplayNotifier extends ChangeNotifier {
   String? _playingVideoId;
+  Timer? _scrollDebounce;
 
   String? get playingVideoId => _playingVideoId;
 
   /// Notifies listeners that a scroll event has occurred.
   /// Video players should check their position when this is called.
+  /// Throttled to avoid excessive layout calculations when many video
+  /// players are loaded in the feed.
   void notifyScroll() {
-    notifyListeners();
+    if (_scrollDebounce?.isActive ?? false) return;
+    _scrollDebounce = Timer(
+      const Duration(milliseconds: 100),
+      notifyListeners,
+    );
   }
 
   /// Requests to play a video.
@@ -27,5 +36,11 @@ class VideoAutoplayNotifier extends ChangeNotifier {
       _playingVideoId = null;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _scrollDebounce?.cancel();
+    super.dispose();
   }
 }

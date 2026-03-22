@@ -13,17 +13,11 @@ class YouTubeEmbed extends StatefulWidget {
 
 class _YouTubeEmbedState extends State<YouTubeEmbed> {
   late YoutubePlayerController _controller;
-  bool _isPlayerReady = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = YoutubePlayerController(initialVideoId: widget.videoId)
-      ..addListener(_listener);
-  }
-
-  void _listener() {
-    if (_isPlayerReady && mounted && !_controller.value.isFullScreen) {}
+    _controller = YoutubePlayerController(initialVideoId: widget.videoId);
   }
 
   @override
@@ -54,15 +48,13 @@ class _YouTubeEmbedState extends State<YouTubeEmbed> {
   @override
   Widget build(BuildContext context) {
     return VisibilityDetector(
-      key: Key('youtube-${widget.videoId}'),
+      key: ValueKey('youtube_${widget.videoId}'),
       onVisibilityChanged: _handleVisibilityChanged,
       child: YoutubePlayer(
         controller: _controller,
         showVideoProgressIndicator: true,
         progressIndicatorColor: Colors.red,
-        onReady: () {
-          _isPlayerReady = true;
-        },
+        onReady: () {},
       ),
     );
   }

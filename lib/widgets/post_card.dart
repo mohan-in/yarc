@@ -27,12 +27,6 @@ class PostCard extends StatelessWidget {
   final bool expanded;
   final bool isRead;
 
-  /// Matches markdown image syntax: `![alt](url)`
-  static final _markdownImageRegex = RegExp(r'!\[[^\]]*\]\([^)]+\)');
-
-  /// Matches 3+ consecutive newlines for collapsing whitespace.
-  static final _excessiveNewlinesRegex = RegExp(r'\n{3,}');
-
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -54,7 +48,8 @@ class PostCard extends StatelessWidget {
               const SizedBox(height: 8),
               _PostTitle(post: post, isRead: isRead),
               if (post.url != null) _ExternalLink(url: post.url!),
-              if (post.content.isNotEmpty) _buildContent(context),
+              if (post.content.isNotEmpty)
+                _PostContent(post: post, expanded: expanded),
               const SizedBox(height: 12),
               _PostMedia(post: post),
               PostMetadata(
@@ -69,8 +64,23 @@ class PostCard extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildContent(BuildContext context) {
+/// Renders the post's text content with duplicate media URLs stripped out.
+class _PostContent extends StatelessWidget {
+  const _PostContent({required this.post, required this.expanded});
+
+  final Post post;
+  final bool expanded;
+
+  /// Matches markdown image syntax: `![alt](url)`
+  static final _markdownImageRegex = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
+
+  /// Matches 3+ consecutive newlines for collapsing whitespace.
+  static final _excessiveNewlinesRegex = RegExp(r'\n{3,}');
+
+  @override
+  Widget build(BuildContext context) {
     var content = HtmlUtils.unescape(post.content);
 
     final mediaUrls = <String>{...post.images};
@@ -78,20 +88,25 @@ class PostCard extends StatelessWidget {
       mediaUrls.add(post.thumbnail!);
     }
 
-    // Remove image URLs that match media URLs to prevent duplicates
+    // Build a set of all URL variants for fast lookup
+    final allVariants = <String>{};
     for (final url in mediaUrls) {
-      final unescapedUrl = url.replaceAll('&amp;', '&');
-      final escapedUrl = url.replaceAll('&', '&amp;');
+      allVariants
+        ..add(url)
+        ..add(url.replaceAll('&amp;', '&'))
+        ..add(url.replaceAll('&', '&amp;'))
+        ..add(Uri.encodeFull(url));
+    }
 
-      for (final urlVariant in [url, unescapedUrl, escapedUrl]) {
-        // Remove markdown image syntax referencing this URL
-        content = content.replaceAll(
-          _markdownImageRegex,
-          '',
-        );
-        content = content.replaceAll(urlVariant, '');
-      }
-      content = content.replaceAll(Uri.encodeFull(url), '');
+    // Remove only markdown images whose src matches a known media URL
+    content = content.replaceAllMapped(_markdownImageRegex, (match) {
+      final src = match.group(1) ?? '';
+      return allVariants.contains(src) ? '' : match.group(0)!;
+    });
+
+    // Remove bare media URLs from text
+    for (final variant in allVariants) {
+      content = content.replaceAll(variant, '');
     }
 
     content = content.replaceAll(_excessiveNewlinesRegex, '\n\n').trim();
@@ -193,20 +208,14 @@ class _PostMedia extends StatelessWidget {
     if (showVideo) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: GestureDetector(
-          onTap: () {},
-          child: RedditVideoPlayer(videoUrl: post.videoUrl!, autoPlay: true),
-        ),
+        child: RedditVideoPlayer(videoUrl: post.videoUrl!, autoPlay: true),
       );
     }
 
     if (showYoutube) {
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: GestureDetector(
-          onTap: () {},
-          child: YouTubeEmbed(videoId: post.youtubeId!),
-        ),
+        child: YouTubeEmbed(videoId: post.youtubeId!),
       );
     }
 
