@@ -34,6 +34,43 @@ final ThemeData appTheme = ThemeData(
   ],
 );
 
+/// Dark theme using standard Material 3.
+final ThemeData darkAppTheme = ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(
+    seedColor: Colors.blue,
+    brightness: Brightness.dark,
+  ),
+  textTheme: const TextTheme(
+    titleMedium: TextStyle(fontSize: 17), // Default 16 + 1
+    bodyMedium: TextStyle(fontSize: 15), // Default 14 + 1
+  ),
+  appBarTheme: AppBarTheme(
+    centerTitle: true,
+    scrolledUnderElevation: 4,
+    backgroundColor: Colors.grey[900], // Darker AppBar to distinguish from bg
+    foregroundColor: Colors.white,
+    surfaceTintColor: Colors.transparent,
+  ),
+  extensions: const [
+    CommentTheme(
+      depthColors: [
+        Colors.redAccent,
+        Colors.orangeAccent,
+        Colors.amberAccent,
+        Colors.greenAccent,
+        Colors.blueAccent,
+        Colors.indigoAccent,
+        Colors.purpleAccent,
+      ],
+    ),
+    MediaViewerTheme(
+      overlayColor: Colors.black87,
+      labelColor: Colors.white,
+    ),
+  ],
+);
+
 @immutable
 class CommentTheme extends ThemeExtension<CommentTheme> {
   const CommentTheme({required this.depthColors});

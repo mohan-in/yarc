@@ -46,6 +46,27 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
           '${_currentIndex + 1} / ${widget.imageUrls.length}',
           style: const TextStyle(color: Colors.white),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.download),
+            onPressed: () async {
+              final url = widget.imageUrls[_currentIndex];
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await ImageUtils.saveImage(url);
+
+              if (mounted) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success ? 'Image saved' : 'Failed to save',
+                    ),
+                  ),
+                );
+              }
+            },
+            tooltip: 'Save Image',
+          ),
+        ],
       ),
       body: PageView.builder(
         controller: _pageController,

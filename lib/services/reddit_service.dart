@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:draw/draw.dart' as draw;
 import 'package:yarc/models/comment.dart';
+import 'package:yarc/models/feed_sort.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
@@ -80,6 +81,8 @@ class RedditService {
   Future<PostsResult> fetchPosts({
     String? subreddit,
     String? after,
+    FeedSort sort = FeedSort.hot,
+    draw.TimeFilter timeFilter = draw.TimeFilter.day,
   }) async {
     final reddit = _reddit;
     if (reddit == null) {
@@ -94,10 +97,18 @@ class RedditService {
         }
 
         final stream = subreddit != null
-            ? reddit
-                  .subreddit(subreddit)
-                  .hot(limit: kDefaultPostLimit, params: params)
-            : reddit.front.best(limit: kDefaultPostLimit, params: params);
+            ? _getSubredditStream(
+                reddit.subreddit(subreddit),
+                sort: sort,
+                timeFilter: timeFilter,
+                params: params,
+              )
+            : _getFrontPageStream(
+                reddit.front,
+                sort: sort,
+                timeFilter: timeFilter,
+                params: params,
+              );
 
         final posts = <Post>[];
         String? nextAfterToken;
@@ -113,6 +124,100 @@ class RedditService {
     } on Exception catch (_) {
       return (posts: <Post>[], nextAfter: null);
     }
+  }
+
+  /// Saves a post by its ID.
+  Future<void> savePost(String postId) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      throw Exception('Reddit client not initialized or logged out');
+    }
+    return _withAuthRetry('savePost', () async {
+      final submission = await reddit.submission(id: postId).populate();
+      await submission.save();
+    });
+  }
+
+  /// Unsaves a post by its ID.
+  Future<void> unsavePost(String postId) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      throw Exception('Reddit client not initialized or logged out');
+    }
+    return _withAuthRetry('unsavePost', () async {
+      final submission = await reddit.submission(id: postId).populate();
+      await submission.unsave();
+    });
+  }
+
+  /// Returns the appropriate sorted stream for a subreddit.
+  Stream<draw.UserContent> _getSubredditStream(
+    draw.SubredditRef sub, {
+    required FeedSort sort,
+    required draw.TimeFilter timeFilter,
+    required Map<String, String> params,
+  }) {
+    return switch (sort) {
+      FeedSort.best || FeedSort.hot => sub.hot(
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.newest => sub.newest(
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.top => sub.top(
+        timeFilter: timeFilter,
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.controversial => sub.controversial(
+        timeFilter: timeFilter,
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.rising => sub.rising(
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+    };
+  }
+
+  /// Returns the appropriate sorted stream for the front page.
+  Stream<draw.UserContent> _getFrontPageStream(
+    draw.FrontPage front, {
+    required FeedSort sort,
+    required draw.TimeFilter timeFilter,
+    required Map<String, String> params,
+  }) {
+    return switch (sort) {
+      FeedSort.best => front.best(
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.hot => front.hot(
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.newest => front.newest(
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.top => front.top(
+        timeFilter: timeFilter,
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.controversial => front.controversial(
+        timeFilter: timeFilter,
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+      FeedSort.rising => front.rising(
+        limit: kDefaultPostLimit,
+        params: params,
+      ),
+    };
   }
 
   /// Fetches comments for a post, with automatic retry handling.

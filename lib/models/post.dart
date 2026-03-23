@@ -23,6 +23,11 @@ class Post {
     this.youtubeId,
     this.aspectRatio,
     this.crosspostParent,
+    this.authorFlairText,
+    this.linkFlairText,
+    this.totalAwardsReceived = 0,
+    this.isSaved = false,
+    this.isNsfw = false,
     this.isStickied = false,
   });
 
@@ -77,6 +82,48 @@ class Post {
 
   /// Whether this post is stickied (pinned) by a moderator.
   final bool isStickied;
+
+  /// Whether the post is marked as NSFW.
+  final bool isNsfw;
+
+  /// The author's flair text (if any).
+  final String? authorFlairText;
+
+  /// The post's flair text (if any).
+  final String? linkFlairText;
+
+  /// The number of awards received.
+  final int totalAwardsReceived;
+
+  /// Whether the user has saved this post.
+  final bool isSaved;
+
+  List<Object?> get props => [
+    id,
+    title,
+    author,
+    subreddit,
+    ups,
+    numComments,
+    createdUtc,
+    thumbnail,
+    url,
+    permalink,
+    content,
+    images,
+    isVideo,
+    videoUrl,
+    isYoutube,
+    youtubeId,
+    aspectRatio,
+    crosspostParent,
+    isNsfw,
+    isStickied,
+    authorFlairText,
+    linkFlairText,
+    totalAwardsReceived,
+    isSaved,
+  ];
 
   @override
   bool operator ==(Object other) =>

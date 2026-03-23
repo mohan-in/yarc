@@ -1,4 +1,6 @@
+import 'package:draw/draw.dart' as draw;
 import 'package:yarc/models/comment.dart';
+import 'package:yarc/models/feed_sort.dart';
 import 'package:yarc/models/types.dart';
 import 'package:yarc/services/history_service.dart';
 import 'package:yarc/services/reddit_service.dart';
@@ -13,13 +15,31 @@ class PostRepository {
   /// Fetches posts, optionally for a specific subreddit.
   ///
   /// Returns a [PostsResult] containing posts and the pagination cursor.
-  Future<PostsResult> getPosts({String? subreddit, String? after}) async {
-    return _redditService.fetchPosts(subreddit: subreddit, after: after);
+  Future<PostsResult> getPosts({
+    String? subreddit,
+    String? after,
+    FeedSort sort = FeedSort.hot,
+    draw.TimeFilter timeFilter = draw.TimeFilter.day,
+  }) async {
+    return _redditService.fetchPosts(
+      subreddit: subreddit,
+      after: after,
+      sort: sort,
+      timeFilter: timeFilter,
+    );
   }
 
   /// Fetches fresh posts from API (resets pagination).
-  Future<PostsResult> refresh({String? subreddit}) async {
-    return _redditService.fetchPosts(subreddit: subreddit);
+  Future<PostsResult> refresh({
+    String? subreddit,
+    FeedSort sort = FeedSort.hot,
+    draw.TimeFilter timeFilter = draw.TimeFilter.day,
+  }) async {
+    return _redditService.fetchPosts(
+      subreddit: subreddit,
+      sort: sort,
+      timeFilter: timeFilter,
+    );
   }
 
   /// Fetches comments for a post.
@@ -40,5 +60,15 @@ class PostRepository {
   /// Gets all read post IDs.
   Set<String> getReadPostIds() {
     return _historyService.getReadPostIds();
+  }
+
+  /// Saves a post.
+  Future<void> savePost(String postId) async {
+    return _redditService.savePost(postId);
+  }
+
+  /// Unsaves a post.
+  Future<void> unsavePost(String postId) async {
+    return _redditService.unsavePost(postId);
   }
 }

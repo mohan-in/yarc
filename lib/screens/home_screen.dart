@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:draw/draw.dart' as draw;
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
@@ -196,6 +198,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         body: RefreshIndicator(
           onRefresh: () => context.read<FeedNotifier>().refresh(),
+          color: Theme.of(context).colorScheme.primary,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest,
+          displacement: 20,
           child: CustomScrollView(
             controller: _scrollController,
             slivers: [
@@ -285,6 +292,17 @@ class _AppBarActions extends StatelessWidget {
   final VoidCallback onSearch;
   final VoidCallback onScrollToTop;
 
+  String _timeFilterLabel(draw.TimeFilter filter) {
+    return switch (filter) {
+      draw.TimeFilter.hour => 'Past Hour',
+      draw.TimeFilter.day => 'Today',
+      draw.TimeFilter.week => 'This Week',
+      draw.TimeFilter.month => 'This Month',
+      draw.TimeFilter.year => 'This Year',
+      draw.TimeFilter.all => 'All Time',
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLoggedIn = context.select<AuthNotifier, bool>((n) => n.isLoggedIn);
@@ -292,13 +310,76 @@ class _AppBarActions extends StatelessWidget {
       (n) => n.currentSubreddit,
     );
     final hideRead = context.select<FeedNotifier, bool>((n) => n.hideRead);
+    final currentSort = context.select<FeedNotifier, FeedSort>(
+      (n) => n.currentSort,
+    );
+    final currentTimeFilter = context.select<FeedNotifier, draw.TimeFilter>(
+      (n) => n.currentTimeFilter,
+    );
 
     final showSearch = isLoggedIn || currentSubreddit != null;
     final showHideRead = isLoggedIn || currentSubreddit != null;
+    final showSort = isLoggedIn || currentSubreddit != null;
+
+    final needsTimeFilter = feedSortNeedsTimeFilter(currentSort);
 
     return ListBody(
       mainAxis: Axis.horizontal,
       children: [
+        if (showSort) ...[
+          if (needsTimeFilter)
+            PopupMenuButton<draw.TimeFilter>(
+              tooltip: 'Time Filter',
+              initialValue: currentTimeFilter,
+              onSelected: (filter) {
+                context.read<FeedNotifier>().setTimeFilter(filter);
+                onScrollToTop();
+              },
+              itemBuilder: (context) => draw.TimeFilter.values
+                  .map(
+                    (f) => PopupMenuItem(
+                      value: f,
+                      child: Text(_timeFilterLabel(f)),
+                    ),
+                  )
+                  .toList(),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Center(
+                  child: Text(
+                    _timeFilterLabel(currentTimeFilter),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          PopupMenuButton<FeedSort>(
+            tooltip: 'Sort Posts',
+            initialValue: currentSort,
+            icon: const Icon(Icons.sort),
+            onSelected: (sort) {
+              context.read<FeedNotifier>().setSort(sort);
+              onScrollToTop();
+            },
+            itemBuilder: (context) {
+              // The API only supports 'best' on the front page.
+              final availableSorts = currentSubreddit == null
+                  ? FeedSort.values
+                  : FeedSort.values.where((s) => s != FeedSort.best).toList();
+
+              return availableSorts
+                  .map(
+                    (s) => PopupMenuItem(
+                      value: s,
+                      child: Text(feedSortLabel(s)),
+                    ),
+                  )
+                  .toList();
+            },
+          ),
+        ],
         if (showSearch)
           IconButton(
             icon: const Icon(Icons.search),

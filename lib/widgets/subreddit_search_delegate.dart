@@ -343,7 +343,7 @@ class _UserTile extends StatelessWidget {
       subtitle: Text(
         '${_formatKarma(user.totalKarma)} karma'
         '${user.createdUtc != null ? '\nJoined '
-            '${_formatAge(user.createdUtc!)}' : ''}',
+                  '${_formatAge(user.createdUtc!)}' : ''}',
         style: textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),

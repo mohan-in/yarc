@@ -24,6 +24,20 @@ class CachedImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onLongPress: () async {
+        final messenger = ScaffoldMessenger.of(context);
+        final success = await ImageUtils.saveImage(imageUrl);
+
+        if (context.mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                success ? 'Image saved' : 'Failed to save',
+              ),
+            ),
+          );
+        }
+      },
       onTap: () {
         unawaited(
           Navigator.push<void>(

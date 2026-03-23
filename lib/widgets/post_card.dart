@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yarc/models/post.dart';
+import 'package:yarc/screens/user_profile_screen.dart';
 import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/widgets/cached_image.dart';
 import 'package:yarc/widgets/image_carousel.dart';
@@ -52,12 +55,7 @@ class PostCard extends StatelessWidget {
                 _PostContent(post: post, expanded: expanded),
               const SizedBox(height: 12),
               _PostMedia(post: post),
-              PostMetadata(
-                createdUtc: post.createdUtc,
-                numComments: post.numComments,
-                ups: post.ups,
-                permalink: post.permalink,
-              ),
+              PostMetadata(post: post),
             ],
           ),
         ),
@@ -156,19 +154,80 @@ class _PostHeader extends StatelessWidget {
           ),
           const SizedBox(width: 4),
         ],
-        Text(
-          'r/${post.subreddit}',
-          style: theme.textTheme.labelMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: theme.colorScheme.primary,
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'r/${post.subreddit}',
+              style: theme.textTheme.labelMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.primary,
+              ),
+            ),
+            if (post.totalAwardsReceived > 0) ...[
+              const SizedBox(width: 6),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.workspace_premium,
+                    size: 14,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    '${post.totalAwardsReceived}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+        GestureDetector(
+          onTap: () {
+            unawaited(
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) =>
+                      UserProfileScreen(username: post.author),
+                ),
+              ),
+            );
+          },
+          child: Text(
+            ' • u/${post.author}',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.primary, // Make it look tappable
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-        Text(
-          ' • u/${post.author}',
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
+        if (post.authorFlairText != null &&
+            post.authorFlairText!.isNotEmpty) ...[
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.tertiaryContainer,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              post.authorFlairText!,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onTertiaryContainer,
+                fontSize: 10,
+              ),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -186,11 +245,33 @@ class _PostTitle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Text(
-      HtmlUtils.unescape(post.title),
-      style: theme.textTheme.titleMedium?.copyWith(
-        fontWeight: FontWeight.bold,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (post.linkFlairText != null && post.linkFlairText!.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                post.linkFlairText!,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+          ),
+        Text(
+          HtmlUtils.unescape(post.title),
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }

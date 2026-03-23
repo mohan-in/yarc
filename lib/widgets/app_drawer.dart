@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/screens/settings_screen.dart';
 import 'package:yarc/utils/image_utils.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -82,6 +85,23 @@ class AppDrawer extends StatelessWidget {
         const Padding(
           padding: EdgeInsets.fromLTRB(28, 16, 28, 10),
           child: Divider(),
+        ),
+
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.settings),
+          title: const Text('Settings'),
+          onTap: () {
+            Navigator.pop(context);
+            unawaited(
+              Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (context) => const SettingsScreen(),
+                ),
+              ),
+            );
+          },
         ),
 
         // Logout (not a destination — uses ListTile)

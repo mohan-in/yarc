@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:yarc/models/post.dart';
+import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/theme/theme.dart';
 import 'package:yarc/widgets/markdown_content.dart';
 import 'package:yarc/widgets/post_card.dart';
@@ -23,7 +25,10 @@ void main() {
       MaterialApp(
         theme: appTheme,
         home: Scaffold(
-          body: PostCard(post: post),
+          body: ChangeNotifierProvider<FeedNotifier>(
+            create: (_) => FeedNotifier(),
+            child: PostCard(post: post),
+          ),
         ),
       ),
     );

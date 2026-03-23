@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:dex_compat/dex_compat.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yarc/notifiers/notifiers.dart';
+import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/screens/home_screen.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
@@ -15,14 +17,31 @@ void main() async {
 
   await HistoryService.init();
   final isDesktopMode = await DexCompat.isDesktopMode();
+  final prefs = await SharedPreferences.getInstance();
 
-  runApp(YarcApp(isDesktopMode: isDesktopMode));
+  final themeNotifier = ThemeNotifier();
+  await themeNotifier.init();
+
+  runApp(
+    ChangeNotifierProvider.value(
+      value: themeNotifier,
+      child: YarcApp(
+        isDesktopMode: isDesktopMode,
+        prefs: prefs,
+      ),
+    ),
+  );
 }
 
 class YarcApp extends StatefulWidget {
-  const YarcApp({required this.isDesktopMode, super.key});
+  const YarcApp({
+    required this.isDesktopMode,
+    required this.prefs,
+    super.key,
+  });
 
   final bool isDesktopMode;
+  final SharedPreferences prefs;
 
   @override
   State<YarcApp> createState() => _YarcAppState();
@@ -134,6 +153,9 @@ class _YarcAppState extends State<YarcApp> {
       providers: [
         Provider(create: (_) => AuthService()),
         Provider(create: (_) => HistoryService()),
+        ChangeNotifierProvider(
+          create: (_) => SettingsNotifier(widget.prefs),
+        ),
         ProxyProvider<AuthService, RedditService>(
           update: (_, auth, prev) => prev ?? RedditService(auth),
         ),
@@ -153,9 +175,15 @@ class _YarcAppState extends State<YarcApp> {
           create: (_) => AuthNotifier(),
           update: (_, repo, notifier) => notifier!..setRepository(repo),
         ),
-        ChangeNotifierProxyProvider<PostRepository, FeedNotifier>(
+        ChangeNotifierProxyProvider2<
+          PostRepository,
+          SettingsNotifier,
+          FeedNotifier
+        >(
           create: (_) => FeedNotifier(),
-          update: (_, repo, notifier) => notifier!..setRepository(repo),
+          update: (_, repo, settings, notifier) => notifier!
+            ..setRepository(repo)
+            ..setSettings(settings),
         ),
         ChangeNotifierProxyProvider<SubredditRepository, SubredditsNotifier>(
           create: (_) => SubredditsNotifier(),
@@ -184,10 +212,14 @@ class _YarcAppState extends State<YarcApp> {
             });
           }
 
+          final themeNotifier = context.watch<ThemeNotifier>();
+
           return MaterialApp(
             navigatorKey: _navigatorKey,
             title: 'YARC - Yet Another Reddit Client',
             theme: appTheme,
+            darkTheme: darkAppTheme,
+            themeMode: themeNotifier.themeMode,
             home: const HomeScreen(),
             builder: DexCompat.builder(widget.isDesktopMode),
           );

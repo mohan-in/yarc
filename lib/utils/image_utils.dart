@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:yarc/utils/constants.dart';
 
 /// Utility class for image URL processing and CORS handling.
@@ -57,4 +59,22 @@ class ImageUtils {
   /// a User-Agent header for Reddit API compliance.
   static Map<String, String>? get authHeaders =>
       kIsWeb ? null : const {'User-Agent': kUserAgent};
+
+  /// Saves the image at [rawUrl] to the device's gallery.
+  ///
+  /// Returns `true` if successful, `false` if it failed or an error occurred.
+  static Future<bool> saveImage(String rawUrl) async {
+    final url = getCorsUrl(rawUrl);
+
+    try {
+      final file = await DefaultCacheManager().getSingleFile(
+        url,
+        headers: authHeaders,
+      );
+      final result = await ImageGallerySaverPlus.saveFile(file.path) as Map;
+      return result['isSuccess'] == true;
+    } on Exception catch (_) {
+      return false;
+    }
+  }
 }
