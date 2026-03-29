@@ -38,6 +38,19 @@ class VideoAutoplayNotifier extends ChangeNotifier {
     }
   }
 
+  /// Clears the currently playing video ID.
+  ///
+  /// Call this when navigating to a new screen so that stale state from
+  /// a previous screen does not block the first video on the new screen
+  /// from initiating autoplay (the "sticky" guard in video_player.dart
+  /// skips play when another video ID is already active).
+  void reset() {
+    if (_playingVideoId != null) {
+      _playingVideoId = null;
+      notifyListeners();
+    }
+  }
+
   @override
   void dispose() {
     _scrollDebounce?.cancel();

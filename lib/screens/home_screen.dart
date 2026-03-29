@@ -32,6 +32,11 @@ class _HomeScreenState extends State<HomeScreen> {
     // have access to Providers after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_initializeAuth());
+      // Also trigger an initial autoplay check so videos visible on
+      // first load will play without requiring a scroll event.
+      if (mounted) {
+        context.read<VideoAutoplayNotifier>().notifyScroll();
+      }
     });
   }
 

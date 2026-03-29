@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
+import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/widgets/widgets.dart';
 
@@ -19,12 +21,25 @@ class PostDetailScreen extends StatefulWidget {
 
 class _PostDetailScreenState extends State<PostDetailScreen> {
   late Future<List<Comment>> _commentsFuture;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_scrollListener);
     // Start fetching comments as soon as the screen initializes
     _commentsFuture = widget.postRepository.getComments(widget.post.id);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollListener() {
+    if (!_scrollController.hasClients) return;
+    context.read<VideoAutoplayNotifier>().notifyScroll();
   }
 
   @override
@@ -32,6 +47,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     final crosspostParent = widget.post.crosspostParent;
     return Scaffold(
       body: CustomScrollView(
+        controller: _scrollController,
         // CustomScrollView enables complex
         // scrolling effects like the floating bar
         slivers: [

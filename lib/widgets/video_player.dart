@@ -51,11 +51,11 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   void didUpdateWidget(covariant RedditVideoPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.autoPlay != oldWidget.autoPlay) {
+      // The listener is always registered in initState; we only need to
+      // trigger an immediate check when the autoPlay flag is enabled so that
+      // a video already in the viewport doesn't wait for the next scroll.
       if (widget.autoPlay) {
-        _notifier.addListener(_onNotifierUpdate);
         _checkAutoplay();
-      } else {
-        _notifier.removeListener(_onNotifierUpdate);
       }
     }
   }

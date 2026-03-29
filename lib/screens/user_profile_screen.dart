@@ -6,6 +6,7 @@ import 'package:yarc/models/post.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
+import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/services/reddit_service.dart';
@@ -67,36 +68,96 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         appBar: AppBar(
           title: Text('u/${widget.username}'),
         ),
-        body: Column(
-          children: [
-            _UserProfileHeader(
-              userInfo: _userInfo,
-              isLoading: _isLoadingInfo,
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: Builder(
-                builder: (feedContext) {
-                  return RefreshIndicator(
-                    onRefresh: () => feedContext.read<FeedNotifier>().refresh(),
-                    color: Theme.of(context).colorScheme.primary,
-                    backgroundColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceContainerHighest,
-                    displacement: 20,
-                    child: CustomScrollView(
-                      slivers: [
-                        _UserProfileFeed(
-                          postRepository: context.read<PostRepository>(),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+        body: _UserProfileBody(
+          userInfo: _userInfo,
+          isLoadingInfo: _isLoadingInfo,
         ),
+      ),
+    );
+  }
+}
+
+class _UserProfileBody extends StatefulWidget {
+  const _UserProfileBody({
+    required this.userInfo,
+    required this.isLoadingInfo,
+  });
+
+  final RedditorInfo? userInfo;
+  final bool isLoadingInfo;
+
+  @override
+  State<_UserProfileBody> createState() => _UserProfileBodyState();
+}
+
+class _UserProfileBodyState extends State<_UserProfileBody> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_scrollListener);
+    // Trigger an initial autoplay check after the first frame so that
+    // videos already in the viewport on screen load will start playing
+    // without requiring the user to scroll first.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Reset stale state from the previous screen (e.g. a playing home-feed
+        // video) so the sticky guard doesn't block the first video here.
+        context.read<VideoAutoplayNotifier>().reset();
+        context.read<VideoAutoplayNotifier>().notifyScroll();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _scrollListener() {
+    if (!_scrollController.hasClients) return;
+
+    final currentPosition = _scrollController.position.pixels;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+
+    const threshold = 500.0;
+    if (currentPosition >= maxScroll - threshold) {
+      unawaited(context.read<FeedNotifier>().loadPosts());
+    }
+
+    // Video autoplay check
+    context.read<VideoAutoplayNotifier>().notifyScroll();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return RefreshIndicator(
+      onRefresh: () => context.read<FeedNotifier>().refresh(),
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surfaceContainerHighest,
+      displacement: 20,
+      child: CustomScrollView(
+        controller: _scrollController,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                _UserProfileHeader(
+                  userInfo: widget.userInfo,
+                  isLoading: widget.isLoadingInfo,
+                ),
+                const Divider(height: 1),
+              ],
+            ),
+          ),
+          _UserProfileFeed(
+            postRepository: context.read<PostRepository>(),
+          ),
+        ],
       ),
     );
   }
@@ -115,56 +176,104 @@ class _UserProfileHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(32),
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (userInfo == null) {
       return const Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(32),
         child: Text('User not found or error loading info.'),
       );
     }
 
     final theme = Theme.of(context);
     final cakeDay = userInfo!.createdUtc;
+    final formattedCakeDay = cakeDay != null
+        ? '${cakeDay.year}-'
+            '${cakeDay.month.toString().padLeft(2, '0')}-'
+            '${cakeDay.day.toString().padLeft(2, '0')}'
+        : '';
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return Container(
+      width: double.infinity,
+      color: theme.colorScheme.surface,
+      child: Column(
         children: [
-          _StatColumn(
-            label: 'Post Karma',
-            value: userInfo!.linkKarma.toString(),
-            icon: Icons.post_add,
-            color: theme.colorScheme.primary,
-          ),
-          _StatColumn(
-            label: 'Comment Karma',
-            value: userInfo!.commentKarma.toString(),
-            icon: Icons.comment,
-            color: theme.colorScheme.secondary,
-          ),
-          if (cakeDay != null)
-            _StatColumn(
-              label: 'Cake Day',
-              value:
-                  '${cakeDay.year}-'
-                  '${cakeDay.month.toString().padLeft(2, '0')}-'
-                  '${cakeDay.day.toString().padLeft(2, '0')}',
-              icon: Icons.cake,
-              color: theme.colorScheme.tertiary,
+          const SizedBox(height: 24),
+          CircleAvatar(
+            radius: 40,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            foregroundColor: theme.colorScheme.onPrimaryContainer,
+            child: Text(
+              userInfo!.name.isNotEmpty
+                  ? userInfo!.name[0].toUpperCase()
+                  : '?',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'u/${userInfo!.name}',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${userInfo!.totalKarma} total karma',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    label: 'Post Karma',
+                    value: userInfo!.linkKarma.toString(),
+                    icon: Icons.post_add,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _StatCard(
+                    label: 'Comment Karma',
+                    value: userInfo!.commentKarma.toString(),
+                    icon: Icons.comment,
+                    color: theme.colorScheme.secondary,
+                  ),
+                ),
+                if (cakeDay != null) ...[
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StatCard(
+                      label: 'Cake Day',
+                      value: formattedCakeDay,
+                      icon: Icons.cake,
+                      color: theme.colorScheme.tertiary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 }
 
-class _StatColumn extends StatelessWidget {
-  const _StatColumn({
+class _StatCard extends StatelessWidget {
+  const _StatCard({
     required this.label,
     required this.value,
     required this.icon,
@@ -179,23 +288,40 @@ class _StatColumn extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 12),
+            Text(
+              value,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
         ),
-        Text(
-          label,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

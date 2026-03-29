@@ -23,8 +23,9 @@ void main() {
     when(() => mockSettingsNotifier.hideNsfw).thenReturn(false);
     when(() => mockSettingsNotifier.hideReadPosts).thenReturn(false);
     when(() => mockPostRepository.getReadPostIds()).thenReturn(<String>{});
-    when(() => mockPostRepository.getSubredditInfo(any()))
-        .thenAnswer((_) async => null);
+    when(
+      () => mockPostRepository.getSubredditInfo(any()),
+    ).thenAnswer((_) async => null);
 
     feedNotifier = FeedNotifier()
       ..setRepository(mockPostRepository)

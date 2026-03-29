@@ -116,7 +116,7 @@ Orchestrate services, apply business rules.
 | Repository | Dependencies | Purpose |
 |------------|--------------|---------|
 | `AuthRepository` | AuthService | Login/logout abstraction, exposes `authStateStream` |
-| `PostRepository` | RedditService, HistoryService | Post fetching, comment fetching, pagination, read history tracking |
+| `PostRepository` | RedditService, HistoryService | Post fetching, comment fetching, pagination, subreddit metadata resolving, read history tracking |
 | `SubredditRepository` | RedditService | Subscribed subreddits, search, subscribe/unsubscribe |
 
 ### Notifiers
@@ -154,11 +154,15 @@ Every layer uses a barrel file (`models.dart`, `services.dart`, `repositories.da
 - **Logic**: `FeedNotifier` decouples what is "read" (`_readPostIds`) from what is actively "hidden" (`_hiddenPostIds`).
 - **Effect**: Allows scrolling past posts to optimistically mark them as read visually without unexpectedly dropping them from the UI when the "Hide Read" filter is engaged.
 
+### Isolated Feed Syncing
+- **Behavior**: Features like `HomeScreen` and `SavedPostsScreen` spawn their own **isolated instances** of `FeedNotifier` so they can manage separate post feeds simultaneously.
+- **Syncing**: To ensure actions like saving/unsaving a post immediately reflect across *all* active screens (preventing stale cached icons), `FeedNotifier` internally uses a `static StreamController.broadcast()`. When a post's status is toggled natively in one feed, the boolean event is globally broadcasted—allowing all background feed instances to passively update their targeted cached `Post` objects.
+
 ### Deep Linking
 - **Service**: `DeepLinkService` uses `app_links` to handle universal links and custom schemes.
 - **Logic**: Parses URLs (e.g., `/r/flutter`, `/r/flutter/comments/xyz`, `/u/username`) into `DeepLinkResult` objects.
-- **Types**: Supports `subreddit`, `post`, `user`, `home`, and `unknown` deep link types.
-- **Handling**: `_YarcAppState` manages both cold-start (pending link) and warm-start (stream listener) deep links. User deep links navigate to the `u_{username}` feed.
+- **Handling**: `_YarcAppState` manages both cold-start (pending link) and warm-start (stream listener) deep links. 
+- **Metadata Fallbacks**: Because deep links only provide raw String paths, the receiving `FeedNotifier` parallelly downloads full `Subreddit` objects (info, flairs, banners) in the background and silently redraws the info cards the moment that rich metadata arrives.
 
 ### Samsung DeX Compatibility
 - **Plugin**: `dex_compat` (local path dependency) detects desktop mode on Samsung DeX.
