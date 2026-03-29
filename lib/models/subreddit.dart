@@ -9,6 +9,7 @@ import 'package:yarc/utils/html_utils.dart';
 @immutable
 class Subreddit {
   const Subreddit({
+    required this.isOver18,
     required this.displayName,
     required this.title,
     required this.url,
@@ -45,6 +46,7 @@ class Subreddit {
         ? HtmlUtils.unescape(rawDescription)
         : null;
     final userIsSubscriber = data?['user_is_subscriber'] as bool?;
+    final isOver18 = (data?['over18'] as bool?) ?? false;
 
     return Subreddit(
       displayName: sub.displayName,
@@ -54,6 +56,7 @@ class Subreddit {
       subscriberCount: subscribers,
       description: description,
       userIsSubscriber: userIsSubscriber,
+      isOver18: isOver18,
     );
   }
 
@@ -72,6 +75,8 @@ class Subreddit {
   final String? description;
 
   final bool? userIsSubscriber;
+
+  final bool isOver18;
 
   @override
   bool operator ==(Object other) =>

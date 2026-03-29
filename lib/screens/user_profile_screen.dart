@@ -92,22 +92,10 @@ class _UserProfileBody extends StatefulWidget {
 
 class _UserProfileBodyState extends State<_UserProfileBody> {
   final ScrollController _scrollController = ScrollController();
-
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
-    // Trigger an initial autoplay check after the first frame so that
-    // videos already in the viewport on screen load will start playing
-    // without requiring the user to scroll first.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        // Reset stale state from the previous screen (e.g. a playing home-feed
-        // video) so the sticky guard doesn't block the first video here.
-        context.read<VideoAutoplayNotifier>().reset();
-        context.read<VideoAutoplayNotifier>().notifyScroll();
-      }
-    });
   }
 
   @override

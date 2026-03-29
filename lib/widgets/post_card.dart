@@ -157,7 +157,24 @@ class _PostHeader extends StatelessWidget {
         ],
         Wrap(
           crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 6,
           children: [
+            if (post.isNsfw)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: const Text(
+                  'NSFW',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
             Text(
               'r/${post.subreddit}',
               style: theme.textTheme.labelMedium?.copyWith(
@@ -342,7 +359,10 @@ class _ExternalLink extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final uri = Uri.tryParse(url);
-    final displayHost = uri?.host.replaceFirst('www.', '') ?? url;
+    var displayHost = uri?.host.replaceFirst('www.', '');
+    if (displayHost == null || displayHost.isEmpty) {
+      displayHost = url;
+    }
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),

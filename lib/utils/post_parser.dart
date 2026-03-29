@@ -88,8 +88,8 @@ class PostParser {
         if (crosspostResult.isVideo) {
           isVideo = true;
         }
-        imageUrl ??= crosspostResult.imageUrl;
-        aspectRatio ??= crosspostResult.aspectRatio;
+        imageUrl = crosspostResult.imageUrl ?? imageUrl;
+        aspectRatio = crosspostResult.aspectRatio ?? aspectRatio;
       }
 
       if (videoUrl != null) {
@@ -169,7 +169,7 @@ class PostParser {
       isYoutube: isYoutube,
       youtubeId: youtubeId,
       aspectRatio: aspectRatio,
-      url: externalUrl,
+      url: crosspostParent != null ? null : externalUrl,
       crosspostParent: crosspostParent,
       authorFlairText: submission.data?['author_flair_text'] != null
           ? HtmlUtils.unescape(
@@ -212,6 +212,21 @@ class PostParser {
     final isSelf = parent['is_self'] as bool? ?? true;
     final parentUrl = parent['url'] as String?;
 
+    // Extract images and media natively for the original post
+    final crosspostImages = <String>[];
+    final mediaInfo = _parseCrosspostMedia(
+      crossposts,
+      images: crosspostImages,
+      imageUrl: null,
+      videoUrl: null,
+      aspectRatio: null,
+    );
+
+    // Make sure we add the resolved image URL if gallery was empty
+    if (crosspostImages.isEmpty && mediaInfo.imageUrl != null) {
+      crosspostImages.add(mediaInfo.imageUrl!);
+    }
+
     // Determine external URL for link-type parent posts
     String? externalUrl;
     if (!isSelf && parentUrl != null && parentUrl.isNotEmpty) {
@@ -228,6 +243,11 @@ class PostParser {
       permalink: permalink,
       content: HtmlUtils.unescape(selftext),
       createdUtc: createdUtc,
+      images: crosspostImages,
+      imageUrl: mediaInfo.imageUrl,
+      isVideo: mediaInfo.isVideo,
+      videoUrl: mediaInfo.videoUrl,
+      aspectRatio: mediaInfo.aspectRatio,
       url: externalUrl,
     );
   }
@@ -307,11 +327,19 @@ class PostParser {
     String? resolvedImageUrl;
     double? resolvedAspectRatio;
 
-    // Try images/gallery from parent only if we have none
-    if (images.isEmpty && imageUrl == null) {
-      final parentGalleryRatio = _parseGalleryData(parentData, images);
+    // Always check for gallery from parent, as it's the source of truth
+    final parentGalleryRatio = _parseGalleryData(parentData, images);
+    if (parentGalleryRatio != null) {
       resolvedAspectRatio = parentGalleryRatio;
+    }
 
+    // Also extract images embedded directly inside the parent's markdown text
+    if (parentData['selftext'] != null) {
+      _extractSelftextImages(parentData['selftext'] as String, images);
+    }
+
+    // Checking parent for single image/preview if we still have no gallery images
+    if (images.isEmpty) {
       // Check parent URL for direct image
       if (parentData['url'] != null) {
         final pUrl = parentData['url'].toString();

@@ -247,11 +247,37 @@ class _SubredditTile extends StatelessWidget {
               ),
             )
           : const CircleAvatar(child: Icon(Icons.group)),
-      title: Text(
-        'r/${subreddit.displayName}',
-        style: textTheme.bodyLarge?.copyWith(
-          fontSize: (textTheme.bodyLarge?.fontSize ?? 16) - 1,
-        ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (subreddit.isOver18) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'NSFW',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Text(
+              'r/${subreddit.displayName}',
+              style: textTheme.bodyLarge?.copyWith(
+                fontSize: (textTheme.bodyLarge?.fontSize ?? 16) - 1,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
       subtitle: subreddit.title.isNotEmpty
           ? Text(
