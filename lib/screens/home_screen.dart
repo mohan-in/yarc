@@ -8,6 +8,7 @@ import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/notifiers.dart';
 import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
+import 'package:yarc/screens/saved_posts_screen.dart';
 import 'package:yarc/utils/utils.dart';
 import 'package:yarc/widgets/widgets.dart';
 
@@ -193,6 +194,20 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
               },
               onLogout: _handleLogout,
+              onSavedSelected: () {
+                final username = context.read<AuthNotifier>().currentUsername;
+                if (username != null) {
+                  unawaited(
+                    Navigator.push<void>(
+                      context,
+                      MaterialPageRoute<void>(
+                        builder: (context) =>
+                            SavedPostsScreen(username: username),
+                      ),
+                    ),
+                  );
+                }
+              },
             );
           },
         ),

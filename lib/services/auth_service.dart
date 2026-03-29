@@ -19,12 +19,16 @@ class AuthService {
     'vote',
     'history',
     'subscribe',
+    'save',
+    'submit',
+    'edit',
   ];
 
   static const String _redirectUri = 'com.mohan.reddit.client://callback';
 
   Reddit? _reddit;
   String? _lastSavedCredentials;
+  String? _currentUsername;
 
   final _authStateController = StreamController<AuthState>.broadcast();
 
@@ -34,6 +38,9 @@ class AuthService {
 
   /// Returns the Reddit client instance.
   Reddit? get reddit => _reddit;
+
+  /// Returns the currently logged in username.
+  String? get currentUsername => _currentUsername;
 
   /// Checks if the user is currently logged in.
   /// Returns true if we have valid credentials with a refresh token,
@@ -98,6 +105,7 @@ class AuthService {
         // `isValid` (access token not expired). The access token expires every
         // ~1h; an expired access token is NOT a reason to destroy the session.
         if (isLoggedIn) {
+          _currentUsername = (await _reddit!.user.me())?.displayName;
           if (!_reddit!.auth.isValid) {
             try {
               await refreshSession();
@@ -166,6 +174,7 @@ class AuthService {
       );
       _lastSavedCredentials = credentialsJson;
       await _reddit!.auth.refresh();
+      _currentUsername = (await _reddit!.user.me())?.displayName;
       await persistCredentials();
       _authStateController.add(AuthState.loggedIn);
       return true;
@@ -210,6 +219,7 @@ class AuthService {
       final code = Uri.parse(result).queryParameters['code'];
       if (code != null) {
         await _exchangeCodeForToken(code, redditConfig);
+        _currentUsername = (await _reddit!.user.me())?.displayName;
         _authStateController.add(AuthState.loggedIn);
         return null; // Success
       } else {
@@ -236,6 +246,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_credentialsKey);
     _reddit = null;
+    _currentUsername = null;
     _authStateController.add(AuthState.loggedOut);
   }
 

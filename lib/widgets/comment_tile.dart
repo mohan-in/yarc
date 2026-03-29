@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:yarc/models/comment.dart';
 import 'package:yarc/theme/theme.dart';
 import 'package:yarc/utils/date_utils.dart';
-import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/widgets/markdown_content.dart';
 
 class CommentTile extends StatefulWidget {
@@ -172,7 +171,7 @@ class _CommentBody extends StatelessWidget {
       children: [
         for (var i = 0; i < paragraphs.length; i++) ...[
           MarkdownContent(
-            text: HtmlUtils.unescape(paragraphs[i].trim()),
+            text: paragraphs[i].trim(),
             style: theme.textTheme.bodyMedium,
           ),
           if (i < paragraphs.length - 1) const SizedBox(height: 6),

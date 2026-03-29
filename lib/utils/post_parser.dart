@@ -171,8 +171,16 @@ class PostParser {
       aspectRatio: aspectRatio,
       url: externalUrl,
       crosspostParent: crosspostParent,
-      authorFlairText: submission.data?['author_flair_text'] as String?,
-      linkFlairText: submission.data?['link_flair_text'] as String?,
+      authorFlairText: submission.data?['author_flair_text'] != null
+          ? HtmlUtils.unescape(
+              submission.data!['author_flair_text'] as String,
+            )
+          : null,
+      linkFlairText: submission.data?['link_flair_text'] != null
+          ? HtmlUtils.unescape(
+              submission.data!['link_flair_text'] as String,
+            )
+          : null,
       totalAwardsReceived:
           submission.data?['total_awards_received'] as int? ?? 0,
       isSaved: submission.saved,

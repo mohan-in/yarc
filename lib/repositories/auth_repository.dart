@@ -9,6 +9,9 @@ class AuthRepository {
   /// Whether the user is currently logged in.
   bool get isLoggedIn => _service.isLoggedIn;
 
+  /// Returns the currently logged in username.
+  String? get currentUsername => _service.currentUsername;
+
   /// Stream to listen to auth state changes.
   Stream<AuthState> get authStateStream => _service.authStateStream;
 

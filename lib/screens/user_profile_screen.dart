@@ -59,7 +59,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       SettingsNotifier,
       FeedNotifier
     >(
-      create: (_) => FeedNotifier()..selectSubreddit('u_${widget.username}'),
+      create: (_) => FeedNotifier()..selectUserProfile(widget.username),
       update: (_, repo, settings, notifier) => notifier!
         ..setRepository(repo)
         ..setSettings(settings),

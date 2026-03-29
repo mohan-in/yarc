@@ -124,11 +124,4 @@ class Post {
     totalAwardsReceived,
     isSaved,
   ];
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || (other is Post && other.id == id);
-
-  @override
-  int get hashCode => id.hashCode;
 }

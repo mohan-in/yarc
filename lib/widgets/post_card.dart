@@ -1,10 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yarc/models/post.dart';
+import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/screens/user_profile_screen.dart';
-import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/widgets/cached_image.dart';
 import 'package:yarc/widgets/image_carousel.dart';
 import 'package:yarc/widgets/markdown_content.dart';
@@ -79,7 +80,7 @@ class _PostContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var content = HtmlUtils.unescape(post.content);
+    var content = post.content;
 
     final mediaUrls = <String>{...post.images};
     if (post.thumbnail != null) {
@@ -266,7 +267,7 @@ class _PostTitle extends StatelessWidget {
             ),
           ),
         Text(
-          HtmlUtils.unescape(post.title),
+          post.title,
           style: theme.textTheme.titleMedium?.copyWith(
             fontWeight: FontWeight.bold,
           ),
@@ -287,9 +288,12 @@ class _PostMedia extends StatelessWidget {
     final showYoutube = post.isYoutube && post.youtubeId != null;
 
     if (showVideo) {
+      final autoPlay = context.select<SettingsNotifier, bool>(
+        (n) => n.autoPlayVideos,
+      );
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: RedditVideoPlayer(videoUrl: post.videoUrl!, autoPlay: true),
+        child: RedditVideoPlayer(videoUrl: post.videoUrl!, autoPlay: autoPlay),
       );
     }
 

@@ -1,36 +1,60 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yarc/notifiers/theme_notifier.dart';
 
 void main() {
   group('ThemeNotifier', () {
-    test('initializes with dark mode false by default', () async {
+    test('defaults to system theme', () async {
       SharedPreferences.setMockInitialValues({});
       final notifier = ThemeNotifier();
-      // Allow async init to complete
-      await Future<void>.delayed(Duration.zero);
-      expect(notifier.isDarkMode, false);
+      await notifier.init();
+      expect(notifier.themeMode, ThemeMode.system);
     });
 
-    test('initializes with saved value', () async {
-      SharedPreferences.setMockInitialValues({'darkMode': true});
+    test('restores saved light mode', () async {
+      SharedPreferences.setMockInitialValues({'theme_mode': 'light'});
       final notifier = ThemeNotifier();
-      await Future<void>.delayed(Duration.zero);
-      expect(notifier.isDarkMode, true);
+      await notifier.init();
+      expect(notifier.themeMode, ThemeMode.light);
     });
 
-    test('toggleTheme updates value and saves to prefs', () async {
-      SharedPreferences.setMockInitialValues({'darkMode': false});
+    test('restores saved dark mode', () async {
+      SharedPreferences.setMockInitialValues({'theme_mode': 'dark'});
       final notifier = ThemeNotifier();
-      await Future<void>.delayed(Duration.zero);
+      await notifier.init();
+      expect(notifier.themeMode, ThemeMode.dark);
+    });
 
-      expect(notifier.isDarkMode, false);
+    test('restores saved system mode', () async {
+      SharedPreferences.setMockInitialValues({'theme_mode': 'system'});
+      final notifier = ThemeNotifier();
+      await notifier.init();
+      expect(notifier.themeMode, ThemeMode.system);
+    });
 
-      await notifier.toggleTheme();
-      expect(notifier.isDarkMode, true);
+    test('setThemeMode persists value to prefs', () async {
+      SharedPreferences.setMockInitialValues({});
+      final notifier = ThemeNotifier();
+      await notifier.init();
+
+      await notifier.setThemeMode(ThemeMode.dark);
+      expect(notifier.themeMode, ThemeMode.dark);
 
       final prefs = await SharedPreferences.getInstance();
-      expect(prefs.getBool('darkMode'), true);
+      expect(prefs.getString('theme_mode'), 'dark');
+    });
+
+    test('setThemeMode is a no-op when mode unchanged', () async {
+      SharedPreferences.setMockInitialValues({'theme_mode': 'dark'});
+      final notifier = ThemeNotifier();
+      await notifier.init();
+
+      var notified = false;
+      notifier.addListener(() => notified = true);
+
+      await notifier.setThemeMode(ThemeMode.dark);
+      expect(notified, isFalse);
     });
   });
 }

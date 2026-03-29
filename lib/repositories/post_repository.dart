@@ -1,6 +1,7 @@
 import 'package:draw/draw.dart' as draw;
 import 'package:yarc/models/comment.dart';
 import 'package:yarc/models/feed_sort.dart';
+import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/models/types.dart';
 import 'package:yarc/services/history_service.dart';
 import 'package:yarc/services/reddit_service.dart';
@@ -29,6 +30,21 @@ class PostRepository {
     );
   }
 
+  /// Fetches posts submitted by [username] with pagination support.
+  Future<PostsResult> getUserPosts({
+    required String username,
+    String? after,
+    FeedSort sort = FeedSort.hot,
+    draw.TimeFilter timeFilter = draw.TimeFilter.day,
+  }) async {
+    return _redditService.fetchUserPosts(
+      username: username,
+      after: after,
+      sort: sort,
+      timeFilter: timeFilter,
+    );
+  }
+
   /// Fetches fresh posts from API (resets pagination).
   Future<PostsResult> refresh({
     String? subreddit,
@@ -40,6 +56,11 @@ class PostRepository {
       sort: sort,
       timeFilter: timeFilter,
     );
+  }
+
+  /// Fetches info for a specific subreddit by name.
+  Future<Subreddit?> getSubredditInfo(String name) async {
+    return _redditService.fetchSubredditInfo(name);
   }
 
   /// Fetches comments for a post.
@@ -70,5 +91,13 @@ class PostRepository {
   /// Unsaves a post.
   Future<void> unsavePost(String postId) async {
     return _redditService.unsavePost(postId);
+  }
+
+  /// Fetches the saved posts for [username] with pagination.
+  Future<PostsResult> getSavedPosts({
+    required String username,
+    String? after,
+  }) async {
+    return _redditService.fetchSavedPosts(username: username, after: after);
   }
 }

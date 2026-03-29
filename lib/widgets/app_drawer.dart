@@ -10,6 +10,7 @@ class AppDrawer extends StatelessWidget {
     required this.subreddits,
     required this.onSubredditSelected,
     required this.onLogout,
+    required this.onSavedSelected,
     super.key,
     this.currentSubreddit,
   });
@@ -18,6 +19,7 @@ class AppDrawer extends StatelessWidget {
   final String? currentSubreddit;
   final void Function(Subreddit?) onSubredditSelected;
   final VoidCallback onLogout;
+  final VoidCallback onSavedSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +52,16 @@ class AppDrawer extends StatelessWidget {
           icon: Icon(Icons.home_outlined),
           selectedIcon: Icon(Icons.home),
           label: Text('Home'),
+        ),
+
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.bookmark_outline),
+          title: const Text('Saved'),
+          onTap: () {
+            Navigator.pop(context);
+            onSavedSelected();
+          },
         ),
 
         // Section divider

@@ -19,11 +19,34 @@ class SettingsScreen extends StatelessWidget {
         builder: (context, settings, theme, _) {
           return ListView(
             children: [
-              SwitchListTile(
-                title: const Text('Dark Mode'),
-                subtitle: const Text('Use dark theme'),
-                value: theme.isDarkMode,
-                onChanged: (_) => unawaited(theme.toggleTheme()),
+              ListTile(
+                title: const Text('Theme'),
+                subtitle: const Text('Choose light, dark, or follow system'),
+                trailing: SegmentedButton<ThemeMode>(
+                  style: const ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  segments: const [
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.light,
+                      icon: Icon(Icons.light_mode_outlined),
+                      tooltip: 'Light',
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.system,
+                      icon: Icon(Icons.brightness_auto_outlined),
+                      tooltip: 'System',
+                    ),
+                    ButtonSegment<ThemeMode>(
+                      value: ThemeMode.dark,
+                      icon: Icon(Icons.dark_mode_outlined),
+                      tooltip: 'Dark',
+                    ),
+                  ],
+                  selected: {theme.themeMode},
+                  onSelectionChanged: (modes) =>
+                      unawaited(theme.setThemeMode(modes.first)),
+                ),
               ),
               const Divider(),
               ListTile(

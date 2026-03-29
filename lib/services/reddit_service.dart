@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:draw/draw.dart' as draw;
@@ -126,6 +127,44 @@ class RedditService {
     }
   }
 
+  /// Fetches posts submitted by a specific user, with pagination support.
+  Future<PostsResult> fetchUserPosts({
+    required String username,
+    String? after,
+    FeedSort sort = FeedSort.hot,
+    draw.TimeFilter timeFilter = draw.TimeFilter.day,
+  }) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      throw Exception('Reddit client not initialized or logged out');
+    }
+
+    try {
+      return await _withAuthRetry('fetchUserPosts', () async {
+        final submissions = reddit.redditor(username).submissions;
+        final stream = _getUserSubmissionsStream(
+          submissions,
+          sort: sort,
+          timeFilter: timeFilter,
+          after: after,
+        );
+
+        final posts = <Post>[];
+        String? nextAfterToken;
+
+        await for (final content in stream) {
+          if (content is draw.Submission) {
+            posts.add(PostParser.parse(content));
+            nextAfterToken = content.fullname;
+          }
+        }
+        return (posts: posts, nextAfter: nextAfterToken);
+      });
+    } on Exception catch (_) {
+      return (posts: <Post>[], nextAfter: null);
+    }
+  }
+
   /// Saves a post by its ID.
   Future<void> savePost(String postId) async {
     final reddit = _reddit;
@@ -133,8 +172,21 @@ class RedditService {
       throw Exception('Reddit client not initialized or logged out');
     }
     return _withAuthRetry('savePost', () async {
-      final submission = await reddit.submission(id: postId).populate();
-      await submission.save();
+      try {
+        final submission = await reddit.submission(id: postId).populate();
+        await submission.save();
+        developer.log(
+          'Successfully saved post: $postId',
+          name: 'RedditService',
+        );
+      } on Exception catch (e) {
+        developer.log(
+          'Failed to save post $postId: $e',
+          name: 'RedditService',
+          error: e,
+        );
+        rethrow;
+      }
     });
   }
 
@@ -145,8 +197,21 @@ class RedditService {
       throw Exception('Reddit client not initialized or logged out');
     }
     return _withAuthRetry('unsavePost', () async {
-      final submission = await reddit.submission(id: postId).populate();
-      await submission.unsave();
+      try {
+        final submission = await reddit.submission(id: postId).populate();
+        await submission.unsave();
+        developer.log(
+          'Successfully unsaved post: $postId',
+          name: 'RedditService',
+        );
+      } on Exception catch (e) {
+        developer.log(
+          'Failed to unsave post $postId: $e',
+          name: 'RedditService',
+          error: e,
+        );
+        rethrow;
+      }
     });
   }
 
@@ -216,6 +281,40 @@ class RedditService {
       FeedSort.rising => front.rising(
         limit: kDefaultPostLimit,
         params: params,
+      ),
+    };
+  }
+
+  /// Returns the appropriate sorted stream for a user's submitted posts.
+  Stream<draw.UserContent> _getUserSubmissionsStream(
+    draw.SubListing submissions, {
+    required FeedSort sort,
+    required draw.TimeFilter timeFilter,
+    String? after,
+  }) {
+    return switch (sort) {
+      FeedSort.best || FeedSort.hot => submissions.hot(
+        limit: kDefaultPostLimit,
+        after: after,
+      ),
+      FeedSort.newest => submissions.newest(
+        limit: kDefaultPostLimit,
+        after: after,
+      ),
+      FeedSort.top => submissions.top(
+        timeFilter: timeFilter,
+        limit: kDefaultPostLimit,
+        after: after,
+      ),
+      FeedSort.controversial => submissions.controversial(
+        timeFilter: timeFilter,
+        limit: kDefaultPostLimit,
+        after: after,
+      ),
+      // SubListing has no rising; fall back to hot.
+      FeedSort.rising => submissions.hot(
+        limit: kDefaultPostLimit,
+        after: after,
       ),
     };
   }
@@ -314,6 +413,30 @@ class RedditService {
     }
   }
 
+  /// Fetches a specific subreddit by name.
+  Future<Subreddit?> fetchSubredditInfo(String name) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      return null;
+    }
+
+    try {
+      return await _withAuthRetry('fetchSubredditInfo', () async {
+        final ref = reddit.subreddit(name);
+        final sub = await ref.populate();
+        return Subreddit.fromDraw(sub);
+      });
+    } on Exception catch (e, stack) {
+      developer.log(
+        'Failed to fetch subreddit info for $name: $e',
+        name: 'RedditService',
+        error: e,
+        stackTrace: stack,
+      );
+      return null;
+    }
+  }
+
   /// Subscribes the current user to the given subreddit.
   Future<void> subscribeToSubreddit(String subredditName) async {
     final reddit = _reddit;
@@ -368,6 +491,98 @@ class RedditService {
       });
     } on Exception catch (_) {
       return null;
+    }
+  }
+
+  /// Returns the display name of the currently authenticated user, or null.
+  Future<String?> fetchCurrentUsername() async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      return null;
+    }
+    try {
+      return await _withAuthRetry('fetchCurrentUsername', () async {
+        final me = await reddit.user.me();
+        return me?.displayName;
+      });
+    } on Exception catch (_) {
+      return null;
+    }
+  }
+
+  /// Fetches saved posts (Submissions only) for [username] with pagination.
+  Future<PostsResult> fetchSavedPosts({
+    required String username,
+    String? after,
+  }) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      developer.log(
+        'Saved posts fetch failed: Reddit client null',
+        name: 'RedditService',
+      );
+      throw Exception('Reddit client not initialized or logged out');
+    }
+
+    try {
+      return await _withAuthRetry('fetchSavedPosts', () async {
+        developer.log(
+          'Fetching saved posts for $username, after: $after',
+          name: 'RedditService',
+        );
+
+        // me() is more reliable for private content than redditor(username).
+        final me = await reddit.user.me();
+        final redditor = me ?? reddit.redditor(username);
+
+        final stream = redditor.saved(
+          limit: kDefaultPostLimit,
+          after: after,
+        );
+
+        final posts = <Post>[];
+        String? nextAfterToken;
+        var count = 0;
+
+        await for (final content in stream) {
+          count++;
+          if (content is draw.Submission) {
+            nextAfterToken = content.fullname;
+            posts.add(PostParser.parse(content));
+            developer.log(
+              'Found saved submission: ${content.fullname}',
+              name: 'RedditService',
+            );
+          } else if (content is draw.Comment) {
+            nextAfterToken = content.fullname;
+            developer.log(
+              'Skipping saved comment: ${content.fullname}',
+              name: 'RedditService',
+            );
+          } else {
+            developer.log(
+              'Found unknown saved content type: ${content.runtimeType}',
+              name: 'RedditService',
+            );
+          }
+        }
+
+        developer.log(
+          'Fetched $count items from saved stream. '
+          'Found ${posts.length} posts. nextAfter: $nextAfterToken',
+          name: 'RedditService',
+        );
+
+        return (posts: posts, nextAfter: nextAfterToken);
+      });
+    } on Exception catch (e, stack) {
+      developer.log(
+        'Error fetching saved posts: $e',
+        name: 'RedditService',
+        error: e,
+        stackTrace: stack,
+      );
+      rethrow;
     }
   }
 }

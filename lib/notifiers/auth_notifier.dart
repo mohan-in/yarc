@@ -18,9 +18,11 @@ class AuthNotifier extends ChangeNotifier {
   bool _isLoggedIn = false;
   bool _isInitialized = false;
   bool _isUnauthenticated = false;
+  String? _currentUsername;
 
   bool get isLoggedIn => _isLoggedIn;
   bool get isInitialized => _isInitialized;
+  String? get currentUsername => _currentUsername;
 
   /// True when the session has expired or the token was revoked.
   /// The user should see a "session expired" screen with Retry/Re-login.
@@ -41,12 +43,15 @@ class AuthNotifier extends ChangeNotifier {
       case AuthState.loggedIn:
         _isLoggedIn = true;
         _isUnauthenticated = false;
+        _currentUsername = _repository?.currentUsername;
       case AuthState.loggedOut:
         _isLoggedIn = false;
         _isUnauthenticated = false;
+        _currentUsername = null;
       case AuthState.unauthenticated:
         _isLoggedIn = false;
         _isUnauthenticated = true;
+        _currentUsername = null;
     }
     notifyListeners();
   }
@@ -58,6 +63,7 @@ class AuthNotifier extends ChangeNotifier {
     }
     await _repository!.init();
     _isLoggedIn = _repository!.isLoggedIn;
+    _currentUsername = _repository!.currentUsername;
     _isInitialized = true;
     notifyListeners();
   }
@@ -72,6 +78,7 @@ class AuthNotifier extends ChangeNotifier {
     if (error == null) {
       _isLoggedIn = true;
       _isUnauthenticated = false;
+      _currentUsername = _repository?.currentUsername;
       notifyListeners();
     }
     return error;
@@ -93,6 +100,7 @@ class AuthNotifier extends ChangeNotifier {
     await _repository!.logout();
     _isLoggedIn = false;
     _isUnauthenticated = false;
+    _currentUsername = null;
     notifyListeners();
   }
 
