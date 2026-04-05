@@ -1,24 +1,15 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 
+/// Coordinates single-video-at-a-time playback across the app.
+///
+/// Individual `RedditVideoPlayer` widgets use `VisibilityDetector` to
+/// determine their own visibility and call [play] / [stop] accordingly.
+/// This notifier only tracks *which* video is currently active so that
+/// two videos never play simultaneously.
 class VideoAutoplayNotifier extends ChangeNotifier {
   String? _playingVideoId;
-  Timer? _scrollDebounce;
 
   String? get playingVideoId => _playingVideoId;
-
-  /// Notifies listeners that a scroll event has occurred.
-  /// Video players should check their position when this is called.
-  /// Throttled to avoid excessive layout calculations when many video
-  /// players are loaded in the feed.
-  void notifyScroll() {
-    if (_scrollDebounce?.isActive ?? false) return;
-    _scrollDebounce = Timer(
-      const Duration(milliseconds: 100),
-      notifyListeners,
-    );
-  }
 
   /// Requests to play a video.
   /// If another video is playing, it will be stopped by the nature of the UI
@@ -49,11 +40,5 @@ class VideoAutoplayNotifier extends ChangeNotifier {
       _playingVideoId = null;
       notifyListeners();
     }
-  }
-
-  @override
-  void dispose() {
-    _scrollDebounce?.cancel();
-    super.dispose();
   }
 }

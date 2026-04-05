@@ -137,7 +137,10 @@ class _PostHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Row(
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
         if (post.isStickied) ...[
           Icon(
@@ -369,8 +372,18 @@ class _ExternalLink extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(8),
         onTap: () async {
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri);
+          if (uri != null) {
+            final useSystemBrowser = context
+                .read<SettingsNotifier>()
+                .useSystemBrowser;
+            if (await canLaunchUrl(uri)) {
+              await launchUrl(
+                uri,
+                mode: useSystemBrowser
+                    ? LaunchMode.externalApplication
+                    : LaunchMode.platformDefault,
+              );
+            }
           }
         },
         child: Container(

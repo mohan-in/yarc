@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
-import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/widgets/post_list.dart';
@@ -55,17 +54,6 @@ class _SavedPostsBodyState extends State<_SavedPostsBody> {
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
-    // Trigger an initial autoplay check after the first frame so that
-    // videos already in the viewport on screen load will start playing
-    // without requiring the user to scroll first.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        // Reset stale state from the previous screen so the sticky guard
-        // doesn't block the first video on this screen.
-        context.read<VideoAutoplayNotifier>().reset();
-        context.read<VideoAutoplayNotifier>().notifyScroll();
-      }
-    });
   }
 
   @override
@@ -85,9 +73,6 @@ class _SavedPostsBodyState extends State<_SavedPostsBody> {
     if (currentPosition >= maxScroll - threshold) {
       unawaited(context.read<FeedNotifier>().loadPosts());
     }
-
-    // Video autoplay check
-    context.read<VideoAutoplayNotifier>().notifyScroll();
   }
 
   @override

@@ -6,7 +6,6 @@ import 'package:yarc/models/post.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
-import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/services/reddit_service.dart';
@@ -114,9 +113,6 @@ class _UserProfileBodyState extends State<_UserProfileBody> {
     if (currentPosition >= maxScroll - threshold) {
       unawaited(context.read<FeedNotifier>().loadPosts());
     }
-
-    // Video autoplay check
-    context.read<VideoAutoplayNotifier>().notifyScroll();
   }
 
   @override
@@ -180,8 +176,8 @@ class _UserProfileHeader extends StatelessWidget {
     final cakeDay = userInfo!.createdUtc;
     final formattedCakeDay = cakeDay != null
         ? '${cakeDay.year}-'
-            '${cakeDay.month.toString().padLeft(2, '0')}-'
-            '${cakeDay.day.toString().padLeft(2, '0')}'
+              '${cakeDay.month.toString().padLeft(2, '0')}-'
+              '${cakeDay.day.toString().padLeft(2, '0')}'
         : '';
 
     return Container(
@@ -195,9 +191,7 @@ class _UserProfileHeader extends StatelessWidget {
             backgroundColor: theme.colorScheme.primaryContainer,
             foregroundColor: theme.colorScheme.onPrimaryContainer,
             child: Text(
-              userInfo!.name.isNotEmpty
-                  ? userInfo!.name[0].toUpperCase()
-                  : '?',
+              userInfo!.name.isNotEmpty ? userInfo!.name[0].toUpperCase() : '?',
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),

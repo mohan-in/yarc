@@ -32,11 +32,6 @@ class _HomeScreenState extends State<HomeScreen> {
     // have access to Providers after the first build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       unawaited(_initializeAuth());
-      // Also trigger an initial autoplay check so videos visible on
-      // first load will play without requiring a scroll event.
-      if (mounted) {
-        context.read<VideoAutoplayNotifier>().notifyScroll();
-      }
     });
   }
 
@@ -70,9 +65,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (currentPosition >= maxScroll - threshold) {
       unawaited(context.read<FeedNotifier>().loadPosts());
     }
-
-    // Video autoplay check
-    context.read<VideoAutoplayNotifier>().notifyScroll();
 
     // Image precaching (still UI/Rendering concern, but we can cleaner it up)
     // We can delegate this to FeedNotifier if we want strict separation,
@@ -249,15 +241,32 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              Selector2<AuthNotifier, FeedNotifier, (bool, bool, String?)>(
+              Selector2<
+                AuthNotifier,
+                FeedNotifier,
+                (bool, bool, bool, String?)
+              >(
                 selector: (_, auth, feed) => (
+                  auth.isInitialized,
                   auth.isLoggedIn,
                   auth.isUnauthenticated,
                   feed.currentSubreddit,
                 ),
                 builder: (context, data, _) {
-                  final (isLoggedIn, isUnauthenticated, currentSubreddit) =
-                      data;
+                  final (
+                    isInitialized,
+                    isLoggedIn,
+                    isUnauthenticated,
+                    currentSubreddit,
+                  ) = data;
+
+                  if (!isInitialized) {
+                    return const SliverFillRemaining(
+                      child: Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
 
                   // Session expired — show retry / re-login
                   if (isUnauthenticated && currentSubreddit == null) {

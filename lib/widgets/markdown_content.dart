@@ -5,8 +5,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/widgets/faded_truncation.dart';
 import 'package:yarc/widgets/full_screen_image_view.dart';
@@ -64,8 +66,16 @@ class MarkdownContent extends StatelessWidget {
       onTapLink: (text, href, title) async {
         if (href != null) {
           final uri = Uri.parse(href);
+          final useSystemBrowser = context
+              .read<SettingsNotifier>()
+              .useSystemBrowser;
           if (await canLaunchUrl(uri)) {
-            await launchUrl(uri);
+            await launchUrl(
+              uri,
+              mode: useSystemBrowser
+                  ? LaunchMode.externalApplication
+                  : LaunchMode.platformDefault,
+            );
           }
         }
       },

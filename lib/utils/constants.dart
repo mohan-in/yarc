@@ -29,11 +29,23 @@ const int kMaxSubscribedSubreddits = 100;
 /// Reddit requires a descriptive user-agent for API compliance.
 const String kUserAgent = 'flutter_reddit_demo/1.0.0 (by /u/antigravity)';
 
-/// Top fraction of the viewport for the video autoplay safe zone.
-const double kVideoSafeZoneTop = 0.15;
+/// Minimum visible fraction of a video to trigger autoplay.
+const double kVideoPlayThreshold = 0.4;
 
-/// Bottom fraction of the viewport for the video autoplay safe zone.
-const double kVideoSafeZoneBottom = 0.85;
+/// Visible fraction below which a playing video will be paused.
+/// Lower than [kVideoPlayThreshold] to provide hysteresis and prevent
+/// rapid play/pause cycling at the boundary.
+const double kVideoPauseThreshold = 0.2;
+
+/// Maximum fraction of viewport height a video is allowed to occupy.
+/// Prevents tall portrait videos from filling the entire screen and
+/// blocking scroll interaction or deadlocking the autoplay system.
+const double kVideoMaxHeightFraction = 0.75;
+
+/// Minimum visible fraction to steal playback from another playing video.
+/// Higher than [kVideoPlayThreshold] to prevent two partially-visible
+/// videos from rapidly swapping ownership.
+const double kVideoStealThreshold = 0.6;
 
 /// Fallback height (in pixels) for image carousels without an aspect ratio.
 const double kCarouselFallbackHeight = 400;
