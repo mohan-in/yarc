@@ -17,6 +17,7 @@ class SliverPostList extends StatelessWidget {
     required this.onPostVisible,
     super.key,
     this.subredditInfo,
+    this.selectedPostId,
   });
 
   final List<Post> posts;
@@ -25,6 +26,9 @@ class SliverPostList extends StatelessWidget {
   final Set<String> readPostIds;
   final void Function(Post post) onPostVisible;
   final Subreddit? subredditInfo;
+
+  /// When non-null, the post with this ID is highlighted as selected.
+  final String? selectedPostId;
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +81,7 @@ class SliverPostList extends StatelessWidget {
             key: ValueKey(post.id),
             post: post,
             isRead: isRead,
+            isSelected: selectedPostId == post.id,
             onTap: () {
               // Ensure it's marked as read if tapped before scrolling
               // fully into view

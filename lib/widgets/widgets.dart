@@ -9,6 +9,7 @@ export 'image_carousel.dart';
 export 'login_prompt.dart';
 export 'markdown_content.dart';
 export 'post_card.dart';
+export 'post_detail_content.dart';
 export 'post_list.dart';
 export 'post_metadata.dart';
 export 'sort_filter_bottom_sheet.dart';

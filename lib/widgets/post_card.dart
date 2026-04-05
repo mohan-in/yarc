@@ -24,18 +24,30 @@ class PostCard extends StatelessWidget {
     this.onTap,
     this.expanded = false,
     this.isRead = false,
+    this.isSelected = false,
   });
 
   final Post post;
   final VoidCallback? onTap;
   final bool expanded;
   final bool isRead;
+  final bool isSelected;
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Card(
-      elevation: 2,
+      elevation: isSelected ? 4 : 2,
       clipBehavior: Clip.antiAlias,
+      shape: isSelected
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: colorScheme.primary,
+                width: 2,
+              ),
+            )
+          : null,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: InkWell(
         onTap: onTap,
