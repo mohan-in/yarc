@@ -26,6 +26,12 @@ class PostParser {
     caseSensitive: false,
   );
 
+  /// Matches markdown image syntax: `![alt](url)`
+  static final _markdownImageRegex = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
+
+  /// Matches 3+ consecutive newlines for collapsing whitespace.
+  static final _excessiveNewlinesRegex = RegExp(r'\n{3,}');
+
   static final _youtubeRegex = RegExp(
     r'^.*((youtu.be\/)|(v\/)|'
     r'(\/u\/\w\/)|(embed\/)|'
@@ -159,9 +165,13 @@ class PostParser {
       thumbnail: thumbnailUrl,
       imageUrl: imageUrl,
       permalink: (submission.data!['permalink'] as String?) ?? '',
-      content: submission.selftext != null
-          ? HtmlUtils.unescape(submission.selftext!)
-          : '',
+      content: _sanitizeContent(
+        submission.selftext != null
+            ? HtmlUtils.unescape(submission.selftext!)
+            : '',
+        images,
+        thumbnailUrl,
+      ),
       createdUtc: submission.createdUtc.millisecondsSinceEpoch / 1000,
       images: images,
       isVideo: isVideo && videoUrl != null,
@@ -241,7 +251,11 @@ class PostParser {
       ups: ups,
       numComments: numComments,
       permalink: permalink,
-      content: HtmlUtils.unescape(selftext),
+      content: _sanitizeContent(
+        HtmlUtils.unescape(selftext),
+        crosspostImages,
+        null,
+      ),
       createdUtc: createdUtc,
       images: crosspostImages,
       imageUrl: mediaInfo.imageUrl,
@@ -250,6 +264,44 @@ class PostParser {
       aspectRatio: mediaInfo.aspectRatio,
       url: externalUrl,
     );
+  }
+
+  /// Removes known media URLs and cleans up whitespace
+  static String _sanitizeContent(
+    String content,
+    List<String> images,
+    String? thumbnail,
+  ) {
+    if (content.isEmpty) return content;
+
+    var sanitized = content;
+    final mediaUrls = <String>{...images};
+    if (thumbnail != null) {
+      mediaUrls.add(thumbnail);
+    }
+
+    // Build a set of all URL variants for fast lookup
+    final allVariants = <String>{};
+    for (final url in mediaUrls) {
+      allVariants
+        ..add(url)
+        ..add(url.replaceAll('&amp;', '&'))
+        ..add(url.replaceAll('&', '&amp;'))
+        ..add(Uri.encodeFull(url));
+    }
+
+    // Remove only markdown images whose src matches a known media URL
+    sanitized = sanitized.replaceAllMapped(_markdownImageRegex, (match) {
+      final src = match.group(1) ?? '';
+      return allVariants.contains(src) ? '' : match.group(0)!;
+    });
+
+    // Remove bare media URLs from text
+    for (final variant in allVariants) {
+      sanitized = sanitized.replaceAll(variant, '');
+    }
+
+    return sanitized.replaceAll(_excessiveNewlinesRegex, '\n\n').trim();
   }
 
   /// Resolves the direct image URL, preferring GIF over static preview.

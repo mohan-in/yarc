@@ -53,6 +53,7 @@ class CachedImage extends StatelessWidget {
       child: CachedNetworkImage(
         imageUrl: ImageUtils.getCorsUrl(imageUrl),
         httpHeaders: ImageUtils.authHeaders,
+        memCacheWidth: 800, // Optimize memory for the feed
         width: double.infinity,
         fit: fit,
         placeholder: (context, url) => SizedBox(

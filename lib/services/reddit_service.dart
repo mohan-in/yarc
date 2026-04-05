@@ -119,6 +119,8 @@ class RedditService {
             posts.add(PostParser.parse(content));
             nextAfterToken = content.fullname;
           }
+          // Yield to UI thread to prevent jank
+          await Future<void>.delayed(Duration.zero);
         }
         return (posts: posts, nextAfter: nextAfterToken);
       });
@@ -157,6 +159,8 @@ class RedditService {
             posts.add(PostParser.parse(content));
             nextAfterToken = content.fullname;
           }
+          // Yield to UI thread to prevent jank
+          await Future<void>.delayed(Duration.zero);
         }
         return (posts: posts, nextAfter: nextAfterToken);
       });
@@ -565,6 +569,8 @@ class RedditService {
               name: 'RedditService',
             );
           }
+          // Yield to UI thread to prevent jank
+          await Future<void>.delayed(Duration.zero);
         }
 
         developer.log(

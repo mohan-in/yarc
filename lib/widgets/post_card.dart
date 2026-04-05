@@ -72,52 +72,16 @@ class _PostContent extends StatelessWidget {
   final Post post;
   final bool expanded;
 
-  /// Matches markdown image syntax: `![alt](url)`
-  static final _markdownImageRegex = RegExp(r'!\[[^\]]*\]\(([^)]+)\)');
-
-  /// Matches 3+ consecutive newlines for collapsing whitespace.
-  static final _excessiveNewlinesRegex = RegExp(r'\n{3,}');
-
   @override
   Widget build(BuildContext context) {
-    var content = post.content;
-
-    final mediaUrls = <String>{...post.images};
-    if (post.thumbnail != null) {
-      mediaUrls.add(post.thumbnail!);
-    }
-
-    // Build a set of all URL variants for fast lookup
-    final allVariants = <String>{};
-    for (final url in mediaUrls) {
-      allVariants
-        ..add(url)
-        ..add(url.replaceAll('&amp;', '&'))
-        ..add(url.replaceAll('&', '&amp;'))
-        ..add(Uri.encodeFull(url));
-    }
-
-    // Remove only markdown images whose src matches a known media URL
-    content = content.replaceAllMapped(_markdownImageRegex, (match) {
-      final src = match.group(1) ?? '';
-      return allVariants.contains(src) ? '' : match.group(0)!;
-    });
-
-    // Remove bare media URLs from text
-    for (final variant in allVariants) {
-      content = content.replaceAll(variant, '');
-    }
-
-    content = content.replaceAll(_excessiveNewlinesRegex, '\n\n').trim();
-
-    if (content.isEmpty) {
+    if (post.content.isEmpty) {
       return const SizedBox.shrink();
     }
 
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: MarkdownContent(
-        text: content,
+        text: post.content,
         maxLines: expanded ? null : 3,
         style: Theme.of(context).textTheme.bodyMedium,
       ),
