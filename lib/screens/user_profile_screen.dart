@@ -9,7 +9,7 @@ import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/services/reddit_service.dart';
-import 'package:yarc/widgets/post_list.dart';
+import 'package:yarc/widgets/widgets.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({
@@ -24,6 +24,7 @@ class UserProfileScreen extends StatefulWidget {
 }
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
+  final ScrollController _scrollController = ScrollController();
   RedditorInfo? _userInfo;
   bool _isLoadingInfo = true;
 
@@ -31,6 +32,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void initState() {
     super.initState();
     unawaited(_loadUserInfo());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserInfo() async {
@@ -66,48 +73,49 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text('u/${widget.username}'),
+          actions: [
+            UniversalAppBarActions(
+              onScrollToTop: () {
+                if (_scrollController.hasClients) {
+                  unawaited(
+                    _scrollController.animateTo(
+                      0,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeOut,
+                    ),
+                  );
+                }
+              },
+              showSearch: false,
+            ),
+          ],
         ),
         body: _UserProfileBody(
           userInfo: _userInfo,
           isLoadingInfo: _isLoadingInfo,
+          scrollController: _scrollController,
         ),
       ),
     );
   }
 }
 
-class _UserProfileBody extends StatefulWidget {
+class _UserProfileBody extends StatelessWidget {
   const _UserProfileBody({
     required this.userInfo,
     required this.isLoadingInfo,
+    required this.scrollController,
   });
 
   final RedditorInfo? userInfo;
   final bool isLoadingInfo;
+  final ScrollController scrollController;
 
-  @override
-  State<_UserProfileBody> createState() => _UserProfileBodyState();
-}
+  void _scrollListener(BuildContext context) {
+    if (!scrollController.hasClients) return;
 
-class _UserProfileBodyState extends State<_UserProfileBody> {
-  final ScrollController _scrollController = ScrollController();
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_scrollListener);
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollListener() {
-    if (!_scrollController.hasClients) return;
-
-    final currentPosition = _scrollController.position.pixels;
-    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentPosition = scrollController.position.pixels;
+    final maxScroll = scrollController.position.maxScrollExtent;
 
     const threshold = 500.0;
     if (currentPosition >= maxScroll - threshold) {
@@ -117,31 +125,39 @@ class _UserProfileBodyState extends State<_UserProfileBody> {
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: () => context.read<FeedNotifier>().refresh(),
-      color: Theme.of(context).colorScheme.primary,
-      backgroundColor: Theme.of(
-        context,
-      ).colorScheme.surfaceContainerHighest,
-      displacement: 20,
-      child: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                _UserProfileHeader(
-                  userInfo: widget.userInfo,
-                  isLoading: widget.isLoadingInfo,
-                ),
-                const Divider(height: 1),
-              ],
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification) {
+          _scrollListener(context);
+        }
+        return false;
+      },
+      child: RefreshIndicator(
+        onRefresh: () => context.read<FeedNotifier>().refresh(),
+        color: Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(
+          context,
+        ).colorScheme.surfaceContainerHighest,
+        displacement: 20,
+        child: CustomScrollView(
+          controller: scrollController,
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  _UserProfileHeader(
+                    userInfo: userInfo,
+                    isLoading: isLoadingInfo,
+                  ),
+                  const Divider(height: 1),
+                ],
+              ),
             ),
-          ),
-          _UserProfileFeed(
-            postRepository: context.read<PostRepository>(),
-          ),
-        ],
+            _UserProfileFeed(
+              postRepository: context.read<PostRepository>(),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -276,7 +292,6 @@ class _StatCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         child: Column(
