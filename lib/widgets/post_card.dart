@@ -204,25 +204,17 @@ class _PostHeader extends StatelessWidget {
             ),
           ),
         ),
-        if (post.authorFlairText != null &&
-            post.authorFlairText!.isNotEmpty) ...[
+        if ((post.authorFlairText != null &&
+                post.authorFlairText!.isNotEmpty) ||
+            (post.authorFlairRichtext != null &&
+                post.authorFlairRichtext!.isNotEmpty)) ...[
           const SizedBox(width: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 4,
-              vertical: 2,
-            ),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.tertiaryContainer,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              post.authorFlairText!,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onTertiaryContainer,
-                fontSize: 10,
-              ),
-            ),
+          _FlairLabel(
+            text: post.authorFlairText,
+            richtext: post.authorFlairRichtext,
+            backgroundColor: theme.colorScheme.tertiaryContainer,
+            textColor: theme.colorScheme.onTertiaryContainer,
+            borderRadius: 4,
           ),
         ],
       ],
@@ -245,21 +237,17 @@ class _PostTitle extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (post.linkFlairText != null && post.linkFlairText!.isNotEmpty)
+        if ((post.linkFlairText != null && post.linkFlairText!.isNotEmpty) ||
+            (post.linkFlairRichtext != null &&
+                post.linkFlairRichtext!.isNotEmpty))
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.secondaryContainer,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                post.linkFlairText!,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSecondaryContainer,
-                ),
-              ),
+            child: _FlairLabel(
+              text: post.linkFlairText,
+              richtext: post.linkFlairRichtext,
+              backgroundColor: theme.colorScheme.secondaryContainer,
+              textColor: theme.colorScheme.onSecondaryContainer,
+              borderRadius: 12,
             ),
           ),
         Text(
@@ -420,6 +408,80 @@ class _CrosspostIndicator extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _FlairLabel extends StatelessWidget {
+  const _FlairLabel({
+    required this.text,
+    required this.richtext,
+    required this.backgroundColor,
+    required this.textColor,
+    required this.borderRadius,
+  });
+
+  final String? text;
+  final List<FlairItem>? richtext;
+  final Color backgroundColor;
+  final Color textColor;
+  final double borderRadius;
+
+  @override
+  Widget build(BuildContext context) {
+    if ((text == null || text!.isEmpty) &&
+        (richtext == null || richtext!.isEmpty)) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    final textStyle = theme.textTheme.labelSmall?.copyWith(
+      color: textColor,
+      fontSize: 10,
+    );
+
+    Widget content;
+    if (richtext != null && richtext!.isNotEmpty) {
+      content = RichText(
+        text: TextSpan(
+          children: richtext!.map((item) {
+            if (item.isEmoji && item.emojiUrl != null) {
+              return WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  child: CachedImage(
+                    imageUrl: item.emojiUrl!,
+                    height: 14,
+                    width: 14,
+                  ),
+                ),
+              );
+            }
+            return TextSpan(
+              text: item.text ?? '',
+              style: textStyle,
+            );
+          }).toList(),
+        ),
+      );
+    } else {
+      content = Text(
+        text!,
+        style: textStyle,
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 6,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(borderRadius),
+      ),
+      child: content,
     );
   }
 }

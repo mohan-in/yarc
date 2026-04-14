@@ -4,13 +4,23 @@ import 'package:yarc/utils/html_utils.dart';
 
 /// Utility class for parsing Reddit submissions into Post models.
 class PostParser {
+  /// Matches direct image URLs (jpg/jpeg/png/gif/webp) with optional query strings.
   static final _imageUrlRegex = RegExp(
     r'https?://[^\s\)]+\.(?:jpg|jpeg|png|gif|webp)(?:\?[^\s\)]*)?',
     caseSensitive: false,
   );
 
+  /// Matches Reddit custom subreddit emoji shortcodes, e.g. `::pepewoah::` or
+  /// `:z100_2:`.  These are moderator-uploaded images that have no Unicode
+  /// equivalent, so we strip them and collapse the surrounding whitespace when
+  /// richtext rendering is not desired or the string falls back.
+  static final _redditEmojiShortcodeRegex = RegExp(
+    r':[\w.\-]+:',
+  );
+
+  /// Matches both Reddit-native and external preview CDN URLs.
   static final _redditPreviewRegex = RegExp(
-    r'https?://preview\.redd\.it/[^\s\)]+',
+    r'https?://(?:external-)?preview\.redd\.it/[^\s\)]+',
     caseSensitive: false,
   );
 
@@ -21,8 +31,18 @@ class PostParser {
   );
 
   /// Matches Reddit-hosted media domains (galleries, videos, images).
+  /// Also includes Giphy domains so we don't show a redundant link chip
+  /// when the GIF is already rendered via Reddit's preview image.
   static final _redditMediaDomainRegex = RegExp(
-    r'(?:i\.redd\.it|v\.redd\.it|preview\.redd\.it|reddit\.com/gallery)',
+    r'(?:i\.redd\.it|v\.redd\.it|preview\.redd\.it|reddit\.com/gallery'
+    r'|(?:media|i)\.giphy\.com|giphy\.com/gifs)',
+    caseSensitive: false,
+  );
+
+  /// Matches Giphy CDN URLs that serve the actual animated GIF, so we
+  /// can use them in place of Reddit's static preview.
+  static final _giphyMediaDomainRegex = RegExp(
+    r'https?://(?:media|i)\.giphy\.com/',
     caseSensitive: false,
   );
 
@@ -32,6 +52,8 @@ class PostParser {
   /// Matches 3+ consecutive newlines for collapsing whitespace.
   static final _excessiveNewlinesRegex = RegExp(r'\n{3,}');
 
+  /// Matches YouTube video URLs across all common formats
+  /// (watch, shorts, live, embed).
   static final _youtubeRegex = RegExp(
     r'^.*((youtu.be\/)|(v\/)|'
     r'(\/u\/\w\/)|(embed\/)|'
@@ -51,13 +73,24 @@ class PostParser {
     double? aspectRatio;
     final isStickied = submission.data?['stickied'] as bool? ?? false;
 
-    // Attempt to find the main image URL from preview
-    final preview = submission.preview;
-    if (preview.isNotEmpty) {
-      final image = preview[0].source;
-      imageUrl = HtmlUtils.unescape(image.url.toString());
-      if (image.width > 0 && image.height > 0) {
-        aspectRatio = image.width / image.height;
+    // Attempt to find the main image URL from preview.
+    // Instead of relying on DRAW's `submission.preview`, extract manually
+    // from `submission.data` to ensure we don't miss previews that DRAW might
+    // drop.
+    if (submission.data != null) {
+      final data = submission.data!.cast<String, dynamic>();
+      final previewResult = _extractImageFromPreview(data);
+      if (previewResult != null) {
+        final urlStr = previewResult.url;
+        // Reddit sometimes gives a .gif extension but adds format=mp4.
+        // It is actually a video.
+        if (urlStr.contains('format=mp4')) {
+          videoUrl = urlStr;
+          isVideo = true;
+        } else {
+          imageUrl = urlStr;
+          aspectRatio = previewResult.aspectRatio;
+        }
       }
     }
 
@@ -167,7 +200,9 @@ class PostParser {
       permalink: (submission.data!['permalink'] as String?) ?? '',
       content: _sanitizeContent(
         submission.selftext != null
-            ? HtmlUtils.unescape(submission.selftext!)
+            ? HtmlUtils.resolveGiphyShortcodes(
+                HtmlUtils.unescape(submission.selftext!),
+              )
             : '',
         images,
         thumbnailUrl,
@@ -182,15 +217,25 @@ class PostParser {
       url: crosspostParent != null ? null : externalUrl,
       crosspostParent: crosspostParent,
       authorFlairText: submission.data?['author_flair_text'] != null
-          ? HtmlUtils.unescape(
-              submission.data!['author_flair_text'] as String,
+          ? _cleanFlairText(
+              HtmlUtils.unescape(
+                submission.data!['author_flair_text'] as String,
+              ),
             )
           : null,
+      authorFlairRichtext: _parseFlairRichtext(
+        submission.data?['author_flair_richtext'] as List<dynamic>?,
+      ),
       linkFlairText: submission.data?['link_flair_text'] != null
-          ? HtmlUtils.unescape(
-              submission.data!['link_flair_text'] as String,
+          ? _cleanFlairText(
+              HtmlUtils.unescape(
+                submission.data!['link_flair_text'] as String,
+              ),
             )
           : null,
+      linkFlairRichtext: _parseFlairRichtext(
+        submission.data?['link_flair_richtext'] as List<dynamic>?,
+      ),
       totalAwardsReceived:
           submission.data?['total_awards_received'] as int? ?? 0,
       isSaved: submission.saved,
@@ -266,6 +311,41 @@ class PostParser {
     );
   }
 
+  /// Parses Reddit's flair richtext array into FlairItem models.
+  static List<FlairItem>? _parseFlairRichtext(List<dynamic>? richtextFields) {
+    if (richtextFields == null || richtextFields.isEmpty) return null;
+    final items = <FlairItem>[];
+    for (final field in richtextFields) {
+      if (field is! Map) continue;
+      final e = field['e'] as String?;
+      if (e == 'emoji') {
+        final url = field['u'] as String?;
+        if (url != null) {
+          items.add(
+            FlairItem(isEmoji: true, emojiUrl: HtmlUtils.unescape(url)),
+          );
+        }
+      } else if (e == 'text') {
+        final text = field['t'] as String?;
+        if (text != null && text.isNotEmpty) {
+          items.add(FlairItem(isEmoji: false, text: HtmlUtils.unescape(text)));
+        }
+      }
+    }
+    return items.isEmpty ? null : items;
+  }
+
+  /// Strips Reddit custom emoji shortcodes (`:name:`) from flair text and
+  /// collapses surrounding whitespace.  Returns `null` when the resulting
+  /// string is empty so callers can use null-aware guards.
+  static String? _cleanFlairText(String text) {
+    final cleaned = text
+        .replaceAll(_redditEmojiShortcodeRegex, ' ')
+        .trim()
+        .replaceAll(RegExp(' {2,}'), ' ');
+    return cleaned.isEmpty ? null : cleaned;
+  }
+
   /// Removes known media URLs and cleans up whitespace
   static String _sanitizeContent(
     String content,
@@ -305,8 +385,10 @@ class PostParser {
   }
 
   /// Resolves the direct image URL, preferring GIF over static preview.
+  /// Giphy CDN URLs ([media|i].giphy.com) serve animated GIFs, so they
+  /// take precedence over a static Reddit preview.
   static String? _resolveDirectImageUrl(String url, String? currentImageUrl) {
-    if (url.endsWith('.gif')) {
+    if (url.endsWith('.gif') || _giphyMediaDomainRegex.hasMatch(url)) {
       return url;
     }
     if (currentImageUrl == null) {
@@ -403,7 +485,7 @@ class PostParser {
         }
       }
 
-      // Check parent preview if still no image
+      // Check parent preview only when Reddit has enabled it for this post.
       if (resolvedImageUrl == null) {
         final result = _extractImageFromPreview(parentData);
         if (result != null) {
@@ -499,12 +581,21 @@ class PostParser {
     return HtmlUtils.unescape(source['url'] as String);
   }
 
-  /// Extracts image URL and aspect ratio from preview.
+  /// Extracts image URL and aspect ratio from preview, but only when Reddit
+  /// Extract image from post preview metadata.
   static ({String url, double? aspectRatio})? _extractImageFromPreview(
     Map<String, dynamic> data,
   ) {
     if (data['preview'] == null) return null;
     final preview = data['preview'] as Map<String, dynamic>;
+
+    // Respect Reddit's own decision about whether to show this preview,
+    // but always allow it for link posts since it's their main thumbnail.
+    // Self-posts with enabled=false are typically generic link thumbs we drop.
+    final enabled = preview['enabled'] as bool? ?? false;
+    final isSelf = data['is_self'] as bool? ?? false;
+    if (!enabled && isSelf) return null;
+
     if (preview['images'] == null) return null;
     final imagesList = preview['images'] as List<dynamic>;
     if (imagesList.isEmpty) return null;

@@ -26,7 +26,9 @@ class Comment {
     return Comment(
       id: comment.id ?? '',
       author: comment.author,
-      body: comment.body != null ? HtmlUtils.unescape(comment.body!) : '',
+      body: comment.body != null
+          ? HtmlUtils.resolveGiphyShortcodes(HtmlUtils.unescape(comment.body!))
+          : '',
       ups: comment.upvotes,
       createdUtc: comment.createdUtc.millisecondsSinceEpoch / 1000,
       replies: replies,

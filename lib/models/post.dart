@@ -1,5 +1,19 @@
 import 'package:flutter/foundation.dart';
 
+/// Represents a parsed segment of a flair, either text or a custom emoji.
+@immutable
+class FlairItem {
+  const FlairItem({
+    required this.isEmoji,
+    this.text,
+    this.emojiUrl,
+  });
+
+  final bool isEmoji;
+  final String? text;
+  final String? emojiUrl;
+}
+
 /// A data model representing a Reddit post.
 @immutable
 class Post {
@@ -24,7 +38,9 @@ class Post {
     this.aspectRatio,
     this.crosspostParent,
     this.authorFlairText,
+    this.authorFlairRichtext,
     this.linkFlairText,
+    this.linkFlairRichtext,
     this.totalAwardsReceived = 0,
     this.isSaved = false,
     this.isNsfw = false,
@@ -89,8 +105,14 @@ class Post {
   /// The author's flair text (if any).
   final String? authorFlairText;
 
+  /// The parsed richtext of the author's flair (if any).
+  final List<FlairItem>? authorFlairRichtext;
+
   /// The post's flair text (if any).
   final String? linkFlairText;
+
+  /// The parsed richtext of the post's flair (if any).
+  final List<FlairItem>? linkFlairRichtext;
 
   /// The number of awards received.
   final int totalAwardsReceived;

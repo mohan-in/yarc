@@ -33,7 +33,8 @@ class UniversalAppBarActions extends StatelessWidget {
     final hideRead = context.select<FeedNotifier, bool>((n) => n.hideRead);
     final isLoggedIn = context.select<AuthNotifier, bool>((n) => n.isLoggedIn);
 
-    final hasSubreddit = context.select<FeedNotifier, String?>(
+    final hasSubreddit =
+        context.select<FeedNotifier, String?>(
           (n) => n.currentSubreddit,
         ) !=
         null;

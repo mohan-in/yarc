@@ -14,12 +14,14 @@ class CachedImage extends StatelessWidget {
     this.fullScreenUrls,
     this.fit = BoxFit.fitWidth,
     this.height,
+    this.width,
   });
 
   final String imageUrl;
   final List<String>? fullScreenUrls;
   final BoxFit fit;
   final double? height;
+  final double? width;
 
   @override
   Widget build(BuildContext context) {
@@ -54,14 +56,17 @@ class CachedImage extends StatelessWidget {
         imageUrl: ImageUtils.getCorsUrl(imageUrl),
         httpHeaders: ImageUtils.authHeaders,
         memCacheWidth: 800, // Optimize memory for the feed
-        width: double.infinity,
+        width: width ?? double.infinity,
+        height: height,
         fit: fit,
         placeholder: (context, url) => SizedBox(
           height: height ?? 200,
+          width: width,
           child: const Center(child: CircularProgressIndicator()),
         ),
         errorWidget: (context, url, error) => SizedBox(
           height: height ?? 200,
+          width: width,
           child: const Center(
             child: Icon(Icons.broken_image, size: 50, color: Colors.grey),
           ),
