@@ -3,9 +3,7 @@ import 'dart:collection';
 
 import 'package:draw/draw.dart' as draw;
 import 'package:flutter/foundation.dart';
-import 'package:yarc/models/feed_sort.dart';
-import 'package:yarc/models/post.dart';
-import 'package:yarc/models/subreddit.dart';
+import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
 
@@ -42,6 +40,10 @@ class FeedNotifier extends ChangeNotifier {
   /// Set when the feed is showing a user's profile posts.
   String? _profileUsername;
 
+  /// Set when the feed is showing a custom feed (multireddit).
+  String? _currentCustomFeedPath;
+  String? _currentCustomFeedName;
+
   /// True when the feed shows the current user's saved posts.
   bool _savedMode = false;
   String? _after;
@@ -58,6 +60,8 @@ class FeedNotifier extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get currentSubreddit => _currentSubreddit;
   Subreddit? get currentSubredditInfo => _currentSubredditInfo;
+  String? get currentCustomFeedPath => _currentCustomFeedPath;
+  String? get currentCustomFeedName => _currentCustomFeedName;
 
   /// Derived directly from SettingsNotifier — single source of truth.
   bool get hideRead => _settings?.hideReadPosts ?? false;
@@ -186,6 +190,7 @@ class FeedNotifier extends ChangeNotifier {
                   )
                 : await _repository!.refresh(
                     subreddit: _currentSubreddit,
+                    customFeedPath: _currentCustomFeedPath,
                     sort: _currentSort,
                     timeFilter: _currentTimeFilter,
                   ))
@@ -203,6 +208,7 @@ class FeedNotifier extends ChangeNotifier {
                   )
                 : await _repository!.getPosts(
                     subreddit: _currentSubreddit,
+                    customFeedPath: _currentCustomFeedPath,
                     after: _after,
                     sort: _currentSort,
                     timeFilter: _currentTimeFilter,
@@ -251,6 +257,8 @@ class FeedNotifier extends ChangeNotifier {
     _after = null;
     _currentSubreddit = subreddit;
     _currentSubredditInfo = null;
+    _currentCustomFeedPath = null;
+    _currentCustomFeedName = null;
     _profileUsername = null;
     _savedMode = false;
     _isLoading = false;
@@ -264,6 +272,24 @@ class FeedNotifier extends ChangeNotifier {
     _after = null;
     _currentSubreddit = subreddit.displayName;
     _currentSubredditInfo = subreddit;
+    _currentCustomFeedPath = null;
+    _currentCustomFeedName = null;
+    _profileUsername = null;
+    _savedMode = false;
+    _isLoading = false;
+    _invalidateVisiblePosts();
+    notifyListeners();
+    unawaited(loadPosts());
+  }
+
+  /// Switches the feed to a custom feed (multireddit).
+  void selectCustomFeed(CustomFeed feed) {
+    _posts = [];
+    _after = null;
+    _currentSubreddit = null;
+    _currentSubredditInfo = null;
+    _currentCustomFeedPath = feed.path;
+    _currentCustomFeedName = feed.displayName;
     _profileUsername = null;
     _savedMode = false;
     _isLoading = false;
@@ -282,6 +308,8 @@ class FeedNotifier extends ChangeNotifier {
     _currentSubreddit = null;
     _currentSubredditInfo = null;
     _profileUsername = username;
+    _currentCustomFeedPath = null;
+    _currentCustomFeedName = null;
     _savedMode = false;
     _isLoading = false;
     _invalidateVisiblePosts();
@@ -302,6 +330,8 @@ class FeedNotifier extends ChangeNotifier {
     _currentSubreddit = null;
     _currentSubredditInfo = null;
     _profileUsername = username;
+    _currentCustomFeedPath = null;
+    _currentCustomFeedName = null;
     _savedMode = true;
     _isLoading = false;
     _invalidateVisiblePosts();
@@ -379,6 +409,8 @@ class FeedNotifier extends ChangeNotifier {
     _after = null;
     _currentSubreddit = null;
     _currentSubredditInfo = null;
+    _currentCustomFeedPath = null;
+    _currentCustomFeedName = null;
     _isLoading = false;
     // hideRead is derived from _settings — no local reset needed.
     _readPostIds = {};

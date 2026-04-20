@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 
 import 'package:draw/draw.dart' as draw;
 import 'package:yarc/models/comment.dart';
+import 'package:yarc/models/custom_feed.dart';
 import 'package:yarc/models/feed_sort.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/models/redditor_info.dart';
@@ -81,6 +82,7 @@ class RedditService {
 
   Future<PostsResult> fetchPosts({
     String? subreddit,
+    String? customFeedPath,
     String? after,
     FeedSort sort = FeedSort.hot,
     draw.TimeFilter timeFilter = draw.TimeFilter.day,
@@ -95,6 +97,73 @@ class RedditService {
         final params = <String, String>{'limit': '$kDefaultPostLimit'};
         if (after != null) {
           params['after'] = after;
+        }
+
+        if (customFeedPath != null) {
+          final sortStr = sort == FeedSort.best ? 'hot' : sort.name;
+          final String url;
+          if (customFeedPath.startsWith('/')) {
+            url = customFeedPath.endsWith('/')
+                ? '$customFeedPath$sortStr'
+                : '$customFeedPath/$sortStr';
+          } else {
+            url = '/$customFeedPath/$sortStr';
+          }
+
+          developer.log(
+            'Fetching custom feed: $url (sort: $sortStr, after: $after)',
+            name: 'RedditService',
+          );
+
+          // reddit.get() automatically objectifies the response by default,
+          // returning {'listing': [...], 'before': ..., 'after': ...} for a
+          // Listing response — NOT the raw {'data': {'children': [...]}} JSON.
+          final response = await reddit.get(url, params: {
+            ...params,
+            if (sort == FeedSort.top || sort == FeedSort.controversial)
+              't': timeFilter.toString().split('.').last,
+          });
+
+          developer.log(
+            'Custom feed response type: ${response.runtimeType}, '
+            'keys: ${response is Map ? response.keys.toList() : "N/A"}',
+            name: 'RedditService',
+          );
+
+          if (response is Map) {
+            // DRAW's objectify() converts a Listing into:
+            // {'listing': [Submission, ...], 'before': ..., 'after': ...}
+            final listing = response['listing'] as List?;
+            final nextAfter = response['after'] as String?;
+
+            if (listing != null) {
+              final posts = <Post>[];
+              for (final item in listing) {
+                if (item is draw.Submission) {
+                  try {
+                    posts.add(PostParser.parse(item));
+                  } on Exception catch (e) {
+                    developer.log(
+                      'Failed to parse submission ${item.id}: $e',
+                      name: 'RedditService',
+                    );
+                  }
+                }
+              }
+              developer.log(
+                'Custom feed parsed ${posts.length} posts, '
+                'nextAfter: $nextAfter',
+                name: 'RedditService',
+              );
+              return (posts: posts, nextAfter: nextAfter);
+            }
+          }
+
+          developer.log(
+            'Custom feed returned unexpected response structure',
+            name: 'RedditService',
+          );
+          return (posts: <Post>[], nextAfter: null);
         }
 
         final stream = subreddit != null
@@ -124,7 +193,13 @@ class RedditService {
         }
         return (posts: posts, nextAfter: nextAfterToken);
       });
-    } on Exception catch (_) {
+    } on Exception catch (e, stack) {
+      developer.log(
+        'fetchPosts failed: $e',
+        name: 'RedditService',
+        error: e,
+        stackTrace: stack,
+      );
       return (posts: <Post>[], nextAfter: null);
     }
   }
@@ -381,6 +456,26 @@ class RedditService {
           subs.add(Subreddit.fromDraw(sub));
         }
         return subs;
+      });
+    } on Exception catch (_) {
+      return [];
+    }
+  }
+
+  /// Fetches the user's custom feeds (multireddits).
+  Future<List<CustomFeed>> fetchCustomFeeds() async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      return [];
+    }
+
+    try {
+      return await _withAuthRetry('fetchCustomFeeds', () async {
+        final multis = await reddit.user.multireddits();
+        if (multis == null) {
+          return <CustomFeed>[];
+        }
+        return multis.map(CustomFeed.fromDraw).toList();
       });
     } on Exception catch (_) {
       return [];

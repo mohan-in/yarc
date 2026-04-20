@@ -1,4 +1,5 @@
 export 'comment.dart';
+export 'custom_feed.dart';
 export 'feed_sort.dart';
 export 'post.dart';
 export 'redditor_info.dart';

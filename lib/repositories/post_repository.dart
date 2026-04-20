@@ -18,12 +18,14 @@ class PostRepository {
   /// Returns a [PostsResult] containing posts and the pagination cursor.
   Future<PostsResult> getPosts({
     String? subreddit,
+    String? customFeedPath,
     String? after,
     FeedSort sort = FeedSort.hot,
     draw.TimeFilter timeFilter = draw.TimeFilter.day,
   }) async {
     return _redditService.fetchPosts(
       subreddit: subreddit,
+      customFeedPath: customFeedPath,
       after: after,
       sort: sort,
       timeFilter: timeFilter,
@@ -48,11 +50,13 @@ class PostRepository {
   /// Fetches fresh posts from API (resets pagination).
   Future<PostsResult> refresh({
     String? subreddit,
+    String? customFeedPath,
     FeedSort sort = FeedSort.hot,
     draw.TimeFilter timeFilter = draw.TimeFilter.day,
   }) async {
     return _redditService.fetchPosts(
       subreddit: subreddit,
+      customFeedPath: customFeedPath,
       sort: sort,
       timeFilter: timeFilter,
     );

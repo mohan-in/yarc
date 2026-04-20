@@ -1,3 +1,4 @@
+import 'package:yarc/models/custom_feed.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/services/reddit_service.dart';
 
@@ -16,6 +17,10 @@ class SubredditRepository {
     );
     return subs;
   }
+
+  /// Fetches the user's custom feeds (multireddits).
+  Future<List<CustomFeed>> getCustomFeeds() =>
+      _redditService.fetchCustomFeeds();
 
   /// Searches for subreddits by name prefix.
   Future<List<Subreddit>> search(String query) async {

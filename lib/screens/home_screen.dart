@@ -183,12 +183,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return PopScope(
       canPop: context.select<FeedNotifier, bool>(
-        (n) => n.currentSubreddit == null,
+        (n) => n.currentSubreddit == null && n.currentCustomFeedPath == null,
       ),
       onPopInvokedWithResult: (didPop, result) {
         if (!didPop) {
           final feedNotifier = context.read<FeedNotifier>();
-          if (feedNotifier.currentSubreddit != null) {
+          if (feedNotifier.currentSubreddit != null ||
+              feedNotifier.currentCustomFeedPath != null) {
             feedNotifier.selectSubreddit(null);
           }
         }
@@ -202,8 +203,14 @@ class _HomeScreenState extends State<HomeScreen> {
               subreddits: context.select<SubredditsNotifier, List<Subreddit>>(
                 (n) => n.subreddits,
               ),
+              customFeeds: context.select<SubredditsNotifier, List<CustomFeed>>(
+                (n) => n.customFeeds,
+              ),
               currentSubreddit: context.select<FeedNotifier, String?>(
                 (n) => n.currentSubreddit,
+              ),
+              currentCustomFeedPath: context.select<FeedNotifier, String?>(
+                (n) => n.currentCustomFeedPath,
               ),
               onSubredditSelected: (sub) {
                 if (sub == null) {
@@ -211,6 +218,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 } else {
                   context.read<FeedNotifier>().selectSubredditWithInfo(sub);
                 }
+                _scrollToTop();
+                Navigator.pop(context);
+              },
+              onCustomFeedSelected: (feed) {
+                context.read<FeedNotifier>().selectCustomFeed(feed);
                 _scrollToTop();
                 Navigator.pop(context);
               },
@@ -403,18 +415,23 @@ class _NarrowLayout extends StatelessWidget {
         slivers: [
           SliverAppBar(
             floating: true,
-            title: Selector2<FeedNotifier, AuthNotifier, (String?, bool)>(
+            title:
+                Selector2<FeedNotifier, AuthNotifier, (String?, String?, bool)>(
               selector: (_, feed, auth) => (
                 feed.currentSubreddit,
+                feed.currentCustomFeedName,
                 auth.isLoggedIn,
               ),
               builder: (context, data, _) {
-                final (currentSubreddit, isLoggedIn) = data;
-                return Text(
-                  currentSubreddit != null
-                      ? 'r/$currentSubreddit'
-                      : (isLoggedIn ? 'Home' : 'YARC'),
-                );
+                final (currentSubreddit, currentCustomFeedName, isLoggedIn) =
+                    data;
+                if (currentSubreddit != null) {
+                  return Text('r/$currentSubreddit');
+                }
+                if (currentCustomFeedName != null) {
+                  return Text('m/$currentCustomFeedName');
+                }
+                return Text(isLoggedIn ? 'Home' : 'YARC');
               },
             ),
             actions: [

@@ -1,6 +1,7 @@
 import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
+import 'package:yarc/models/custom_feed.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/repositories/subreddit_repository.dart';
 
@@ -9,8 +10,10 @@ class SubredditsNotifier extends ChangeNotifier {
   SubredditRepository? _repository;
 
   List<Subreddit> _subreddits = [];
+  List<CustomFeed> _customFeeds = [];
 
   List<Subreddit> get subreddits => _subreddits;
+  List<CustomFeed> get customFeeds => _customFeeds;
 
   /// Checks if a subreddit is currently subscribed.
   bool isSubscribed(String name) {
@@ -29,7 +32,12 @@ class SubredditsNotifier extends ChangeNotifier {
       return;
     }
     try {
-      _subreddits = await _repository!.getSubscribed();
+      final results = await Future.wait([
+        _repository!.getSubscribed(),
+        _repository!.getCustomFeeds(),
+      ]);
+      _subreddits = results[0] as List<Subreddit>;
+      _customFeeds = results[1] as List<CustomFeed>;
       notifyListeners();
     } on Exception catch (_) {
       // Keep current state on error
@@ -39,6 +47,7 @@ class SubredditsNotifier extends ChangeNotifier {
   /// Clears the subreddits list (e.g., on logout).
   void clear() {
     _subreddits = [];
+    _customFeeds = [];
     notifyListeners();
   }
 

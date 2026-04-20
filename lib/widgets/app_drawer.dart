@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:yarc/models/custom_feed.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/screens/settings_screen.dart';
 import 'package:yarc/utils/image_utils.dart';
@@ -8,29 +9,46 @@ import 'package:yarc/utils/image_utils.dart';
 class AppDrawer extends StatelessWidget {
   const AppDrawer({
     required this.subreddits,
+    required this.customFeeds,
     required this.onSubredditSelected,
+    required this.onCustomFeedSelected,
     required this.onLogout,
     required this.onSavedSelected,
     super.key,
     this.currentSubreddit,
+    this.currentCustomFeedPath,
   });
 
   final List<Subreddit> subreddits;
+  final List<CustomFeed> customFeeds;
   final String? currentSubreddit;
+  final String? currentCustomFeedPath;
   final void Function(Subreddit?) onSubredditSelected;
+  final void Function(CustomFeed) onCustomFeedSelected;
   final VoidCallback onLogout;
   final VoidCallback onSavedSelected;
 
   @override
   Widget build(BuildContext context) {
-    // Calculate selected index: 0 = Home, 1+ = subreddits
+    // Calculate selected index:
+    // 0 = Home,
+    // 1 to customFeeds.length = Custom Feeds
+    // customFeeds.length + 1 to customFeeds.length + subreddits.length
+    // = Subreddits
     var selectedIndex = 0;
-    if (currentSubreddit != null) {
+    if (currentCustomFeedPath != null) {
+      final customIndex = customFeeds.indexWhere(
+        (f) => f.path == currentCustomFeedPath,
+      );
+      if (customIndex != -1) {
+        selectedIndex = 1 + customIndex;
+      }
+    } else if (currentSubreddit != null) {
       final subIndex = subreddits.indexWhere(
         (s) => s.displayName == currentSubreddit,
       );
       if (subIndex != -1) {
-        selectedIndex = 1 + subIndex;
+        selectedIndex = 1 + customFeeds.length + subIndex;
       }
     }
 
@@ -39,8 +57,10 @@ class AppDrawer extends StatelessWidget {
       onDestinationSelected: (index) {
         if (index == 0) {
           onSubredditSelected(null);
+        } else if (index <= customFeeds.length) {
+          onCustomFeedSelected(customFeeds[index - 1]);
         } else {
-          final subIndex = index - 1;
+          final subIndex = index - customFeeds.length - 1;
           if (subIndex < subreddits.length) {
             onSubredditSelected(subreddits[subIndex]);
           }
@@ -69,6 +89,30 @@ class AppDrawer extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(28, 16, 28, 10),
           child: Divider(),
         ),
+
+        if (customFeeds.isNotEmpty) ...[
+          // Custom Feeds header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(28, 10, 16, 10),
+            child: Text(
+              'Custom Feeds',
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
+          ),
+
+          // Custom Feed destinations
+          for (final feed in customFeeds)
+            NavigationDrawerDestination(
+              icon: const Icon(Icons.dynamic_feed),
+              label: Text(feed.displayName),
+            ),
+
+          // Divider between custom feeds and subscriptions
+          const Padding(
+            padding: EdgeInsets.fromLTRB(28, 16, 28, 10),
+            child: Divider(),
+          ),
+        ],
 
         // Subscriptions header
         Padding(
