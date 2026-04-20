@@ -6,7 +6,7 @@ import 'package:yarc/models/post.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
-import 'package:yarc/screens/post_detail_screen.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/widgets.dart';
 
 /// Displays the currently authenticated user's saved posts.
@@ -48,17 +48,7 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
           centerTitle: false,
           actions: [
             UniversalAppBarActions(
-              onScrollToTop: () {
-                if (_scrollController.hasClients) {
-                  unawaited(
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    ),
-                  );
-                }
-              },
+              onScrollToTop: () => scrollToTop(_scrollController),
               showSort: false,
               showSearch: false,
             ),
@@ -75,19 +65,6 @@ class _SavedPostsBody extends StatelessWidget {
 
   final ScrollController scrollController;
 
-  void _scrollListener(BuildContext context) {
-    if (!scrollController.hasClients) return;
-
-    final currentPosition = scrollController.position.pixels;
-    final maxScroll = scrollController.position.maxScrollExtent;
-
-    // Trigger pagination when close to bottom
-    const threshold = 500.0;
-    if (currentPosition >= maxScroll - threshold) {
-      unawaited(context.read<FeedNotifier>().loadPosts());
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final errorMessage = context.select<FeedNotifier, String?>(
@@ -100,54 +77,40 @@ class _SavedPostsBody extends StatelessWidget {
       (n) => n.isLoading,
     );
 
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollUpdateNotification) {
-          _scrollListener(context);
-        }
-        return false;
+    return PaginatedScrollBody(
+      controller: scrollController,
+      onLoadMore: () => context.read<FeedNotifier>().loadPosts(),
+      onRefresh: () {
+        context.read<FeedNotifier>().clearError();
+        return context.read<FeedNotifier>().refresh();
       },
-      child: RefreshIndicator(
-        onRefresh: () {
-          context.read<FeedNotifier>().clearError();
-          return context.read<FeedNotifier>().refresh();
-        },
-        color: Theme.of(context).colorScheme.primary,
-        backgroundColor: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest,
-        displacement: 20,
-        child: CustomScrollView(
-          controller: scrollController,
-          slivers: [
-            if (errorMessage != null && posts.isEmpty)
-              SliverFillRemaining(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Center(
-                    child: Text(
-                      errorMessage,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
+      slivers: [
+        if (errorMessage != null && posts.isEmpty)
+          SliverFillRemaining(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Center(
+                child: Text(
+                  errorMessage,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.error,
                   ),
                 ),
-              )
-            else if (posts.isEmpty && !isLoading)
-              const SliverFillRemaining(
-                child: Center(
-                  child: Text('No saved posts found.'),
-                ),
-              )
-            else
-              _SavedPostsFeed(
-                postRepository: context.read<PostRepository>(),
               ),
-          ],
-        ),
-      ),
+            ),
+          )
+        else if (posts.isEmpty && !isLoading)
+          const SliverFillRemaining(
+            child: Center(
+              child: Text('No saved posts found.'),
+            ),
+          )
+        else
+          _SavedPostsFeed(
+            postRepository: context.read<PostRepository>(),
+          ),
+      ],
     );
   }
 }
@@ -176,14 +139,10 @@ class _SavedPostsFeed extends StatelessWidget {
       },
       onPostTap: (post) {
         unawaited(
-          Navigator.push<void>(
+          AppRouter.toPostDetail(
             context,
-            MaterialPageRoute<void>(
-              builder: (context) => PostDetailScreen(
-                post: post,
-                postRepository: postRepository,
-              ),
-            ),
+            post: post,
+            postRepository: postRepository,
           ),
         );
       },

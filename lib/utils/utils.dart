@@ -1,3 +1,4 @@
+export 'app_router.dart';
 export 'constants.dart';
 export 'date_utils.dart';
 export 'feed_utils.dart';

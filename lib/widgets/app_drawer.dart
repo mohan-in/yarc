@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:yarc/models/custom_feed.dart';
 import 'package:yarc/models/subreddit.dart';
-import 'package:yarc/screens/settings_screen.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/utils/image_utils.dart';
 
 class AppDrawer extends StatelessWidget {
@@ -149,14 +149,7 @@ class AppDrawer extends StatelessWidget {
           title: const Text('Settings'),
           onTap: () {
             Navigator.pop(context);
-            unawaited(
-              Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (context) => const SettingsScreen(),
-                ),
-              ),
-            );
+            unawaited(AppRouter.toSettings(context));
           },
         ),
 

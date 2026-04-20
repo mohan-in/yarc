@@ -8,6 +8,7 @@ export 'full_screen_image_view.dart';
 export 'image_carousel.dart';
 export 'login_prompt.dart';
 export 'markdown_content.dart';
+export 'paginated_scroll_body.dart';
 export 'post_card.dart';
 export 'post_detail_content.dart';
 export 'post_list.dart';

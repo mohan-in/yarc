@@ -39,8 +39,12 @@ class SubredditsNotifier extends ChangeNotifier {
       _subreddits = results[0] as List<Subreddit>;
       _customFeeds = results[1] as List<CustomFeed>;
       notifyListeners();
-    } on Exception catch (_) {
-      // Keep current state on error
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to fetch subreddits/custom feeds: $e',
+        name: 'SubredditsNotifier',
+      );
+      // Keep current state on error — no notifyListeners needed
     }
   }
 

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/notifiers.dart';
 import 'package:yarc/repositories/repositories.dart';
-import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/screens/saved_posts_screen.dart';
 import 'package:yarc/utils/utils.dart';
 import 'package:yarc/widgets/widgets.dart';
@@ -65,16 +64,15 @@ class _HomeScreenState extends State<HomeScreen> {
     final maxScroll = _scrollController.position.maxScrollExtent;
 
     // Trigger pagination when close to bottom
-    const threshold = 500.0;
-    if (currentPosition >= maxScroll - threshold) {
+    if (currentPosition >= maxScroll - kPaginationThreshold) {
       unawaited(context.read<FeedNotifier>().loadPosts());
     }
 
-    // Image precaching (still UI/Rendering concern, but we can cleaner it up)
-    // We can delegate this to FeedNotifier if we want strict separation,
-    // but FeedNotifier shouldn't depend on context.
-    // So we keep the trigger here.
-    if ((currentPosition - _lastPrecachePosition).abs() >= 500) {
+    // Precaching is kept here (rather than in FeedNotifier) because it
+    // requires a BuildContext to call precacheImage. FeedNotifier must
+    // remain context-free so it stays independently testable.
+    if ((currentPosition - _lastPrecachePosition).abs() >=
+        kPrecacheScrollThreshold) {
       _lastPrecachePosition = currentPosition;
       _precachePostImages();
     }
@@ -119,15 +117,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _scrollToTop() {
-    if (_scrollController.hasClients) {
-      unawaited(
-        _scrollController.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        ),
-      );
-    }
+    scrollToTop(_scrollController);
   }
 
   Future<void> _openSearch(BuildContext context) async {
@@ -165,14 +155,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onPostTapNarrow(Post post, PostRepository postRepository) {
     unawaited(
-      Navigator.push<void>(
+      AppRouter.toPostDetail(
         context,
-        MaterialPageRoute<void>(
-          builder: (context) => PostDetailScreen(
-            post: post,
-            postRepository: postRepository,
-          ),
-        ),
+        post: post,
+        postRepository: postRepository,
       ),
     );
   }
@@ -417,23 +403,26 @@ class _NarrowLayout extends StatelessWidget {
             floating: true,
             title:
                 Selector2<FeedNotifier, AuthNotifier, (String?, String?, bool)>(
-              selector: (_, feed, auth) => (
-                feed.currentSubreddit,
-                feed.currentCustomFeedName,
-                auth.isLoggedIn,
-              ),
-              builder: (context, data, _) {
-                final (currentSubreddit, currentCustomFeedName, isLoggedIn) =
-                    data;
-                if (currentSubreddit != null) {
-                  return Text('r/$currentSubreddit');
-                }
-                if (currentCustomFeedName != null) {
-                  return Text('m/$currentCustomFeedName');
-                }
-                return Text(isLoggedIn ? 'Home' : 'YARC');
-              },
-            ),
+                  selector: (_, feed, auth) => (
+                    feed.currentSubreddit,
+                    feed.currentCustomFeedName,
+                    auth.isLoggedIn,
+                  ),
+                  builder: (context, data, _) {
+                    final (
+                      currentSubreddit,
+                      currentCustomFeedName,
+                      isLoggedIn,
+                    ) = data;
+                    if (currentSubreddit != null) {
+                      return Text('r/$currentSubreddit');
+                    }
+                    if (currentCustomFeedName != null) {
+                      return Text('m/$currentCustomFeedName');
+                    }
+                    return Text(isLoggedIn ? 'Home' : 'YARC');
+                  },
+                ),
             actions: [
               UniversalAppBarActions(
                 onSearch: onSearch,

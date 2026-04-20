@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
-import 'package:yarc/screens/user_profile_screen.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/cached_image.dart';
 import 'package:yarc/widgets/image_carousel.dart';
 import 'package:yarc/widgets/markdown_content.dart';
@@ -186,15 +186,7 @@ class _PostHeader extends StatelessWidget {
         ),
         GestureDetector(
           onTap: () {
-            unawaited(
-              Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (context) =>
-                      UserProfileScreen(username: post.author),
-                ),
-              ),
-            );
+            unawaited(AppRouter.toUserProfile(context, post.author));
           },
           child: Text(
             ' • u/${post.author}',

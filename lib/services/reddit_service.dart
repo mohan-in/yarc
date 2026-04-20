@@ -118,11 +118,14 @@ class RedditService {
           // reddit.get() automatically objectifies the response by default,
           // returning {'listing': [...], 'before': ..., 'after': ...} for a
           // Listing response — NOT the raw {'data': {'children': [...]}} JSON.
-          final response = await reddit.get(url, params: {
-            ...params,
-            if (sort == FeedSort.top || sort == FeedSort.controversial)
-              't': timeFilter.toString().split('.').last,
-          });
+          final response = await reddit.get(
+            url,
+            params: {
+              ...params,
+              if (sort == FeedSort.top || sort == FeedSort.controversial)
+                't': timeFilter.toString().split('.').last,
+            },
+          );
 
           developer.log(
             'Custom feed response type: ${response.runtimeType}, '

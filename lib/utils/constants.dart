@@ -2,12 +2,12 @@
 library;
 
 /// Scroll threshold (in pixels) before pagination triggers.
-/// When user scrolls within this distance from the bottom, new posts load.
-const int kPaginationThreshold = 800;
+/// When the user scrolls within this distance from the bottom, new posts load.
+const double kPaginationThreshold = 500;
 
 /// Scroll distance (in pixels) between image precache operations.
 /// Throttles precaching to avoid excessive network calls.
-const double kPrecacheScrollThreshold = 600;
+const double kPrecacheScrollThreshold = 500;
 
 /// Default number of posts to fetch per API request.
 const int kDefaultPostLimit = 10;
@@ -52,3 +52,6 @@ const double kCarouselFallbackHeight = 400;
 
 /// Debounce duration for subreddit search input.
 const Duration kSearchDebounceDuration = Duration(milliseconds: 300);
+
+/// Duration of the animated scroll-to-top action.
+const Duration kScrollToTopDuration = Duration(milliseconds: 300);

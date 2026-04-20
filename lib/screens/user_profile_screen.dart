@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -7,8 +8,8 @@ import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
-import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/services/reddit_service.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/widgets.dart';
 
 class UserProfileScreen extends StatefulWidget {
@@ -50,7 +51,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _isLoadingInfo = false;
         });
       }
-    } on Exception catch (_) {
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to load user info for ${widget.username}: $e',
+        name: 'UserProfileScreen',
+      );
       if (mounted) {
         setState(() {
           _isLoadingInfo = false;
@@ -75,17 +80,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           title: Text('u/${widget.username}'),
           actions: [
             UniversalAppBarActions(
-              onScrollToTop: () {
-                if (_scrollController.hasClients) {
-                  unawaited(
-                    _scrollController.animateTo(
-                      0,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeOut,
-                    ),
-                  );
-                }
-              },
+              onScrollToTop: () => scrollToTop(_scrollController),
               showSearch: false,
             ),
           ],
@@ -111,54 +106,28 @@ class _UserProfileBody extends StatelessWidget {
   final bool isLoadingInfo;
   final ScrollController scrollController;
 
-  void _scrollListener(BuildContext context) {
-    if (!scrollController.hasClients) return;
-
-    final currentPosition = scrollController.position.pixels;
-    final maxScroll = scrollController.position.maxScrollExtent;
-
-    const threshold = 500.0;
-    if (currentPosition >= maxScroll - threshold) {
-      unawaited(context.read<FeedNotifier>().loadPosts());
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
-      onNotification: (notification) {
-        if (notification is ScrollUpdateNotification) {
-          _scrollListener(context);
-        }
-        return false;
-      },
-      child: RefreshIndicator(
-        onRefresh: () => context.read<FeedNotifier>().refresh(),
-        color: Theme.of(context).colorScheme.primary,
-        backgroundColor: Theme.of(
-          context,
-        ).colorScheme.surfaceContainerHighest,
-        displacement: 20,
-        child: CustomScrollView(
-          controller: scrollController,
-          slivers: [
-            SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  _UserProfileHeader(
-                    userInfo: userInfo,
-                    isLoading: isLoadingInfo,
-                  ),
-                  const Divider(height: 1),
-                ],
+    return PaginatedScrollBody(
+      controller: scrollController,
+      onLoadMore: () => context.read<FeedNotifier>().loadPosts(),
+      onRefresh: () => context.read<FeedNotifier>().refresh(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              _UserProfileHeader(
+                userInfo: userInfo,
+                isLoading: isLoadingInfo,
               ),
-            ),
-            _UserProfileFeed(
-              postRepository: context.read<PostRepository>(),
-            ),
-          ],
+              const Divider(height: 1),
+            ],
+          ),
         ),
-      ),
+        _UserProfileFeed(
+          postRepository: context.read<PostRepository>(),
+        ),
+      ],
     );
   }
 }
@@ -347,14 +316,10 @@ class _UserProfileFeed extends StatelessWidget {
       },
       onPostTap: (post) {
         unawaited(
-          Navigator.push<void>(
+          AppRouter.toPostDetail(
             context,
-            MaterialPageRoute<void>(
-              builder: (context) => PostDetailScreen(
-                post: post,
-                postRepository: postRepository,
-              ),
-            ),
+            post: post,
+            postRepository: postRepository,
           ),
         );
       },

@@ -25,8 +25,7 @@ class CustomFeed {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is CustomFeed && other.path == path);
+      identical(this, other) || (other is CustomFeed && other.path == path);
 
   @override
   int get hashCode => path.hashCode;
