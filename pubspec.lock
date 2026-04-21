@@ -336,6 +336,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
+  file_picker:
+    dependency: "direct main"
+    description:
+      name: file_picker
+      sha256: f13a03000d942e476bc1ff0a736d2e9de711d2f89a95cd4c1d88f861c3348387
+      url: "https://pub.dev"
+    source: hosted
+    version: "11.0.2"
   fixnum:
     dependency: transitive
     description:
@@ -445,6 +453,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.7"
+  flutter_plugin_android_lifecycle:
+    dependency: transitive
+    description:
+      name: flutter_plugin_android_lifecycle
+      sha256: "38d1c268de9097ff59cf0e844ac38759fc78f76836d37edad06fa21e182055a0"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.34"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -575,14 +591,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.7.2"
-  image_gallery_saver_plus:
-    dependency: "direct main"
-    description:
-      name: image_gallery_saver_plus
-      sha256: "199b9e24f8d85e98f11e3d35571ab68ae50626ad40e2bb85c84383f69a6950ad"
-      url: "https://pub.dev"
-    source: hosted
-    version: "4.0.1"
   ini:
     dependency: transitive
     description:

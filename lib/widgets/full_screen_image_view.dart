@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:yarc/utils/image_utils.dart';
+import 'package:yarc/widgets/image_save_dialog.dart';
 
 /// A full-screen image viewer that supports zooming and panning.
 class FullScreenImageView extends StatefulWidget {
@@ -49,21 +50,10 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.download),
-            onPressed: () async {
-              final url = widget.imageUrls[_currentIndex];
-              final messenger = ScaffoldMessenger.of(context);
-              final success = await ImageUtils.saveImage(url);
-
-              if (mounted) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      success ? 'Image saved' : 'Failed to save',
-                    ),
-                  ),
-                );
-              }
-            },
+            onPressed: () => showImageSaveDialog(
+              context,
+              widget.imageUrls[_currentIndex],
+            ),
             tooltip: 'Save Image',
           ),
         ],

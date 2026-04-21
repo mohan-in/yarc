@@ -1,6 +1,6 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:yarc/utils/constants.dart';
 
 /// Utility class for image URL processing and CORS handling.
@@ -60,10 +60,14 @@ class ImageUtils {
   static Map<String, String>? get authHeaders =>
       kIsWeb ? null : const {'User-Agent': kUserAgent};
 
-  /// Saves the image at [rawUrl] to the device's gallery.
+  /// Opens the native file-save dialog so the user can choose where to save
+  /// the image at [rawUrl].
   ///
-  /// Returns `true` if successful, `false` if it failed or an error occurred.
-  static Future<bool> saveImage(String rawUrl) async {
+  /// The image bytes are fetched from the disk cache (or network) first, then
+  /// handed to FilePicker.saveFile which drives the SAF picker on Android.
+  /// Returns `true` when the file was saved successfully, `false`
+  /// when the user cancelled or an error occurred.
+  static Future<bool> saveImageWithFilePicker(String rawUrl) async {
     final url = getCorsUrl(rawUrl);
 
     try {
@@ -71,10 +75,37 @@ class ImageUtils {
         url,
         headers: authHeaders,
       );
-      final result = await ImageGallerySaverPlus.saveFile(file.path) as Map;
-      return result['isSuccess'] == true;
+      final bytes = await file.readAsBytes();
+      final defaultName = _extractFilename(rawUrl);
+
+      final savedPath = await FilePicker.saveFile(
+        dialogTitle: 'Save image',
+        fileName: defaultName,
+        type: FileType.image,
+        bytes: bytes,
+      );
+
+      // null means the user dismissed the picker without saving.
+      return savedPath != null;
     } on Exception catch (_) {
       return false;
     }
+  }
+
+  /// Derives a filename from [rawUrl], falling back to a timestamped name.
+  static String _extractFilename(String rawUrl) {
+    try {
+      final uri = Uri.parse(rawUrl);
+      final segments = uri.pathSegments;
+      if (segments.isNotEmpty) {
+        final last = segments.last;
+        if (last.contains('.')) {
+          return last;
+        }
+      }
+    } on Exception catch (_) {
+      // Fall through to default.
+    }
+    return 'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
   }
 }

@@ -4,6 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/widgets/full_screen_image_view.dart';
+import 'package:yarc/widgets/image_save_dialog.dart';
 
 /// A reusable widget for displaying a single network image with loading,
 /// error handling, disk/memory caching, and tap-to-fullscreen functionality.
@@ -26,20 +27,7 @@ class CachedImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onLongPress: () async {
-        final messenger = ScaffoldMessenger.of(context);
-        final success = await ImageUtils.saveImage(imageUrl);
-
-        if (context.mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
-                success ? 'Image saved' : 'Failed to save',
-              ),
-            ),
-          );
-        }
-      },
+      onLongPress: () => showImageSaveDialog(context, imageUrl),
       onTap: () {
         unawaited(
           Navigator.push<void>(
