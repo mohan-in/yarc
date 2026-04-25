@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
@@ -181,6 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
+        // Improve diagonal swipe detection by starting the drag immediately 
+        // and increasing the edge hit area to prevent vertical scroll takeover.
+        drawerDragStartBehavior: DragStartBehavior.down,
+        drawerEdgeDragWidth: MediaQuery.sizeOf(context).width * 0.1,
         drawer: Selector<AuthNotifier, bool>(
           selector: (_, auth) => auth.isLoggedIn,
           builder: (context, isLoggedIn, _) {
