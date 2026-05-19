@@ -51,11 +51,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     _playerId = widget.videoUrl;
     _notifier = context.read<VideoAutoplayNotifier>();
     _notifier.addListener(_onNotifierUpdate);
-    // Reduce the default 500ms interval so visibility changes are detected
-    // quickly enough for autoplay to feel instant.
-    VisibilityDetectorController.instance.updateInterval = const Duration(
-      milliseconds: 100,
-    );
+    // updateInterval is set globally in main.dart — no per-instance override.
     unawaited(_initializePlayer());
   }
 

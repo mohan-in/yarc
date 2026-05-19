@@ -46,26 +46,12 @@ class SubredditSearchDelegate extends SearchDelegate<SearchResult?> {
   }
 
   @override
-  Widget buildResults(BuildContext context) {
-    return _SearchBody(
-      query: query,
-      debounceTimer: _debounceTimer,
-      onDebounce: (timer) => _debounceTimer = timer,
-      onSelectSubreddit: (sub) {
-        _debounceTimer?.cancel();
-        context.read<SearchNotifier>().clear();
-        close(context, SearchResult(subreddit: sub));
-      },
-      onSelectUser: (username) {
-        _debounceTimer?.cancel();
-        context.read<SearchNotifier>().clear();
-        close(context, SearchResult(username: username));
-      },
-    );
-  }
+  Widget buildResults(BuildContext context) => _buildBody(context);
 
   @override
-  Widget buildSuggestions(BuildContext context) {
+  Widget buildSuggestions(BuildContext context) => _buildBody(context);
+
+  Widget _buildBody(BuildContext context) {
     return _SearchBody(
       query: query,
       debounceTimer: _debounceTimer,

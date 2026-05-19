@@ -153,10 +153,16 @@ class FeedNotifier extends ChangeNotifier {
       return;
     }
 
-    final dbReadIds = _repository!.getReadPostIds();
-    _readPostIds = {..._readPostIds, ...dbReadIds};
-    if (refresh && hideRead) {
-      _hiddenPostIds = Set.from(_readPostIds);
+    // On an explicit refresh, re-sync read IDs from the DB to pick up any
+    // changes made in other sessions. On normal pagination the in-memory
+    // set is already up-to-date (updated incrementally via markAsRead),
+    // so scanning the entire Hive box on every page load is unnecessary.
+    if (refresh) {
+      final dbReadIds = _repository!.getReadPostIds();
+      _readPostIds = {..._readPostIds, ...dbReadIds};
+      if (hideRead) {
+        _hiddenPostIds = Set.from(_readPostIds);
+      }
     }
     _invalidateVisiblePosts();
 
@@ -453,33 +459,7 @@ class FeedNotifier extends ChangeNotifier {
   void _updatePostSaveStatus(String postId, bool isSaved) {
     final index = _posts.indexWhere((p) => p.id == postId);
     if (index != -1) {
-      final oldPost = _posts[index];
-      _posts[index] = Post(
-        id: oldPost.id,
-        title: oldPost.title,
-        author: oldPost.author,
-        subreddit: oldPost.subreddit,
-        ups: oldPost.ups,
-        numComments: oldPost.numComments,
-        createdUtc: oldPost.createdUtc,
-        permalink: oldPost.permalink,
-        url: oldPost.url,
-        thumbnail: oldPost.thumbnail,
-        content: oldPost.content,
-        images: oldPost.images,
-        isVideo: oldPost.isVideo,
-        videoUrl: oldPost.videoUrl,
-        isYoutube: oldPost.isYoutube,
-        youtubeId: oldPost.youtubeId,
-        aspectRatio: oldPost.aspectRatio,
-        crosspostParent: oldPost.crosspostParent,
-        authorFlairText: oldPost.authorFlairText,
-        linkFlairText: oldPost.linkFlairText,
-        totalAwardsReceived: oldPost.totalAwardsReceived,
-        isSaved: isSaved,
-        isNsfw: oldPost.isNsfw,
-        isStickied: oldPost.isStickied,
-      );
+      _posts[index] = _posts[index].copyWith(isSaved: isSaved);
       _invalidateVisiblePosts();
       notifyListeners();
     }

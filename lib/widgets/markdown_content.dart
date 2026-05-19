@@ -15,7 +15,11 @@ import 'package:yarc/widgets/full_screen_image_view.dart';
 
 /// A widget that parses text (Markdown) and renders it with clickable links
 /// and inline images.
-class MarkdownContent extends StatelessWidget {
+///
+/// Uses a [StatefulWidget] to memoise the pre-processed text so that
+/// [ImageUtils.convertBareUrlsToMarkdownImages] and the full Markdown parse
+/// are not re-run on every parent rebuild — only when [text] actually changes.
+class MarkdownContent extends StatefulWidget {
   const MarkdownContent({
     required this.text,
     super.key,
@@ -30,17 +34,37 @@ class MarkdownContent extends StatelessWidget {
   final TextStyle? linkStyle;
 
   @override
+  State<MarkdownContent> createState() => _MarkdownContentState();
+}
+
+class _MarkdownContentState extends State<MarkdownContent> {
+  late String _processedText;
+
+  @override
+  void initState() {
+    super.initState();
+    _processedText = ImageUtils.convertBareUrlsToMarkdownImages(widget.text);
+  }
+
+  @override
+  void didUpdateWidget(MarkdownContent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _processedText = ImageUtils.convertBareUrlsToMarkdownImages(widget.text);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final processedText = ImageUtils.convertBareUrlsToMarkdownImages(text);
     final theme = Theme.of(context);
 
     final markdownBody = MarkdownBody(
-      data: processedText,
+      data: _processedText,
       extensionSet: md.ExtensionSet.gitHubFlavored, // Better link/table parsing
       styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-        p: style ?? theme.textTheme.bodyMedium,
+        p: widget.style ?? theme.textTheme.bodyMedium,
         a:
-            linkStyle ??
+            widget.linkStyle ??
             TextStyle(
               color: theme.colorScheme.primary,
               decoration: TextDecoration.underline,
@@ -79,10 +103,12 @@ class MarkdownContent extends StatelessWidget {
           }
         }
       },
-      builders: {'img': _TapToOpenImageBuilder(context, linkStyle, theme)},
+      builders: {
+        'img': _TapToOpenImageBuilder(context, widget.linkStyle, theme),
+      },
     );
 
-    if (maxLines != null) {
+    if (widget.maxLines != null) {
       return FadedTruncation(child: markdownBody);
     }
 

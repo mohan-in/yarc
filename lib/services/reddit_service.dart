@@ -185,14 +185,18 @@ class RedditService {
 
         final posts = <Post>[];
         String? nextAfterToken;
+        var batchCount = 0;
 
         await for (final content in stream) {
           if (content is draw.Submission) {
             posts.add(PostParser.parse(content));
             nextAfterToken = content.fullname;
           }
-          // Yield to UI thread to prevent jank
-          await Future<void>.delayed(Duration.zero);
+          // Yield to the UI thread every 5 items to prevent jank
+          // without spawning a microtask on every single item.
+          if (++batchCount % 5 == 0) {
+            await Future<void>.delayed(Duration.zero);
+          }
         }
         return (posts: posts, nextAfter: nextAfterToken);
       });
@@ -231,14 +235,18 @@ class RedditService {
 
         final posts = <Post>[];
         String? nextAfterToken;
+        var batchCount = 0;
 
         await for (final content in stream) {
           if (content is draw.Submission) {
             posts.add(PostParser.parse(content));
             nextAfterToken = content.fullname;
           }
-          // Yield to UI thread to prevent jank
-          await Future<void>.delayed(Duration.zero);
+          // Yield to the UI thread every 5 items to prevent jank
+          // without spawning a microtask on every single item.
+          if (++batchCount % 5 == 0) {
+            await Future<void>.delayed(Duration.zero);
+          }
         }
         return (posts: posts, nextAfter: nextAfterToken);
       });
@@ -254,21 +262,17 @@ class RedditService {
       throw Exception('Reddit client not initialized or logged out');
     }
     return _withAuthRetry('savePost', () async {
-      try {
-        final submission = await reddit.submission(id: postId).populate();
-        await submission.save();
-        developer.log(
-          'Successfully saved post: $postId',
-          name: 'RedditService',
-        );
-      } on Exception catch (e) {
-        developer.log(
-          'Failed to save post $postId: $e',
-          name: 'RedditService',
-          error: e,
-        );
-        rethrow;
-      }
+      // Submissions have the fullname prefix 't3_'. Posting directly to
+      // the save endpoint avoids an extra populate() API round-trip.
+      await reddit.post(
+        'api/save/',
+        {'category': '', 'id': 't3_$postId'},
+        discardResponse: true,
+      );
+      developer.log(
+        'Successfully saved post: $postId',
+        name: 'RedditService',
+      );
     });
   }
 
@@ -279,21 +283,17 @@ class RedditService {
       throw Exception('Reddit client not initialized or logged out');
     }
     return _withAuthRetry('unsavePost', () async {
-      try {
-        final submission = await reddit.submission(id: postId).populate();
-        await submission.unsave();
-        developer.log(
-          'Successfully unsaved post: $postId',
-          name: 'RedditService',
-        );
-      } on Exception catch (e) {
-        developer.log(
-          'Failed to unsave post $postId: $e',
-          name: 'RedditService',
-          error: e,
-        );
-        rethrow;
-      }
+      // Posting directly to the unsave endpoint avoids an extra
+      // populate() API round-trip.
+      await reddit.post(
+        'api/unsave/',
+        {'id': 't3_$postId'},
+        discardResponse: true,
+      );
+      developer.log(
+        'Successfully unsaved post: $postId',
+        name: 'RedditService',
+      );
     });
   }
 
@@ -645,6 +645,7 @@ class RedditService {
         final posts = <Post>[];
         String? nextAfterToken;
         var count = 0;
+        var batchCount = 0;
 
         await for (final content in stream) {
           count++;
@@ -667,8 +668,11 @@ class RedditService {
               name: 'RedditService',
             );
           }
-          // Yield to UI thread to prevent jank
-          await Future<void>.delayed(Duration.zero);
+          // Yield to the UI thread every 5 items to prevent jank
+          // without spawning a microtask on every single item.
+          if (++batchCount % 5 == 0) {
+            await Future<void>.delayed(Duration.zero);
+          }
         }
 
         developer.log(

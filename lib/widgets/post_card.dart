@@ -67,7 +67,7 @@ class PostCard extends StatelessWidget {
               if (post.content.isNotEmpty)
                 _PostContent(post: post, expanded: expanded),
               const SizedBox(height: 12),
-              _PostMedia(post: post),
+              RepaintBoundary(child: _PostMedia(post: post)),
               PostMetadata(post: post),
             ],
           ),
@@ -332,13 +332,15 @@ class _ExternalLink extends StatelessWidget {
             final useSystemBrowser = context
                 .read<SettingsNotifier>()
                 .useSystemBrowser;
-            if (await canLaunchUrl(uri)) {
+            try {
               await launchUrl(
                 uri,
                 mode: useSystemBrowser
                     ? LaunchMode.externalApplication
                     : LaunchMode.platformDefault,
               );
+            } on Exception catch (_) {
+              // Ignore launch errors for unsupported URL schemes
             }
           }
         },

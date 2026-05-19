@@ -22,6 +22,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
+  late final FeedNotifier _feedNotifier;
 
   double _lastPrecachePosition = 0;
 
@@ -32,9 +33,10 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
-    // PostFrameCallback ensures we
-    // have access to Providers after the first build
+    // Cache the FeedNotifier reference — stable for the lifetime of this
+    // widget, so there is no need to call context.read on every scroll event.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _feedNotifier = context.read<FeedNotifier>();
       unawaited(_initializeAuth());
     });
   }
@@ -66,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // Trigger pagination when close to bottom
     if (currentPosition >= maxScroll - kPaginationThreshold) {
-      unawaited(context.read<FeedNotifier>().loadPosts());
+      unawaited(_feedNotifier.loadPosts());
     }
 
     // Precaching is kept here (rather than in FeedNotifier) because it
@@ -80,8 +82,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _precachePostImages() {
-    final feedNotifier = context.read<FeedNotifier>();
-    final posts = feedNotifier.visiblePosts;
+    final posts = _feedNotifier.visiblePosts;
 
     FeedUtils.precachePostImages(
       context,
@@ -182,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       },
       child: Scaffold(
-        // Improve diagonal swipe detection by starting the drag immediately 
+        // Improve diagonal swipe detection by starting the drag immediately
         // and increasing the edge hit area to prevent vertical scroll takeover.
         drawerDragStartBehavior: DragStartBehavior.down,
         drawerEdgeDragWidth: MediaQuery.sizeOf(context).width * 0.1,
@@ -502,16 +503,17 @@ class _PostListBuilder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.select<FeedNotifier, bool>((n) => n.isLoading);
-    final posts = context.select<FeedNotifier, List<Post>>(
-      (n) => n.visiblePosts,
-    );
-    final subredditInfo = context.select<FeedNotifier, Subreddit?>(
-      (n) => n.currentSubredditInfo,
-    );
-    final readPostIds = context.select<FeedNotifier, Set<String>>(
-      (n) => n.readPostIds,
-    );
+    // Single selector → one listener registration,
+    // one rebuild per notification.
+    final (isLoading, posts, subredditInfo, readPostIds) = context
+        .select<FeedNotifier, (bool, List<Post>, Subreddit?, Set<String>)>(
+          (n) => (
+            n.isLoading,
+            n.visiblePosts,
+            n.currentSubredditInfo,
+            n.readPostIds,
+          ),
+        );
 
     return SliverPostList(
       posts: posts,

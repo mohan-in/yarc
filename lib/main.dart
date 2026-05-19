@@ -4,6 +4,7 @@ import 'package:dex_compat/dex_compat.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:visibility_detector/visibility_detector.dart';
 import 'package:yarc/notifiers/notifiers.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/repositories.dart';
@@ -14,6 +15,12 @@ import 'package:yarc/theme/theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set once globally — previously overwritten by every RedditVideoPlayer
+  // initState, causing a race where the last initialised player "won".
+  VisibilityDetectorController.instance.updateInterval = const Duration(
+    milliseconds: 100,
+  );
 
   await HistoryService.init();
   final isDesktopMode = await DexCompat.isDesktopMode();

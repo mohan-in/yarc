@@ -12,14 +12,25 @@ class SubredditsNotifier extends ChangeNotifier {
   List<Subreddit> _subreddits = [];
   List<CustomFeed> _customFeeds = [];
 
+  /// Cache of lower-cased display names for O(1) subscription lookups.
+  /// Nulled out whenever [_subreddits] changes.
+  Set<String>? _subscribedNames;
+
+  /// Lazily builds and returns the subscribed-names cache.
+  Set<String> get _subscribed {
+    return _subscribedNames ??= {
+      for (final s in _subreddits) s.displayName.toLowerCase(),
+    };
+  }
+
+  void _invalidateSubscribedSet() => _subscribedNames = null;
+
   List<Subreddit> get subreddits => _subreddits;
   List<CustomFeed> get customFeeds => _customFeeds;
 
-  /// Checks if a subreddit is currently subscribed.
+  /// Checks if a subreddit is currently subscribed. O(1) via cached Set.
   bool isSubscribed(String name) {
-    return _subreddits.any(
-      (s) => s.displayName.toLowerCase() == name.toLowerCase(),
-    );
+    return _subscribed.contains(name.toLowerCase());
   }
 
   // ignore: use_setters_to_change_properties, method does more than set
@@ -38,6 +49,7 @@ class SubredditsNotifier extends ChangeNotifier {
       ]);
       _subreddits = results[0] as List<Subreddit>;
       _customFeeds = results[1] as List<CustomFeed>;
+      _invalidateSubscribedSet();
       notifyListeners();
     } on Exception catch (e) {
       developer.log(
@@ -52,6 +64,7 @@ class SubredditsNotifier extends ChangeNotifier {
   void clear() {
     _subreddits = [];
     _customFeeds = [];
+    _invalidateSubscribedSet();
     notifyListeners();
   }
 
@@ -81,6 +94,7 @@ class SubredditsNotifier extends ChangeNotifier {
             ),
           );
       }
+      _invalidateSubscribedSet();
       notifyListeners();
     } on Exception catch (e) {
       developer.log(

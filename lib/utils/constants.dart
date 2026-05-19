@@ -3,14 +3,14 @@ library;
 
 /// Scroll threshold (in pixels) before pagination triggers.
 /// When the user scrolls within this distance from the bottom, new posts load.
-const double kPaginationThreshold = 500;
+const double kPaginationThreshold = 800;
 
 /// Scroll distance (in pixels) between image precache operations.
 /// Throttles precaching to avoid excessive network calls.
-const double kPrecacheScrollThreshold = 500;
+const double kPrecacheScrollThreshold = 800;
 
 /// Default number of posts to fetch per API request.
-const int kDefaultPostLimit = 10;
+const int kDefaultPostLimit = 25;
 
 /// Estimated height of a post card in pixels.
 /// Used for calculating visible post indices during precaching.
