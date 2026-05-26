@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:yarc/utils/image_utils.dart';
@@ -21,12 +23,21 @@ class FullScreenImageView extends StatefulWidget {
 class _FullScreenImageViewState extends State<FullScreenImageView> {
   late PageController _pageController;
   late int _currentIndex;
+  bool _isZoomed = false;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
+  }
+
+  void _handleZoomChanged(bool isZoomed) {
+    if (_isZoomed != isZoomed) {
+      setState(() {
+        _isZoomed = isZoomed;
+      });
+    }
   }
 
   @override
@@ -60,6 +71,9 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
       ),
       body: PageView.builder(
         controller: _pageController,
+        physics: _isZoomed
+            ? const NeverScrollableScrollPhysics()
+            : const AlwaysScrollableScrollPhysics(),
         itemCount: widget.imageUrls.length,
         onPageChanged: (index) {
           setState(() {
@@ -67,23 +81,115 @@ class _FullScreenImageViewState extends State<FullScreenImageView> {
           });
         },
         itemBuilder: (context, index) {
-          return InteractiveViewer(
-            minScale: 0.5,
-            maxScale: 4,
-            child: Center(
-              child: CachedNetworkImage(
-                imageUrl: ImageUtils.getCorsUrl(widget.imageUrls[index]),
-                httpHeaders: ImageUtils.authHeaders,
-                placeholder: (context, url) => const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
-                ),
-                errorWidget: (context, url, error) => const Center(
-                  child: Icon(Icons.error, color: Colors.white, size: 48),
-                ),
-              ),
-            ),
+          return _ZoomableImagePage(
+            imageUrl: widget.imageUrls[index],
+            onZoomChanged: _handleZoomChanged,
           );
         },
+      ),
+    );
+  }
+}
+
+class _ZoomableImagePage extends StatefulWidget {
+  const _ZoomableImagePage({
+    required this.imageUrl,
+    required this.onZoomChanged,
+  });
+
+  final String imageUrl;
+  final ValueChanged<bool> onZoomChanged;
+
+  @override
+  State<_ZoomableImagePage> createState() => _ZoomableImagePageState();
+}
+
+class _ZoomableImagePageState extends State<_ZoomableImagePage>
+    with SingleTickerProviderStateMixin {
+  late TransformationController _transformationController;
+  late AnimationController _animationController;
+  Animation<Matrix4>? _animation;
+  TapDownDetails? _doubleTapDetails;
+
+  @override
+  void initState() {
+    super.initState();
+    _transformationController = TransformationController();
+    _transformationController.addListener(_onTransformationChanged);
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    )..addListener(() {
+        if (_animation != null) {
+          _transformationController.value = _animation!.value;
+        }
+      });
+  }
+
+  void _onTransformationChanged() {
+    final scale = _transformationController.value.getMaxScaleOnAxis();
+    widget.onZoomChanged(scale > 1.0);
+  }
+
+  void _handleDoubleTap() {
+    Matrix4 endMatrix;
+    if (_transformationController.value.getMaxScaleOnAxis() > 1.0) {
+      endMatrix = Matrix4.identity();
+    } else {
+      final position = _doubleTapDetails?.localPosition ?? Offset.zero;
+      const zoomScale = 3;
+      final dx = -position.dx * (zoomScale - 1);
+      final dy = -position.dy * (zoomScale - 1);
+      endMatrix = Matrix4.diagonal3Values(
+        zoomScale.toDouble(),
+        zoomScale.toDouble(),
+        1,
+      )..setTranslationRaw(dx, dy, 0);
+    }
+
+    _animation = Matrix4Tween(
+      begin: _transformationController.value,
+      end: endMatrix,
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    unawaited(_animationController.forward(from: 0));
+  }
+
+  @override
+  void dispose() {
+    _transformationController
+      ..removeListener(_onTransformationChanged)
+      ..dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onDoubleTapDown: (details) => _doubleTapDetails = details,
+      onDoubleTap: _handleDoubleTap,
+      child: InteractiveViewer(
+        transformationController: _transformationController,
+        minScale: 0.5,
+        maxScale: 4,
+        child: Center(
+          child: CachedNetworkImage(
+            imageUrl: ImageUtils.getCorsUrl(widget.imageUrl),
+            httpHeaders: ImageUtils.authHeaders,
+            placeholder: (context, url) => const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+            errorWidget: (context, url, error) => const Center(
+              child: Icon(Icons.error, color: Colors.white, size: 48),
+            ),
+          ),
+        ),
       ),
     );
   }
