@@ -263,49 +263,98 @@ class _PostMedia extends StatelessWidget {
     final showVideo = post.isVideo && post.videoUrl != null;
     final showYoutube = post.isYoutube && post.youtubeId != null;
 
+    final Widget mediaWidget;
+    final IconData? badgeIcon;
+    final String? badgeLabel;
+
     if (showVideo) {
       final autoPlay = context.select<SettingsNotifier, bool>(
         (n) => n.autoPlayVideos,
       );
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: RedditVideoPlayer(videoUrl: post.videoUrl!, autoPlay: autoPlay),
+      mediaWidget = RedditVideoPlayer(
+        videoUrl: post.videoUrl!,
+        autoPlay: autoPlay,
       );
+      badgeIcon = Icons.play_arrow;
+      badgeLabel = 'VIDEO';
+    } else if (showYoutube) {
+      mediaWidget = YouTubeEmbed(videoId: post.youtubeId!);
+      badgeIcon = Icons.play_arrow;
+      badgeLabel = 'YOUTUBE';
+    } else if (post.images.isNotEmpty) {
+      mediaWidget = post.images.length == 1
+          ? CachedImage(
+              imageUrl: post.images.first,
+              fullScreenUrls: post.images,
+            )
+          : ImageCarousel(
+              imageUrls: post.images,
+              aspectRatio: post.aspectRatio,
+            );
+      badgeIcon = null;
+      badgeLabel = null;
+    } else if (post.thumbnail != null) {
+      mediaWidget = CachedImage(
+        imageUrl: post.thumbnail!,
+        fullScreenUrls: [post.thumbnail!],
+      );
+      badgeIcon = null;
+      badgeLabel = null;
+    } else {
+      return const SizedBox.shrink();
     }
 
-    if (showYoutube) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: YouTubeEmbed(videoId: post.youtubeId!),
-      );
-    }
-
-    if (post.images.isNotEmpty) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: post.images.length == 1
-            ? CachedImage(
-                imageUrl: post.images.first,
-                fullScreenUrls: post.images,
-              )
-            : ImageCarousel(
-                imageUrls: post.images,
-                aspectRatio: post.aspectRatio,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          children: [
+            mediaWidget,
+            if (badgeIcon != null && badgeLabel != null)
+              Positioned(
+                top: 8,
+                left: 8,
+                child: _MediaBadge(icon: badgeIcon, label: badgeLabel),
               ),
-      );
-    }
-
-    if (post.thumbnail != null) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: CachedImage(
-          imageUrl: post.thumbnail!,
-          fullScreenUrls: [post.thumbnail!],
+          ],
         ),
-      );
-    }
+      ),
+    );
+  }
+}
 
-    return const SizedBox.shrink();
+class _MediaBadge extends StatelessWidget {
+  const _MediaBadge({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.white),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 10,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

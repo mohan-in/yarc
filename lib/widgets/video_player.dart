@@ -45,6 +45,14 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   /// Listener for continuous scroll updates
   ScrollPosition? _scrollPosition;
 
+  bool _hasVideoListener = false;
+
+  void _onVideoControllerUpdate() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -219,6 +227,8 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       if (!mounted) {
         return;
       }
+      _videoPlayerController.addListener(_onVideoControllerUpdate);
+      _hasVideoListener = true;
 
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
@@ -276,6 +286,9 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   void dispose() {
     _scrollPosition?.removeListener(_evaluateAutoplay);
     _notifier.removeListener(_onNotifierUpdate);
+    if (_hasVideoListener) {
+      _videoPlayerController.removeListener(_onVideoControllerUpdate);
+    }
     // Always stop playback and release ownership on dispose.
     // This is critical — without it, a video scrolled far off-screen
     // (whose widget is disposed by the list) continues to hold
@@ -357,10 +370,15 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     // If the video would be taller than our cap, constrain it.
     final effectiveHeight = naturalHeight > maxHeight ? maxHeight : null;
 
+    final isPlaying = _isInit && _videoPlayerController.value.isPlaying;
+
     final Widget videoWidget = GestureDetector(
       onTap: _enterFullScreen,
-      child: effectiveHeight != null
-          ? SizedBox(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (effectiveHeight != null)
+            SizedBox(
               width: screenWidth,
               height: effectiveHeight,
               child: FittedBox(
@@ -373,10 +391,31 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
                 ),
               ),
             )
-          : AspectRatio(
+          else
+            AspectRatio(
               aspectRatio: nativeAspectRatio,
               child: Chewie(controller: _chewieController!),
             ),
+          if (!isPlaying)
+            Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  width: 2,
+                ),
+              ),
+              child: const Icon(
+                Icons.play_arrow,
+                color: Colors.white,
+                size: 40,
+              ),
+            ),
+        ],
+      ),
     );
 
     return VisibilityDetector(
