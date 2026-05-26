@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// Light theme using standard Material 3.
 final ThemeData appTheme = ThemeData(
@@ -14,6 +15,11 @@ final ThemeData appTheme = ThemeData(
     backgroundColor: Color(0xFF1565C0),
     foregroundColor: Colors.white,
     surfaceTintColor: Colors.transparent,
+    systemOverlayStyle: SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // Light icons
+      statusBarBrightness: Brightness.dark,      // iOS
+    ),
   ),
   extensions: const [
     CommentTheme(
@@ -51,6 +57,11 @@ final ThemeData darkAppTheme = ThemeData(
     backgroundColor: Colors.grey[900], // Darker AppBar to distinguish from bg
     foregroundColor: Colors.white,
     surfaceTintColor: Colors.transparent,
+    systemOverlayStyle: const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light, // Light icons
+      statusBarBrightness: Brightness.dark,      // iOS
+    ),
   ),
   extensions: const [
     CommentTheme(
