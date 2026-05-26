@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/search_notifier.dart';
 import 'package:yarc/utils/constants.dart';
+import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/utils/number_format_utils.dart';
 
@@ -340,6 +341,11 @@ class _UserTile extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
+    final karmaText = '${_formatKarma(user.totalKarma)} karma';
+    final ageText = user.createdUtc != null
+        ? '\nJoined ${DateUtilsHelper.formatAccountAge(user.createdUtc!)}'
+        : '';
+
     return ListTile(
       leading: CircleAvatar(
         backgroundColor: theme.colorScheme.primaryContainer,
@@ -353,13 +359,12 @@ class _UserTile extends StatelessWidget {
         style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
-        '${_formatKarma(user.totalKarma)} karma'
-        '${user.createdUtc != null ? '\nJoined '
-                  '${_formatAge(user.createdUtc!)}' : ''}',
+        '$karmaText$ageText',
         style: textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
+
       trailing: const Icon(Icons.chevron_right),
       onTap: onTap,
     );
@@ -367,17 +372,5 @@ class _UserTile extends StatelessWidget {
 
   static String _formatKarma(int karma) {
     return NumberFormatUtils.formatCompact(karma);
-  }
-
-  static String _formatAge(DateTime created) {
-    final age = DateTime.now().difference(created);
-    if (age.inDays >= 365) {
-      final years = age.inDays ~/ 365;
-      return '${years}y old';
-    } else if (age.inDays >= 30) {
-      final months = age.inDays ~/ 30;
-      return '${months}mo old';
-    }
-    return '${age.inDays}d old';
   }
 }

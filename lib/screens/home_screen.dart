@@ -436,22 +436,15 @@ class _NarrowLayout extends StatelessWidget {
               ),
             ],
           ),
-          Selector2<AuthNotifier, FeedNotifier, (bool, bool, bool, String?)>(
+          Selector2<AuthNotifier, FeedNotifier, _AuthFeedState>(
             selector: (_, auth, feed) => (
-              auth.isInitialized,
-              auth.isLoggedIn,
-              auth.isUnauthenticated,
-              feed.currentSubreddit,
+              isInitialized: auth.isInitialized,
+              isLoggedIn: auth.isLoggedIn,
+              isUnauthenticated: auth.isUnauthenticated,
+              currentSubreddit: feed.currentSubreddit,
             ),
             builder: (context, data, _) {
-              final (
-                isInitialized,
-                isLoggedIn,
-                isUnauthenticated,
-                currentSubreddit,
-              ) = data;
-
-              if (!isInitialized) {
+              if (!data.isInitialized) {
                 return const SliverFillRemaining(
                   child: Center(
                     child: CircularProgressIndicator(),
@@ -460,7 +453,7 @@ class _NarrowLayout extends StatelessWidget {
               }
 
               // Session expired — show retry / re-login
-              if (isUnauthenticated && currentSubreddit == null) {
+              if (data.isUnauthenticated && data.currentSubreddit == null) {
                 return SliverFillRemaining(
                   child: LoginPrompt(
                     onLogin: onLogin,
@@ -471,13 +464,13 @@ class _NarrowLayout extends StatelessWidget {
               }
 
               // Not logged in — show initial login prompt
-              if (!isLoggedIn && currentSubreddit == null) {
+              if (!data.isLoggedIn && data.currentSubreddit == null) {
                 return SliverFillRemaining(
                   child: LoginPrompt(onLogin: onLogin),
                 );
               }
 
-              return _PostListBuilder(
+              return FeedSliver(
                 postRepository: postRepository,
                 onPostTap: onPostTap,
                 selectedPostId: selectedPostId,
@@ -490,41 +483,12 @@ class _NarrowLayout extends StatelessWidget {
   }
 }
 
-class _PostListBuilder extends StatelessWidget {
-  const _PostListBuilder({
-    required this.postRepository,
-    required this.onPostTap,
-    this.selectedPostId,
-  });
-
-  final PostRepository postRepository;
-  final void Function(Post) onPostTap;
-  final String? selectedPostId;
-
-  @override
-  Widget build(BuildContext context) {
-    // Single selector → one listener registration,
-    // one rebuild per notification.
-    final (isLoading, posts, subredditInfo, readPostIds) = context
-        .select<FeedNotifier, (bool, List<Post>, Subreddit?, Set<String>)>(
-          (n) => (
-            n.isLoading,
-            n.visiblePosts,
-            n.currentSubredditInfo,
-            n.readPostIds,
-          ),
-        );
-
-    return SliverPostList(
-      posts: posts,
-      isLoading: isLoading,
-      subredditInfo: subredditInfo,
-      readPostIds: readPostIds,
-      selectedPostId: selectedPostId,
-      onPostVisible: (post) {
-        unawaited(context.read<FeedNotifier>().markAsRead(post.id));
-      },
-      onPostTap: onPostTap,
-    );
-  }
-}
+/// Named record type for the auth + feed state read in [_NarrowLayout].
+/// Using named fields instead of a positional tuple prevents subtle
+/// ordering bugs when the selector is modified.
+typedef _AuthFeedState = ({
+  bool isInitialized,
+  bool isLoggedIn,
+  bool isUnauthenticated,
+  String? currentSubreddit,
+});

@@ -21,4 +21,26 @@ class DateUtilsHelper {
       return 'just now';
     }
   }
+
+  /// Formats [date] as `YYYY-MM-DD` (ISO 8601 date).
+  ///
+  /// Used for displaying a user's cake day.
+  static String formatDate(DateTime date) {
+    return '${date.year}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  /// Returns a short human-readable age string (e.g. `2y old`, `4mo old`).
+  ///
+  /// Used for displaying how long a Reddit account has existed.
+  static String formatAccountAge(DateTime created) {
+    final age = DateTime.now().difference(created);
+    if (age.inDays >= 365) {
+      return '${age.inDays ~/ 365}y old';
+    } else if (age.inDays >= 30) {
+      return '${age.inDays ~/ 30}mo old';
+    }
+    return '${age.inDays}d old';
+  }
 }

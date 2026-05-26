@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
-import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/widgets.dart';
 
 /// Displays the currently authenticated user's saved posts.
@@ -122,30 +119,6 @@ class _SavedPostsFeed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.select<FeedNotifier, bool>((n) => n.isLoading);
-    final posts = context.select<FeedNotifier, List<Post>>(
-      (n) => n.visiblePosts,
-    );
-    final readPostIds = context.select<FeedNotifier, Set<String>>(
-      (n) => n.readPostIds,
-    );
-
-    return SliverPostList(
-      posts: posts,
-      isLoading: isLoading,
-      readPostIds: readPostIds,
-      onPostVisible: (post) {
-        unawaited(context.read<FeedNotifier>().markAsRead(post.id));
-      },
-      onPostTap: (post) {
-        unawaited(
-          AppRouter.toPostDetail(
-            context,
-            post: post,
-            postRepository: postRepository,
-          ),
-        );
-      },
-    );
+    return FeedSliver(postRepository: postRepository);
   }
 }

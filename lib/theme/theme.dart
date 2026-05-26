@@ -18,7 +18,7 @@ final ThemeData appTheme = ThemeData(
     systemOverlayStyle: SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light, // Light icons
-      statusBarBrightness: Brightness.dark,      // iOS
+      statusBarBrightness: Brightness.dark, // iOS
     ),
   ),
   extensions: const [
@@ -60,7 +60,7 @@ final ThemeData darkAppTheme = ThemeData(
     systemOverlayStyle: const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
       statusBarIconBrightness: Brightness.light, // Light icons
-      statusBarBrightness: Brightness.dark,      // iOS
+      statusBarBrightness: Brightness.dark, // iOS
     ),
   ),
   extensions: const [

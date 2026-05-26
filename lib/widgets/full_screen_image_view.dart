@@ -116,14 +116,15 @@ class _ZoomableImagePageState extends State<_ZoomableImagePage>
     super.initState();
     _transformationController = TransformationController();
     _transformationController.addListener(_onTransformationChanged);
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-    )..addListener(() {
-        if (_animation != null) {
-          _transformationController.value = _animation!.value;
-        }
-      });
+    _animationController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 250),
+        )..addListener(() {
+          if (_animation != null) {
+            _transformationController.value = _animation!.value;
+          }
+        });
   }
 
   void _onTransformationChanged() {
@@ -147,15 +148,16 @@ class _ZoomableImagePageState extends State<_ZoomableImagePage>
       )..setTranslationRaw(dx, dy, 0);
     }
 
-    _animation = Matrix4Tween(
-      begin: _transformationController.value,
-      end: endMatrix,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
-    );
+    _animation =
+        Matrix4Tween(
+          begin: _transformationController.value,
+          end: endMatrix,
+        ).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeInOut,
+          ),
+        );
 
     unawaited(_animationController.forward(from: 0));
   }

@@ -4,6 +4,8 @@ export 'cached_image.dart';
 export 'comment_list.dart';
 export 'comment_tile.dart';
 export 'faded_truncation.dart';
+export 'feed_sliver.dart';
+export 'flair_label.dart';
 export 'full_screen_image_view.dart';
 export 'image_carousel.dart';
 export 'login_prompt.dart';

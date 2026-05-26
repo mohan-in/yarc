@@ -7,6 +7,7 @@ import 'package:yarc/models/post.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/cached_image.dart';
+import 'package:yarc/widgets/flair_label.dart';
 import 'package:yarc/widgets/image_carousel.dart';
 import 'package:yarc/widgets/markdown_content.dart';
 import 'package:yarc/widgets/post_metadata.dart';
@@ -201,7 +202,7 @@ class _PostHeader extends StatelessWidget {
             (post.authorFlairRichtext != null &&
                 post.authorFlairRichtext!.isNotEmpty)) ...[
           const SizedBox(width: 4),
-          _FlairLabel(
+          FlairLabel(
             text: post.authorFlairText,
             richtext: post.authorFlairRichtext,
             backgroundColor: theme.colorScheme.tertiaryContainer,
@@ -234,7 +235,7 @@ class _PostTitle extends StatelessWidget {
                 post.linkFlairRichtext!.isNotEmpty))
           Padding(
             padding: const EdgeInsets.only(bottom: 4),
-            child: _FlairLabel(
+            child: FlairLabel(
               text: post.linkFlairText,
               richtext: post.linkFlairRichtext,
               backgroundColor: theme.colorScheme.secondaryContainer,
@@ -451,80 +452,6 @@ class _CrosspostIndicator extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _FlairLabel extends StatelessWidget {
-  const _FlairLabel({
-    required this.text,
-    required this.richtext,
-    required this.backgroundColor,
-    required this.textColor,
-    required this.borderRadius,
-  });
-
-  final String? text;
-  final List<FlairItem>? richtext;
-  final Color backgroundColor;
-  final Color textColor;
-  final double borderRadius;
-
-  @override
-  Widget build(BuildContext context) {
-    if ((text == null || text!.isEmpty) &&
-        (richtext == null || richtext!.isEmpty)) {
-      return const SizedBox.shrink();
-    }
-
-    final theme = Theme.of(context);
-    final textStyle = theme.textTheme.labelSmall?.copyWith(
-      color: textColor,
-      fontSize: 10,
-    );
-
-    Widget content;
-    if (richtext != null && richtext!.isNotEmpty) {
-      content = RichText(
-        text: TextSpan(
-          children: richtext!.map((item) {
-            if (item.isEmoji && item.emojiUrl != null) {
-              return WidgetSpan(
-                alignment: PlaceholderAlignment.middle,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: CachedImage(
-                    imageUrl: item.emojiUrl!,
-                    height: 14,
-                    width: 14,
-                  ),
-                ),
-              );
-            }
-            return TextSpan(
-              text: item.text ?? '',
-              style: textStyle,
-            );
-          }).toList(),
-        ),
-      );
-    } else {
-      content = Text(
-        text!,
-        style: textStyle,
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 6,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(borderRadius),
-      ),
-      child: content,
     );
   }
 }
