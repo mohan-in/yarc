@@ -52,7 +52,7 @@ class UniversalAppBarActions extends StatelessWidget {
         if (showSort)
           IconButton(
             tooltip: 'Sort Posts',
-            icon: const Icon(Icons.sort),
+            icon: const Icon(Icons.tune_rounded),
             onPressed: () {
               SortFilterBottomSheet.show(
                 context,
@@ -62,13 +62,15 @@ class UniversalAppBarActions extends StatelessWidget {
           ),
         if (showSearch && onSearch != null)
           IconButton(
-            icon: const Icon(Icons.search),
+            icon: const Icon(Icons.search_rounded),
             onPressed: onSearch,
             tooltip: 'Search',
           ),
         IconButton(
           icon: Icon(
-            hideRead ? Icons.visibility_off : Icons.visibility,
+            hideRead
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
           ),
           onPressed: () {
             unawaited(context.read<FeedNotifier>().toggleHideRead());

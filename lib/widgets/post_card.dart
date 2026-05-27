@@ -276,12 +276,12 @@ class _PostMedia extends StatelessWidget {
         videoUrl: post.videoUrl!,
         autoPlay: autoPlay,
       );
-      badgeIcon = Icons.play_arrow;
-      badgeLabel = 'VIDEO';
+      badgeIcon = null;
+      badgeLabel = null;
     } else if (showYoutube) {
       mediaWidget = YouTubeEmbed(videoId: post.youtubeId!);
-      badgeIcon = Icons.play_arrow;
-      badgeLabel = 'YOUTUBE';
+      badgeIcon = null;
+      badgeLabel = null;
     } else if (post.images.isNotEmpty) {
       mediaWidget = post.images.length == 1
           ? CachedImage(

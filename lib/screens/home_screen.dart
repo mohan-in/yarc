@@ -408,25 +408,68 @@ class _NarrowLayout extends StatelessWidget {
           SliverAppBar(
             floating: true,
             title:
-                Selector2<FeedNotifier, AuthNotifier, (String?, String?, bool)>(
+                Selector2<
+                  FeedNotifier,
+                  AuthNotifier,
+                  (String?, String?, bool, FeedSort)
+                >(
                   selector: (_, feed, auth) => (
                     feed.currentSubreddit,
                     feed.currentCustomFeedName,
                     auth.isLoggedIn,
+                    feed.currentSort,
                   ),
                   builder: (context, data, _) {
                     final (
                       currentSubreddit,
                       currentCustomFeedName,
                       isLoggedIn,
+                      currentSort,
                     ) = data;
+
+                    final String titleText;
+                    final bool isBrand;
+
                     if (currentSubreddit != null) {
-                      return Text('r/$currentSubreddit');
+                      titleText = 'r/$currentSubreddit';
+                      isBrand = false;
+                    } else if (currentCustomFeedName != null) {
+                      titleText = 'm/$currentCustomFeedName';
+                      isBrand = false;
+                    } else {
+                      titleText = isLoggedIn ? 'Home' : 'YARC';
+                      isBrand = !isLoggedIn;
                     }
-                    if (currentCustomFeedName != null) {
-                      return Text('m/$currentCustomFeedName');
-                    }
-                    return Text(isLoggedIn ? 'Home' : 'YARC');
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          titleText,
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontWeight: isBrand
+                                ? FontWeight.w900
+                                : FontWeight.bold,
+                            letterSpacing: isBrand ? 1.2 : null,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          feedSortLabel(currentSort),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer
+                                    .withValues(alpha: 0.8),
+                                fontWeight: FontWeight.w500,
+                              ),
+                        ),
+                      ],
+                    );
                   },
                 ),
             actions: [

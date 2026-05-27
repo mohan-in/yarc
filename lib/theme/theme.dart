@@ -1,24 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+final ColorScheme _lightColorScheme = ColorScheme.fromSeed(
+  seedColor: Colors.blue,
+);
+
 /// Light theme using standard Material 3.
 final ThemeData appTheme = ThemeData(
   useMaterial3: true,
-  colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+  colorScheme: _lightColorScheme,
   textTheme: const TextTheme(
     titleMedium: TextStyle(fontSize: 17), // Default 16 + 1
     bodyMedium: TextStyle(fontSize: 15), // Default 14 + 1
   ),
-  appBarTheme: const AppBarTheme(
-    centerTitle: true,
-    scrolledUnderElevation: 4,
-    backgroundColor: Color(0xFF1565C0),
-    foregroundColor: Colors.white,
-    surfaceTintColor: Colors.transparent,
-    systemOverlayStyle: SystemUiOverlayStyle(
+  appBarTheme: AppBarTheme(
+    centerTitle: false,
+    scrolledUnderElevation: 3,
+    elevation: 0,
+    backgroundColor: _lightColorScheme.primaryContainer,
+    foregroundColor: _lightColorScheme.onPrimaryContainer,
+    iconTheme: IconThemeData(color: _lightColorScheme.onPrimaryContainer),
+    actionsIconTheme: IconThemeData(
+      color: _lightColorScheme.onPrimaryContainer,
+    ),
+    titleTextStyle: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      fontFamily: 'Roboto',
+      color: _lightColorScheme.onPrimaryContainer,
+    ),
+    systemOverlayStyle: const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light, // Light icons
-      statusBarBrightness: Brightness.dark, // iOS
+      statusBarIconBrightness: Brightness.dark, // Dark icons on light bg
+      statusBarBrightness: Brightness.light, // iOS
     ),
   ),
   extensions: const [
@@ -40,26 +54,36 @@ final ThemeData appTheme = ThemeData(
   ],
 );
 
+final ColorScheme _darkColorScheme = ColorScheme.fromSeed(
+  seedColor: Colors.blue,
+  brightness: Brightness.dark,
+);
+
 /// Dark theme using standard Material 3.
 final ThemeData darkAppTheme = ThemeData(
   useMaterial3: true,
-  colorScheme: ColorScheme.fromSeed(
-    seedColor: Colors.blue,
-    brightness: Brightness.dark,
-  ),
+  colorScheme: _darkColorScheme,
   textTheme: const TextTheme(
     titleMedium: TextStyle(fontSize: 17), // Default 16 + 1
     bodyMedium: TextStyle(fontSize: 15), // Default 14 + 1
   ),
   appBarTheme: AppBarTheme(
-    centerTitle: true,
-    scrolledUnderElevation: 4,
-    backgroundColor: Colors.grey[900], // Darker AppBar to distinguish from bg
-    foregroundColor: Colors.white,
-    surfaceTintColor: Colors.transparent,
+    centerTitle: false,
+    scrolledUnderElevation: 3,
+    elevation: 0,
+    backgroundColor: _darkColorScheme.primaryContainer,
+    foregroundColor: _darkColorScheme.onPrimaryContainer,
+    iconTheme: IconThemeData(color: _darkColorScheme.onPrimaryContainer),
+    actionsIconTheme: IconThemeData(color: _darkColorScheme.onPrimaryContainer),
+    titleTextStyle: TextStyle(
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+      fontFamily: 'Roboto',
+      color: _darkColorScheme.onPrimaryContainer,
+    ),
     systemOverlayStyle: const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light, // Light icons
+      statusBarIconBrightness: Brightness.light, // Light icons on dark bg
       statusBarBrightness: Brightness.dark, // iOS
     ),
   ),

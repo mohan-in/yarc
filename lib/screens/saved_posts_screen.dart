@@ -42,7 +42,6 @@ class _SavedPostsScreenState extends State<SavedPostsScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Saved Posts'),
-          centerTitle: false,
           actions: [
             UniversalAppBarActions(
               onScrollToTop: () => scrollToTop(_scrollController),
