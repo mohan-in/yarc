@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/theme/theme.dart';
 import 'package:yarc/utils/constants.dart';
@@ -34,6 +35,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   late final String _playerId;
 
   late VideoAutoplayNotifier _notifier;
+  late SettingsNotifier _settings;
 
   /// Tracks if this video overlaps the middle 50% of the screen.
   bool _overlapsSafeZone = false;
@@ -59,6 +61,8 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     _playerId = widget.videoUrl;
     _notifier = context.read<VideoAutoplayNotifier>();
     _notifier.addListener(_onNotifierUpdate);
+    _settings = context.read<SettingsNotifier>();
+    _settings.addListener(_onSettingsChanged);
     // updateInterval is set globally in main.dart — no per-instance override.
     unawaited(_initializePlayer());
   }
@@ -72,6 +76,13 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       _scrollPosition = scrollable?.position;
       _scrollPosition?.addListener(_evaluateAutoplay);
     }
+  }
+
+  /// Called when [SettingsNotifier] changes — applies mute/unmute instantly.
+  void _onSettingsChanged() {
+    if (!_isInit || !mounted) return;
+    final targetVolume = _settings.muteVideosByDefault ? 0.0 : 1.0;
+    unawaited(_videoPlayerController.setVolume(targetVolume));
   }
 
   /// Called when the notifier's `playingVideoId` changes.
@@ -217,6 +228,14 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     _notifier.stop(_playerId);
   }
 
+  /// Toggles mute on this player and persists the preference.
+  void _toggleMute() {
+    final isMuted = _videoPlayerController.value.volume == 0;
+    final newVolume = isMuted ? 1.0 : 0.0;
+    unawaited(_videoPlayerController.setVolume(newVolume));
+    unawaited(_settings.setMuteVideosByDefault(!isMuted));
+  }
+
   Future<void> _initializePlayer() async {
     _videoPlayerController = VideoPlayerController.networkUrl(
       Uri.parse(widget.videoUrl),
@@ -224,6 +243,10 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
 
     try {
       await _videoPlayerController.initialize();
+      // Apply mute setting immediately after initialization.
+      if (_settings.muteVideosByDefault) {
+        await _videoPlayerController.setVolume(0);
+      }
       if (!mounted) {
         return;
       }
@@ -286,6 +309,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   void dispose() {
     _scrollPosition?.removeListener(_evaluateAutoplay);
     _notifier.removeListener(_onNotifierUpdate);
+    _settings.removeListener(_onSettingsChanged);
     if (_hasVideoListener) {
       _videoPlayerController.removeListener(_onVideoControllerUpdate);
     }
@@ -371,6 +395,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     final effectiveHeight = naturalHeight > maxHeight ? maxHeight : null;
 
     final isPlaying = _isInit && _videoPlayerController.value.isPlaying;
+    final isMuted = _videoPlayerController.value.volume == 0;
 
     final Widget videoWidget = GestureDetector(
       onTap: _enterFullScreen,
@@ -414,6 +439,27 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
                 size: 40,
               ),
             ),
+          // Mute/unmute button — bottom-right corner
+          Positioned(
+            bottom: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: _toggleMute,
+              child: Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  isMuted ? Icons.volume_off : Icons.volume_up,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

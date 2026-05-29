@@ -238,7 +238,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         body: LayoutBuilder(
           builder: (context, constraints) {
-            final isWide = constraints.maxWidth >= _kWideBreakpoint;
+            // Two-pane layout requires both width AND height to exceed the
+            // breakpoint. On a phone in landscape (YouTube fullscreen), height
+            // is ~360-400 dp — well below _kWideBreakpoint — so the two-pane
+            // Row never activates during fullscreen without needing any
+            // callbacks or notifiers.
+            final screenHeight = MediaQuery.sizeOf(context).height;
+            final isWide = constraints.maxWidth >= _kWideBreakpoint &&
+                screenHeight >= _kWideBreakpoint;
 
             return _HomeBody(
               scrollController: _scrollController,
