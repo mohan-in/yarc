@@ -222,7 +222,12 @@ class _YouTubeFullScreenPageState extends State<_YouTubeFullScreenPage> {
         DeviceOrientation.portraitDown,
       ]),
     );
-    unawaited(SystemChrome.restoreSystemUIOverlays());
+    unawaited(
+      SystemChrome.setEnabledSystemUIMode(
+        SystemUiMode.manual,
+        overlays: SystemUiOverlay.values,
+      ),
+    );
     _controller.dispose();
     super.dispose();
   }
