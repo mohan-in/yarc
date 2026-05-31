@@ -176,7 +176,10 @@ class PostParser {
         images,
         thumbnailUrl,
       ),
-      createdUtc: submission.createdUtc.millisecondsSinceEpoch / 1000,
+      createdUtc: DateTime.fromMillisecondsSinceEpoch(
+        submission.createdUtc.millisecondsSinceEpoch,
+        isUtc: true,
+      ),
       images: images,
       isVideo: isVideo && videoUrl != null,
       videoUrl: videoUrl,

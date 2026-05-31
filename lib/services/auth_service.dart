@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:math';
 
 import 'package:draw/draw.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
@@ -10,6 +12,8 @@ enum AuthState { loggedIn, loggedOut, unauthenticated }
 
 /// Service responsible for Reddit OAuth2 authentication.
 class AuthService {
+  AuthService(this._prefs);
+
   static const String _clientId = String.fromEnvironment('REDDIT_CLIENT_ID');
   static const String _credentialsKey = 'reddit_credentials';
   static const List<String> _oauthScopes = [
@@ -26,9 +30,15 @@ class AuthService {
 
   static const String _redirectUri = 'com.mohan.reddit.client://callback';
 
+  final SharedPreferences _prefs;
+
   Reddit? _reddit;
   String? _lastSavedCredentials;
   String? _currentUsername;
+
+  /// Holds the CSRF state token generated for the in-flight OAuth request.
+  /// Cleared after the callback is received (whether successful or not).
+  String? _pendingOAuthState;
 
   final _authStateController = StreamController<AuthState>.broadcast();
 
@@ -70,8 +80,7 @@ class AuthService {
     try {
       final currentCredentials = _reddit!.auth.credentials.toJson();
       if (currentCredentials != _lastSavedCredentials) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(_credentialsKey, currentCredentials);
+        await _prefs.setString(_credentialsKey, currentCredentials);
         _lastSavedCredentials = currentCredentials;
       }
     } on Exception catch (_) {}
@@ -79,8 +88,7 @@ class AuthService {
 
   /// Initializes the data source, restoring the session if available.
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final credentialsJson = prefs.getString(_credentialsKey);
+    final credentialsJson = _prefs.getString(_credentialsKey);
 
     if (credentialsJson != null) {
       if (_clientId.isEmpty) {
@@ -159,8 +167,7 @@ class AuthService {
       return false;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    final credentialsJson = prefs.getString(_credentialsKey);
+    final credentialsJson = _prefs.getString(_credentialsKey);
     if (credentialsJson == null) {
       return false;
     }
@@ -203,9 +210,18 @@ class AuthService {
         redirectUri: Uri.parse(_redirectUri),
       );
 
+      // Generate a cryptographically random state token to prevent CSRF.
+      // Each login attempt gets a unique 16-byte (128-bit) random value.
+      final stateBytes = List<int>.generate(
+        16,
+        (_) => Random.secure().nextInt(256),
+      );
+      final state = base64Url.encode(stateBytes);
+      _pendingOAuthState = state;
+
       final url = redditConfig.auth.url(
         _oauthScopes,
-        'random_string',
+        state,
         compactLogin: true,
       );
 
@@ -216,7 +232,24 @@ class AuthService {
         callbackUrlScheme: 'com.mohan.reddit.client',
       );
 
-      final code = Uri.parse(result).queryParameters['code'];
+      final callbackUri = Uri.parse(result);
+      final returnedState = callbackUri.queryParameters['state'];
+      final code = callbackUri.queryParameters['code'];
+
+      // Always clear the pending state once the callback is received.
+      final expectedState = _pendingOAuthState;
+      _pendingOAuthState = null;
+
+      // Validate state before accepting the auth code.
+      if (returnedState == null || returnedState != expectedState) {
+        developer.log(
+          'OAuth state mismatch — possible CSRF attack. '
+          'Expected: $expectedState, Got: $returnedState',
+          name: 'AuthService',
+        );
+        return 'Login failed: invalid OAuth state. Please try again.';
+      }
+
       if (code != null) {
         await _exchangeCodeForToken(code, redditConfig);
         _currentUsername = (await _reddit!.user.me())?.displayName;
@@ -226,6 +259,7 @@ class AuthService {
         return 'Login cancelled or no code returned.';
       }
     } on Exception catch (e) {
+      _pendingOAuthState = null; // Clean up on any exception
       return 'Login failed: $e';
     }
   }
@@ -236,15 +270,13 @@ class AuthService {
     _reddit = redditInstance;
 
     final credentialsJson = _reddit!.auth.credentials.toJson();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_credentialsKey, credentialsJson);
+    await _prefs.setString(_credentialsKey, credentialsJson);
     _lastSavedCredentials = credentialsJson;
   }
 
   /// Logs out the user by clearing stored credentials.
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_credentialsKey);
+    await _prefs.remove(_credentialsKey);
     _reddit = null;
     _currentUsername = null;
     _authStateController.add(AuthState.loggedOut);

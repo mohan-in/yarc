@@ -14,7 +14,7 @@ void main() {
       title: 'Test Title',
       author: 'author',
       subreddit: 'flutter',
-      createdUtc: DateTime.now().millisecondsSinceEpoch / 1000,
+      createdUtc: DateTime.now(),
       content: 'Test content',
       ups: 100,
       numComments: 10,

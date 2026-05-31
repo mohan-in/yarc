@@ -116,7 +116,11 @@ abstract final class CrosspostParser {
     final permalink = parent['permalink'] as String? ?? '';
     final ups = parent['ups'] as int? ?? 0;
     final numComments = parent['num_comments'] as int? ?? 0;
-    final createdUtc = (parent['created_utc'] as num?)?.toDouble() ?? 0;
+    final createdUtcRaw = (parent['created_utc'] as num?)?.toDouble() ?? 0;
+    final createdUtc = DateTime.fromMillisecondsSinceEpoch(
+      (createdUtcRaw * 1000).toInt(),
+      isUtc: true,
+    );
     final isSelf = parent['is_self'] as bool? ?? true;
     final parentUrl = parent['url'] as String?;
 

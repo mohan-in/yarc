@@ -31,7 +31,9 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   ChewieController? _chewieController;
   bool _isInit = false;
   bool _isFullScreenActive = false;
-  // Unique ID for this player instance to coordinate with notifier
+  // Unique ID for this player instance, stable across rebuilds.
+  // Using a per-instance key (not the URL) avoids ID collisions when two
+  // posts share the same video URL (e.g. crossposts).
   late final String _playerId;
 
   late VideoAutoplayNotifier _notifier;
@@ -58,7 +60,9 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    _playerId = widget.videoUrl;
+    // Generate a unique ID from this object's identity to avoid collisions
+    // between two players that share the same videoUrl (e.g. crossposts).
+    _playerId = '${identityHashCode(this)}_${widget.videoUrl.hashCode}';
     _notifier = context.read<VideoAutoplayNotifier>();
     _notifier.addListener(_onNotifierUpdate);
     _settings = context.read<SettingsNotifier>();

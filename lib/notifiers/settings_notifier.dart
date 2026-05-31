@@ -6,6 +6,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yarc/models/feed_sort.dart';
 
 class SettingsNotifier extends ChangeNotifier {
+  /// Initialises settings by reading persisted values synchronously.
+  ///
+  /// [_loadSettings] only populates fields; it does NOT call
+  /// [notifyListeners] because no listeners can be registered yet during
+  /// construction. Calling [notifyListeners] in a constructor body is a
+  /// ChangeNotifier anti-pattern that triggers assertion warnings in debug
+  /// mode and is a conceptual no-op.
   SettingsNotifier(this._prefs) {
     _loadSettings();
   }
@@ -33,6 +40,10 @@ class SettingsNotifier extends ChangeNotifier {
   bool get hideNsfw => _hideNsfw;
   FeedSort get defaultSort => _defaultSort;
 
+  /// Populates fields from [SharedPreferences]. Called only from the
+  /// constructor, so [notifyListeners] is intentionally omitted here —
+  /// no listeners exist yet and calling it would be a no-op that causes
+  /// assertion warnings in debug builds.
   void _loadSettings() {
     _autoPlayVideos = _prefs.getBool(_kAutoPlayVideosKey) ?? true;
     _muteVideosByDefault = _prefs.getBool(_kMuteVideosKey) ?? true;
@@ -47,7 +58,7 @@ class SettingsNotifier extends ChangeNotifier {
         orElse: () => FeedSort.best,
       );
     }
-    notifyListeners();
+    // Do NOT call notifyListeners() here — see constructor doc above.
   }
 
   Future<void> setAutoPlayVideos(bool value) async {

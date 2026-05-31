@@ -11,6 +11,8 @@ class SubredditsNotifier extends ChangeNotifier {
 
   List<Subreddit> _subreddits = [];
   List<CustomFeed> _customFeeds = [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
   /// Cache of lower-cased display names for O(1) subscription lookups.
   /// Nulled out whenever [_subreddits] changes.
@@ -27,6 +29,19 @@ class SubredditsNotifier extends ChangeNotifier {
 
   List<Subreddit> get subreddits => _subreddits;
   List<CustomFeed> get customFeeds => _customFeeds;
+  bool get isLoading => _isLoading;
+
+  /// Non-null when the last [fetch] or [toggleSubscription] call failed.
+  /// Call [clearError] to dismiss.
+  String? get errorMessage => _errorMessage;
+
+  /// Clears the current error message.
+  void clearError() {
+    if (_errorMessage != null) {
+      _errorMessage = null;
+      notifyListeners();
+    }
+  }
 
   /// Checks if a subreddit is currently subscribed. O(1) via cached Set.
   bool isSubscribed(String name) {
@@ -42,6 +57,9 @@ class SubredditsNotifier extends ChangeNotifier {
     if (_repository == null) {
       return;
     }
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
     try {
       final results = await Future.wait([
         _repository!.getSubscribed(),
@@ -50,13 +68,15 @@ class SubredditsNotifier extends ChangeNotifier {
       _subreddits = results[0] as List<Subreddit>;
       _customFeeds = results[1] as List<CustomFeed>;
       _invalidateSubscribedSet();
-      notifyListeners();
     } on Exception catch (e) {
       developer.log(
         'Failed to fetch subreddits/custom feeds: $e',
         name: 'SubredditsNotifier',
       );
-      // Keep current state on error — no notifyListeners needed
+      _errorMessage = 'Failed to load subreddits: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -64,6 +84,8 @@ class SubredditsNotifier extends ChangeNotifier {
   void clear() {
     _subreddits = [];
     _customFeeds = [];
+    _errorMessage = null;
+    _isLoading = false;
     _invalidateSubscribedSet();
     notifyListeners();
   }

@@ -74,8 +74,8 @@ class Post {
   /// The textual content of the post (selftext).
   final String content;
 
-  /// The creation time in UTC seconds.
-  final double createdUtc;
+  /// The creation time in UTC.
+  final DateTime createdUtc;
 
   /// A list of image URLs for gallery posts.
   final List<String> images;
@@ -147,6 +147,22 @@ class Post {
     isSaved,
   ];
 
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Post) return false;
+    final p = props;
+    final q = other.props;
+    if (p.length != q.length) return false;
+    for (var i = 0; i < p.length; i++) {
+      if (p[i] != q[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode => Object.hashAll(props);
+
   /// Returns a copy of this post with the specified fields replaced.
   Post copyWith({
     String? id,
@@ -157,7 +173,7 @@ class Post {
     int? numComments,
     String? permalink,
     String? content,
-    double? createdUtc,
+    DateTime? createdUtc,
     String? thumbnail,
     String? imageUrl,
     List<String>? images,

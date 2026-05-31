@@ -34,12 +34,12 @@ void main() {
 
   test('loadPosts loads posts correctly', () async {
     final postList = [
-      const Post(
+      Post(
         id: '1',
         title: 'Test',
         author: 'u1',
         subreddit: 'all',
-        createdUtc: 0,
+        createdUtc: DateTime.utc(2024),
         content: '',
         ups: 10,
         numComments: 2,

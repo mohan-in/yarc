@@ -11,7 +11,7 @@ void main() {
       id: '1',
       author: 'author',
       body: 'Test comment',
-      createdUtc: DateTime.now().millisecondsSinceEpoch / 1000,
+      createdUtc: DateTime.now(),
       ups: 10,
     );
 

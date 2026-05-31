@@ -15,7 +15,10 @@ class FeedNotifier extends ChangeNotifier {
     });
   }
 
-  static final StreamController<(String, bool)> _saveEvents =
+  // Instance-level broadcast stream so each FeedNotifier manages its own
+  // save-event lifecycle. A static stream would never be closed, leaking
+  // memory across hot-reloads and polluting unrelated test instances.
+  final StreamController<(String, bool)> _saveEvents =
       StreamController.broadcast();
   StreamSubscription<(String, bool)>? _saveSub;
 
@@ -25,6 +28,7 @@ class FeedNotifier extends ChangeNotifier {
     if (cancelFuture != null) {
       unawaited(cancelFuture);
     }
+    unawaited(_saveEvents.close());
     super.dispose();
   }
 
@@ -183,42 +187,7 @@ class FeedNotifier extends ChangeNotifier {
     }
 
     try {
-      final result = refresh
-          ? (_savedMode
-                ? await _repository!.getSavedPosts(
-                    username: _profileUsername!,
-                  )
-                : _profileUsername != null
-                ? await _repository!.getUserPosts(
-                    username: _profileUsername!,
-                    sort: _currentSort,
-                    timeFilter: _currentTimeFilter,
-                  )
-                : await _repository!.refresh(
-                    subreddit: _currentSubreddit,
-                    customFeedPath: _currentCustomFeedPath,
-                    sort: _currentSort,
-                    timeFilter: _currentTimeFilter,
-                  ))
-          : (_savedMode
-                ? await _repository!.getSavedPosts(
-                    username: _profileUsername!,
-                    after: _after,
-                  )
-                : _profileUsername != null
-                ? await _repository!.getUserPosts(
-                    username: _profileUsername!,
-                    after: _after,
-                    sort: _currentSort,
-                    timeFilter: _currentTimeFilter,
-                  )
-                : await _repository!.getPosts(
-                    subreddit: _currentSubreddit,
-                    customFeedPath: _currentCustomFeedPath,
-                    after: _after,
-                    sort: _currentSort,
-                    timeFilter: _currentTimeFilter,
-                  ));
+      final result = await _fetchResult(refresh: refresh);
 
       // Deduplicate posts when appending to
       // avoid "duplicate key" errors in lists
@@ -247,6 +216,47 @@ class FeedNotifier extends ChangeNotifier {
     }
   }
 
+  /// Picks the correct repository fetch based on the current feed mode.
+  ///
+  /// Extracted from [loadPosts] to replace an unreadable nested ternary and
+  /// make each branch independently unit-testable.
+  Future<PostsResult> _fetchResult({required bool refresh}) {
+    // Branch 1: Saved-posts mode (always requires a logged-in username).
+    if (_savedMode) {
+      return _repository!.getSavedPosts(
+        username: _profileUsername!,
+        after: refresh ? null : _after,
+      );
+    }
+
+    // Branch 2: User profile posts.
+    if (_profileUsername != null) {
+      return _repository!.getUserPosts(
+        username: _profileUsername!,
+        after: refresh ? null : _after,
+        sort: _currentSort,
+        timeFilter: _currentTimeFilter,
+      );
+    }
+
+    // Branch 3: Regular subreddit / front-page / custom-feed posts.
+    if (refresh) {
+      return _repository!.refresh(
+        subreddit: _currentSubreddit,
+        customFeedPath: _currentCustomFeedPath,
+        sort: _currentSort,
+        timeFilter: _currentTimeFilter,
+      );
+    }
+    return _repository!.getPosts(
+      subreddit: _currentSubreddit,
+      customFeedPath: _currentCustomFeedPath,
+      after: _after,
+      sort: _currentSort,
+      timeFilter: _currentTimeFilter,
+    );
+  }
+
   Future<void> refresh() async {
     if (_repository == null) {
       return;
@@ -258,10 +268,15 @@ class FeedNotifier extends ChangeNotifier {
     await loadPosts(refresh: true);
   }
 
-  void selectSubreddit(String? subreddit) {
+  /// Resets all feed-selection state to neutral defaults.
+  ///
+  /// Every [select*] method calls this first, then overrides only the fields
+  /// specific to its mode. This eliminates the copy-paste boilerplate that
+  /// would otherwise appear across five methods.
+  void _resetFeed() {
     _posts = [];
     _after = null;
-    _currentSubreddit = subreddit;
+    _currentSubreddit = null;
     _currentSubredditInfo = null;
     _currentCustomFeedPath = null;
     _currentCustomFeedName = null;
@@ -269,37 +284,28 @@ class FeedNotifier extends ChangeNotifier {
     _savedMode = false;
     _isLoading = false;
     _invalidateVisiblePosts();
+  }
+
+  void selectSubreddit(String? subreddit) {
+    _resetFeed();
+    _currentSubreddit = subreddit;
     notifyListeners();
     unawaited(loadPosts());
   }
 
   void selectSubredditWithInfo(Subreddit subreddit) {
-    _posts = [];
-    _after = null;
+    _resetFeed();
     _currentSubreddit = subreddit.displayName;
     _currentSubredditInfo = subreddit;
-    _currentCustomFeedPath = null;
-    _currentCustomFeedName = null;
-    _profileUsername = null;
-    _savedMode = false;
-    _isLoading = false;
-    _invalidateVisiblePosts();
     notifyListeners();
     unawaited(loadPosts());
   }
 
   /// Switches the feed to a custom feed (multireddit).
   void selectCustomFeed(CustomFeed feed) {
-    _posts = [];
-    _after = null;
-    _currentSubreddit = null;
-    _currentSubredditInfo = null;
+    _resetFeed();
     _currentCustomFeedPath = feed.path;
     _currentCustomFeedName = feed.displayName;
-    _profileUsername = null;
-    _savedMode = false;
-    _isLoading = false;
-    _invalidateVisiblePosts();
     notifyListeners();
     unawaited(loadPosts());
   }
@@ -309,16 +315,8 @@ class FeedNotifier extends ChangeNotifier {
   /// Load is deferred: if [_repository] is already set it starts immediately;
   /// otherwise [setRepository] will trigger it once the provider wires up.
   void selectUserProfile(String username) {
-    _posts = [];
-    _after = null;
-    _currentSubreddit = null;
-    _currentSubredditInfo = null;
+    _resetFeed();
     _profileUsername = username;
-    _currentCustomFeedPath = null;
-    _currentCustomFeedName = null;
-    _savedMode = false;
-    _isLoading = false;
-    _invalidateVisiblePosts();
     notifyListeners();
     // Only load immediately if the repository is already available.
     if (_repository != null) {
@@ -331,16 +329,9 @@ class FeedNotifier extends ChangeNotifier {
   ///
   /// [username] must be the authenticated user's own Reddit username.
   void selectSavedPosts(String username) {
-    _posts = [];
-    _after = null;
-    _currentSubreddit = null;
-    _currentSubredditInfo = null;
+    _resetFeed();
     _profileUsername = username;
-    _currentCustomFeedPath = null;
-    _currentCustomFeedName = null;
     _savedMode = true;
-    _isLoading = false;
-    _invalidateVisiblePosts();
     notifyListeners();
     if (_repository != null) {
       unawaited(loadPosts());

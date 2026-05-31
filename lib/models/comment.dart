@@ -30,7 +30,10 @@ class Comment {
           ? HtmlUtils.resolveGiphyShortcodes(HtmlUtils.unescape(comment.body!))
           : '',
       ups: comment.upvotes,
-      createdUtc: comment.createdUtc.millisecondsSinceEpoch / 1000,
+      createdUtc: DateTime.fromMillisecondsSinceEpoch(
+        comment.createdUtc.millisecondsSinceEpoch,
+        isUtc: true,
+      ),
       replies: replies,
     );
   }
@@ -39,7 +42,7 @@ class Comment {
   final String author;
   final String body;
   final int ups;
-  final double createdUtc;
+  final DateTime createdUtc;
   final List<Comment> replies;
 
   @override

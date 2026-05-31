@@ -1,11 +1,7 @@
 class DateUtilsHelper {
-  static String formatTimeAgo(double createdUtc) {
+  static String formatTimeAgo(DateTime createdUtc) {
     final now = DateTime.now().toUtc();
-    final created = DateTime.fromMillisecondsSinceEpoch(
-      (createdUtc * 1000).toInt(),
-      isUtc: true,
-    );
-    final difference = now.difference(created);
+    final difference = now.difference(createdUtc);
 
     if (difference.inDays > 365) {
       return '${(difference.inDays / 365).floor()}y ago';

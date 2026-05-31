@@ -36,6 +36,10 @@ class _HomeScreenState extends State<HomeScreen> {
     // Cache the FeedNotifier reference — stable for the lifetime of this
     // widget, so there is no need to call context.read on every scroll event.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Guard against the widget being disposed before the first frame fires
+      // (e.g., rapid navigation or test teardown). Without this, context.read
+      // will throw a FlutterError on a deactivated element.
+      if (!mounted) return;
       _feedNotifier = context.read<FeedNotifier>();
       unawaited(_initializeAuth());
     });
@@ -244,7 +248,8 @@ class _HomeScreenState extends State<HomeScreen> {
             // Row never activates during fullscreen without needing any
             // callbacks or notifiers.
             final screenHeight = MediaQuery.sizeOf(context).height;
-            final isWide = constraints.maxWidth >= _kWideBreakpoint &&
+            final isWide =
+                constraints.maxWidth >= _kWideBreakpoint &&
                 screenHeight >= _kWideBreakpoint;
 
             return _HomeBody(

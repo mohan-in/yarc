@@ -265,8 +265,9 @@ class _PostMedia extends StatelessWidget {
     final showYoutube = post.isYoutube && post.youtubeId != null;
 
     final Widget mediaWidget;
-    final IconData? badgeIcon;
-    final String? badgeLabel;
+    // Badge shown when the post type warrants a visual label overlay.
+    IconData? badgeIcon;
+    String? badgeLabel;
 
     if (showVideo) {
       final autoPlay = context.select<SettingsNotifier, bool>(
@@ -276,31 +277,28 @@ class _PostMedia extends StatelessWidget {
         videoUrl: post.videoUrl!,
         autoPlay: autoPlay,
       );
-      badgeIcon = null;
-      badgeLabel = null;
     } else if (showYoutube) {
       mediaWidget = YouTubeEmbed(videoId: post.youtubeId!);
-      badgeIcon = null;
-      badgeLabel = null;
     } else if (post.images.isNotEmpty) {
-      mediaWidget = post.images.length == 1
-          ? CachedImage(
-              imageUrl: post.images.first,
-              fullScreenUrls: post.images,
-            )
-          : ImageCarousel(
-              imageUrls: post.images,
-              aspectRatio: post.aspectRatio,
-            );
-      badgeIcon = null;
-      badgeLabel = null;
+      if (post.images.length == 1) {
+        mediaWidget = CachedImage(
+          imageUrl: post.images.first,
+          fullScreenUrls: post.images,
+        );
+      } else {
+        // Multi-image gallery — show a badge so users know there are more.
+        mediaWidget = ImageCarousel(
+          imageUrls: post.images,
+          aspectRatio: post.aspectRatio,
+        );
+        badgeIcon = Icons.photo_library_outlined;
+        badgeLabel = '${post.images.length}';
+      }
     } else if (post.thumbnail != null) {
       mediaWidget = CachedImage(
         imageUrl: post.thumbnail!,
         fullScreenUrls: [post.thumbnail!],
       );
-      badgeIcon = null;
-      badgeLabel = null;
     } else {
       return const SizedBox.shrink();
     }
@@ -309,17 +307,18 @@ class _PostMedia extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(8),
-        child: Stack(
-          children: [
-            mediaWidget,
-            if (badgeIcon != null && badgeLabel != null)
-              Positioned(
-                top: 8,
-                left: 8,
-                child: _MediaBadge(icon: badgeIcon, label: badgeLabel),
-              ),
-          ],
-        ),
+        child: badgeIcon != null && badgeLabel != null
+            ? Stack(
+                children: [
+                  mediaWidget,
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: _MediaBadge(icon: badgeIcon, label: badgeLabel),
+                  ),
+                ],
+              )
+            : mediaWidget,
       ),
     );
   }

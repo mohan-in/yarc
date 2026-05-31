@@ -158,11 +158,27 @@ class _YarcAppState extends State<YarcApp> {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        Provider(create: (_) => AuthService()),
+        Provider(create: (_) => AuthService(widget.prefs)),
         Provider(create: (_) => HistoryService()),
         ChangeNotifierProvider(
           create: (_) => SettingsNotifier(widget.prefs),
         ),
+        // ── Singleton services ───────────────────────────────────────────
+        // Each service is created exactly once for the lifetime of the app.
+        // The `prev ?? Foo(dep)` pattern means: reuse the existing instance if
+        // one already exists, otherwise create it now. This is intentional:
+        //
+        // • These objects hold mutable state (auth tokens, caches, streams)
+        //   that must survive across ProxyProvider rebuilds without being
+        //   reset.
+        // • ProxyProvider rebuilds whenever an upstream provider changes, but
+        //   that should NOT recreate the service and wipe its state.
+        //
+        // ⚠️  Known trade-off: if AuthService itself were ever recreated (e.g.
+        // during a future refactor that makes it non-singleton), RedditService
+        // and AuthRepository would keep references to the *old* AuthService.
+        // If that happens, switch to `create:` / `Provider` or add explicit
+        // re-creation logic here.
         ProxyProvider<AuthService, RedditService>(
           update: (_, auth, prev) => prev ?? RedditService(auth),
         ),
