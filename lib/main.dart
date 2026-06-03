@@ -258,14 +258,16 @@ class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
             });
           }
 
-          final themeNotifier = context.watch<ThemeNotifier>();
+          final themeMode = context.select<ThemeNotifier, ThemeMode>(
+            (n) => n.themeMode,
+          );
 
           return MaterialApp(
             navigatorKey: _navigatorKey,
             title: 'YARC - Yet Another Reddit Client',
             theme: appTheme,
             darkTheme: darkAppTheme,
-            themeMode: themeNotifier.themeMode,
+            themeMode: themeMode,
             home: const HomeScreen(),
             builder: (context, child) {
               // Apply DexCompat desktop scaling first, then layer the

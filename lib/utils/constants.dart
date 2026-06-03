@@ -55,3 +55,7 @@ const Duration kSearchDebounceDuration = Duration(milliseconds: 300);
 
 /// Duration of the animated scroll-to-top action.
 const Duration kScrollToTopDuration = Duration(milliseconds: 300);
+
+/// Localized reason shown to the user during the biometric auth prompt
+/// when reopening the app on an NSFW subreddit.
+const String kBiometricNsfwReason = 'Authenticate to view NSFW content';

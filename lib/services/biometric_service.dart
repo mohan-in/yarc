@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:local_auth/local_auth.dart';
+import 'package:yarc/utils/constants.dart';
 
 /// Wraps [LocalAuthentication] to provide biometric auth capabilities.
 ///
@@ -31,7 +32,7 @@ class BiometricService {
   Future<bool> authenticate() async {
     try {
       return await _auth.authenticate(
-        localizedReason: 'Authenticate to view NSFW content',
+        localizedReason: kBiometricNsfwReason,
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
