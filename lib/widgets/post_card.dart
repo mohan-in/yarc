@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:yarc/models/post.dart';
+import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/cached_image.dart';
@@ -155,11 +156,17 @@ class _PostHeader extends StatelessWidget {
                   ),
                 ),
               ),
-            Text(
-              'r/${post.subreddit}',
-              style: theme.textTheme.labelMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+            GestureDetector(
+              onTap: () {
+                context.read<FeedNotifier>().selectSubreddit(post.subreddit);
+                Navigator.of(context).popUntil((route) => route.isFirst);
+              },
+              child: Text(
+                'r/${post.subreddit}',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
               ),
             ),
             if (post.totalAwardsReceived > 0) ...[
