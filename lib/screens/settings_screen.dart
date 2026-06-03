@@ -76,6 +76,15 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (v) => unawaited(settings.setHideNsfw(v)),
               ),
               SwitchListTile(
+                title: const Text('Require Biometric for NSFW'),
+                subtitle: const Text(
+                  'Lock app when returning from background on NSFW subreddits',
+                ),
+                value: settings.requireBiometricForNsfw,
+                onChanged: (v) =>
+                    unawaited(settings.setRequireBiometricForNsfw(v)),
+              ),
+              SwitchListTile(
                 title: const Text('Auto-play Videos'),
                 subtitle: const Text('Play videos automatically in the feed'),
                 value: settings.autoPlayVideos,

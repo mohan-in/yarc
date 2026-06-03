@@ -1,5 +1,6 @@
 export 'app_bar_actions.dart';
 export 'app_drawer.dart';
+export 'biometric_lock_overlay.dart';
 export 'cached_image.dart';
 export 'comment_list.dart';
 export 'comment_tile.dart';

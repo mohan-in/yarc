@@ -12,6 +12,7 @@ import 'package:yarc/screens/home_screen.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/services/services.dart';
 import 'package:yarc/theme/theme.dart';
+import 'package:yarc/widgets/biometric_lock_overlay.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,7 +55,7 @@ class YarcApp extends StatefulWidget {
   State<YarcApp> createState() => _YarcAppState();
 }
 
-class _YarcAppState extends State<YarcApp> {
+class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
   final DeepLinkService _deepLinkService = DeepLinkService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<DeepLinkResult>? _linkSubscription;
@@ -65,6 +66,7 @@ class _YarcAppState extends State<YarcApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_initDeepLinks());
   }
 
@@ -148,7 +150,23 @@ class _YarcAppState extends State<YarcApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+
+    final settings = context.read<SettingsNotifier>();
+    if (!settings.requireBiometricForNsfw) return;
+
+    final feed = context.read<FeedNotifier>();
+    if (!(feed.currentSubredditInfo?.isOver18 ?? false)) return;
+
+    context.read<BiometricLockNotifier>().requestLock();
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     unawaited(_linkSubscription?.cancel());
     _deepLinkService.dispose();
     super.dispose();
@@ -160,8 +178,13 @@ class _YarcAppState extends State<YarcApp> {
       providers: [
         Provider(create: (_) => AuthService(widget.prefs)),
         Provider(create: (_) => HistoryService()),
+        Provider(create: (_) => BiometricService()),
         ChangeNotifierProvider(
           create: (_) => SettingsNotifier(widget.prefs),
+        ),
+        ChangeNotifierProxyProvider<BiometricService, BiometricLockNotifier>(
+          create: (_) => BiometricLockNotifier(),
+          update: (_, service, notifier) => notifier!..setService(service),
         ),
         // ── Singleton services ───────────────────────────────────────────
         // Each service is created exactly once for the lifetime of the app.
@@ -244,7 +267,15 @@ class _YarcAppState extends State<YarcApp> {
             darkTheme: darkAppTheme,
             themeMode: themeNotifier.themeMode,
             home: const HomeScreen(),
-            builder: DexCompat.builder(widget.isDesktopMode),
+            builder: (context, child) {
+              // Apply DexCompat desktop scaling first, then layer the
+              // biometric lock overlay on top of the entire app.
+              final dexBuilder = DexCompat.builder(widget.isDesktopMode);
+              final scaled = dexBuilder(context, child);
+              return BiometricLockOverlay(
+                child: scaled,
+              );
+            },
           );
         },
       ),
