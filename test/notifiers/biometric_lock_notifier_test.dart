@@ -2,9 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:yarc/notifiers/biometric_lock_notifier.dart';
-import 'package:yarc/repositories/biometric_repository.dart';
-
-class MockBiometricRepository extends Mock implements BiometricRepository {}
+import '../helpers/mocks.dart';
 
 void main() {
   late BiometricLockNotifier notifier;

@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visibility_detector/visibility_detector.dart';
+import 'package:yarc/di/providers.dart';
 import 'package:yarc/notifiers/notifiers.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/repositories/repositories.dart';
@@ -57,7 +58,7 @@ class YarcApp extends StatefulWidget {
   State<YarcApp> createState() => _YarcAppState();
 }
 
-class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
+class _YarcAppState extends State<YarcApp> {
   final DeepLinkService _deepLinkService = DeepLinkService();
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   StreamSubscription<DeepLinkResult>? _linkSubscription;
@@ -68,7 +69,6 @@ class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     unawaited(_initDeepLinks());
   }
 
@@ -152,23 +152,7 @@ class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
   }
 
   @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
-    final context = _navigatorKey.currentContext;
-    if (context == null) return;
-
-    final settings = context.read<SettingsNotifier>();
-    if (!settings.requireBiometricForNsfw) return;
-
-    final feed = context.read<FeedNotifier>();
-    if (!(feed.currentSubredditInfo?.isOver18 ?? false)) return;
-
-    context.read<BiometricLockNotifier>().requestLockIfAvailable();
-  }
-
-  @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     unawaited(_linkSubscription?.cancel());
     _deepLinkService.dispose();
     super.dispose();
@@ -177,81 +161,7 @@ class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        Provider(create: (_) => AuthService(widget.prefs)),
-        Provider(create: (_) => HistoryService()),
-        Provider(create: (_) => BiometricService()),
-        ProxyProvider<BiometricService, BiometricRepository>(
-          update: (_, service, prev) => prev ?? BiometricRepository(service),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => SettingsNotifier(widget.prefs),
-        ),
-        ChangeNotifierProxyProvider<BiometricRepository, BiometricLockNotifier>(
-          create: (_) => BiometricLockNotifier(),
-          update: (_, repo, notifier) => notifier!..setRepository(repo),
-        ),
-        // ── Singleton services ───────────────────────────────────────────
-        // Each service is created exactly once for the lifetime of the app.
-        // The `prev ?? Foo(dep)` pattern means: reuse the existing instance if
-        // one already exists, otherwise create it now. This is intentional:
-        //
-        // • These objects hold mutable state (auth tokens, caches, streams)
-        //   that must survive across ProxyProvider rebuilds without being
-        //   reset.
-        // • ProxyProvider rebuilds whenever an upstream provider changes, but
-        //   that should NOT recreate the service and wipe its state.
-        //
-        // ⚠️  Known trade-off: if AuthService itself were ever recreated (e.g.
-        // during a future refactor that makes it non-singleton), RedditService
-        // and AuthRepository would keep references to the *old* AuthService.
-        // If that happens, switch to `create:` / `Provider` or add explicit
-        // re-creation logic here.
-        ProxyProvider<AuthService, RedditService>(
-          update: (_, auth, prev) => prev ?? RedditService(auth),
-        ),
-
-        ProxyProvider<AuthService, AuthRepository>(
-          update: (_, auth, prev) => prev ?? AuthRepository(auth),
-        ),
-        ProxyProvider2<RedditService, HistoryService, PostRepository>(
-          update: (_, reddit, history, prev) =>
-              prev ?? PostRepository(reddit, history),
-        ),
-        ProxyProvider<RedditService, SubredditRepository>(
-          update: (_, reddit, prev) => prev ?? SubredditRepository(reddit),
-        ),
-
-        ChangeNotifierProxyProvider<AuthRepository, AuthNotifier>(
-          create: (_) => AuthNotifier(),
-          update: (_, repo, notifier) => notifier!..setRepository(repo),
-        ),
-        ChangeNotifierProxyProvider2<
-          PostRepository,
-          SettingsNotifier,
-          FeedNotifier
-        >(
-          create: (_) => FeedNotifier(),
-          update: (_, repo, settings, notifier) => notifier!
-            ..setRepository(repo)
-            ..setSettings(settings),
-        ),
-        ChangeNotifierProxyProvider<SubredditRepository, SubredditsNotifier>(
-          create: (_) => SubredditsNotifier(),
-          update: (_, repo, notifier) => notifier!..setRepository(repo),
-        ),
-        ChangeNotifierProxyProvider2<
-          SubredditRepository,
-          RedditService,
-          SearchNotifier
-        >(
-          create: (_) => SearchNotifier(),
-          update: (_, repo, reddit, notifier) => notifier!
-            ..setRepository(repo)
-            ..setRedditService(reddit),
-        ),
-        ChangeNotifierProvider(create: (_) => VideoAutoplayNotifier()),
-      ],
+      providers: getAppProviders(widget.prefs),
       child: Builder(
         builder: (context) {
           if (_pendingDeepLink != null) {
@@ -301,9 +211,29 @@ class _SecureWindowWrapper extends StatefulWidget {
   State<_SecureWindowWrapper> createState() => _SecureWindowWrapperState();
 }
 
-class _SecureWindowWrapperState extends State<_SecureWindowWrapper> {
+class _SecureWindowWrapperState extends State<_SecureWindowWrapper>
+    with WidgetsBindingObserver {
   static const _channel = MethodChannel('com.mohan.reddit.client/secure');
   bool _isSecure = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+
+    final settings = context.read<SettingsNotifier>();
+    if (!settings.requireBiometricForNsfw) return;
+
+    final feed = context.read<FeedNotifier>();
+    if (!(feed.currentSubredditInfo?.isOver18 ?? false)) return;
+
+    context.read<BiometricLockNotifier>().requestLockIfAvailable();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -328,6 +258,7 @@ class _SecureWindowWrapperState extends State<_SecureWindowWrapper> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (_isSecure) {
       unawaited(_setSecureWindow(false));
     }

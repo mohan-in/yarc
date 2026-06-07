@@ -3,12 +3,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:yarc/models/feed_sort.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
-import 'package:yarc/notifiers/settings_notifier.dart';
-import 'package:yarc/repositories/post_repository.dart';
-
-class MockPostRepository extends Mock implements PostRepository {}
-
-class MockSettingsNotifier extends Mock implements SettingsNotifier {}
+import '../helpers/mocks.dart';
 
 void main() {
   late FeedNotifier feedNotifier;
