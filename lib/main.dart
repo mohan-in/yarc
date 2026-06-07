@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:dex_compat/dex_compat.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visibility_detector/visibility_detector.dart';
@@ -161,7 +163,7 @@ class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
     final feed = context.read<FeedNotifier>();
     if (!(feed.currentSubredditInfo?.isOver18 ?? false)) return;
 
-    context.read<BiometricLockNotifier>().requestLock();
+    context.read<BiometricLockNotifier>().requestLockIfAvailable();
   }
 
   @override
@@ -179,12 +181,15 @@ class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
         Provider(create: (_) => AuthService(widget.prefs)),
         Provider(create: (_) => HistoryService()),
         Provider(create: (_) => BiometricService()),
+        ProxyProvider<BiometricService, BiometricRepository>(
+          update: (_, service, prev) => prev ?? BiometricRepository(service),
+        ),
         ChangeNotifierProvider(
           create: (_) => SettingsNotifier(widget.prefs),
         ),
-        ChangeNotifierProxyProvider<BiometricService, BiometricLockNotifier>(
+        ChangeNotifierProxyProvider<BiometricRepository, BiometricLockNotifier>(
           create: (_) => BiometricLockNotifier(),
-          update: (_, service, notifier) => notifier!..setService(service),
+          update: (_, repo, notifier) => notifier!..setRepository(repo),
         ),
         // ── Singleton services ───────────────────────────────────────────
         // Each service is created exactly once for the lifetime of the app.
@@ -274,13 +279,74 @@ class _YarcAppState extends State<YarcApp> with WidgetsBindingObserver {
               // biometric lock overlay on top of the entire app.
               final dexBuilder = DexCompat.builder(widget.isDesktopMode);
               final scaled = dexBuilder(context, child);
-              return BiometricLockOverlay(
-                child: scaled,
+              return _SecureWindowWrapper(
+                child: BiometricLockOverlay(
+                  child: scaled,
+                ),
               );
             },
           );
         },
       ),
     );
+  }
+}
+
+class _SecureWindowWrapper extends StatefulWidget {
+  const _SecureWindowWrapper({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_SecureWindowWrapper> createState() => _SecureWindowWrapperState();
+}
+
+class _SecureWindowWrapperState extends State<_SecureWindowWrapper> {
+  static const _channel = MethodChannel('com.mohan.reddit.client/secure');
+  bool _isSecure = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final requireBiometric = context.select<SettingsNotifier, bool>(
+      (s) => s.requireBiometricForNsfw,
+    );
+    final isNsfw = context.select<FeedNotifier, bool>(
+      (f) => f.currentSubredditInfo?.isOver18 ?? false,
+    );
+
+    final shouldBeSecure = requireBiometric && isNsfw;
+
+    if (_isSecure != shouldBeSecure) {
+      _isSecure = shouldBeSecure;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(_setSecureWindow(shouldBeSecure));
+      });
+    }
+
+    return widget.child;
+  }
+
+  @override
+  void dispose() {
+    if (_isSecure) {
+      unawaited(_setSecureWindow(false));
+    }
+    super.dispose();
+  }
+
+  static Future<void> _setSecureWindow(bool secure) async {
+    try {
+      await _channel.invokeMethod(
+        'setSecure',
+        {
+          'secure': secure,
+        },
+      );
+    } on PlatformException catch (e) {
+      developer.log(
+        'Failed to set secure window: $e',
+        name: '_SecureWindowWrapper',
+      );
+    }
   }
 }

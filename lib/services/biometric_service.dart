@@ -12,13 +12,19 @@ class BiometricService {
 
   final LocalAuthentication _auth;
 
-  /// Returns true if the device has enrolled biometrics (fingerprint / face).
+  /// Returns true if the device has **enrolled** biometrics (fingerprint /
+  /// face) that can actually be used to authenticate right now.
+  ///
+  /// `canCheckBiometrics` only indicates hardware presence, not enrollment.
+  /// `getAvailableBiometrics()` is the correct API: it returns the list of
+  /// enrolled biometric types, so an empty list means "nothing to prompt".
   ///
   /// Does NOT include device credentials (PIN / pattern / password) since
   /// this service is biometric-only.
   Future<bool> isAvailable() async {
     try {
-      return await _auth.canCheckBiometrics;
+      final enrolled = await _auth.getAvailableBiometrics();
+      return enrolled.isNotEmpty;
     } on Exception catch (e) {
       log('isAvailable error: $e', name: 'BiometricService');
       return false;
@@ -27,18 +33,24 @@ class BiometricService {
 
   /// Prompts the user to authenticate using biometrics only.
   ///
-  /// PIN / pattern / password fallback is intentionally disabled.
-  /// Returns `true` on success, `false` if the user cancelled or failed.
+  /// Returns `true` on success.
+  ///
+  /// Throws [LocalAuthException] for all non-success outcomes so callers
+  /// can distinguish error codes (lockout, no hardware, cancelled, etc.)
+  /// from a genuine success.
   Future<bool> authenticate() async {
     try {
       return await _auth.authenticate(
         localizedReason: kBiometricNsfwReason,
         biometricOnly: true,
-        persistAcrossBackgrounding: true,
       );
+    } on LocalAuthException {
+      // Re-throw typed exceptions so BiometricLockNotifier can distinguish
+      // hardware/enrollment errors from a simple false return (cancelled).
+      rethrow;
     } on Exception catch (e) {
       log('authenticate error: $e', name: 'BiometricService');
-      return false;
+      rethrow;
     }
   }
 }
