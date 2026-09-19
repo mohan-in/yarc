@@ -45,6 +45,7 @@ class PaginatedScrollBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
     return NotificationListener<ScrollNotification>(
       onNotification: (notification) {
         _onScrollNotification(notification);
@@ -57,7 +58,11 @@ class PaginatedScrollBody extends StatelessWidget {
         displacement: 20,
         child: CustomScrollView(
           controller: controller,
-          slivers: slivers,
+          slivers: [
+            ...slivers,
+            if (bottomInset > 0)
+              SliverPadding(padding: EdgeInsets.only(bottom: bottomInset)),
+          ],
         ),
       ),
     );
