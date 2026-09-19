@@ -2,9 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:yarc/models/post.dart';
-import 'package:yarc/repositories/post_repository.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/screens/settings_screen.dart';
+import 'package:yarc/screens/top_subreddits_screen.dart';
 import 'package:yarc/screens/user_profile_screen.dart';
 
 /// Centralised navigation helper.
@@ -17,14 +17,12 @@ abstract final class AppRouter {
   static Future<void> toPostDetail(
     BuildContext context, {
     required Post post,
-    required PostRepository postRepository,
   }) {
     return Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
         builder: (_) => PostDetailScreen(
           post: post,
-          postRepository: postRepository,
         ),
       ),
     );
@@ -49,6 +47,16 @@ abstract final class AppRouter {
       context,
       MaterialPageRoute<void>(
         builder: (_) => const SettingsScreen(),
+      ),
+    );
+  }
+
+  /// Navigates to the [TopSubredditsScreen].
+  static Future<void> toTopSubreddits(BuildContext context) {
+    return Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => const TopSubredditsScreen(),
       ),
     );
   }

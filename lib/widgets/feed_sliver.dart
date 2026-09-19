@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
-import 'package:yarc/repositories/post_repository.dart';
 import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/post_list.dart';
 
@@ -14,20 +13,14 @@ import 'package:yarc/widgets/post_list.dart';
 /// Replaces the near-identical `_PostListBuilder`, `_UserProfileFeed`, and
 /// `_SavedPostsFeed` widgets that previously lived inline in each screen.
 ///
-/// The [postRepository] is forwarded to [AppRouter.toPostDetail] when no
-/// custom [onPostTap] handler is provided.
-///
 /// Pass [selectedPostId] to highlight the active post in the wide
 /// (master-detail) layout.
 class FeedSliver extends StatelessWidget {
   const FeedSliver({
-    required this.postRepository,
     this.onPostTap,
     this.selectedPostId,
     super.key,
   });
-
-  final PostRepository postRepository;
 
   /// Optional tap handler. Defaults to navigating to the post detail screen.
   final void Function(Post post)? onPostTap;
@@ -67,7 +60,6 @@ class FeedSliver extends StatelessWidget {
             AppRouter.toPostDetail(
               context,
               post: post,
-              postRepository: postRepository,
             ),
           );
         }

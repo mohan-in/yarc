@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:yarc/models/models.dart';
-import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/widgets/widgets.dart';
 
 /// A full-screen page for viewing a single post's details and comments.
@@ -10,12 +9,10 @@ import 'package:yarc/widgets/widgets.dart';
 class PostDetailScreen extends StatelessWidget {
   const PostDetailScreen({
     required this.post,
-    required this.postRepository,
     super.key,
   });
 
   final Post post;
-  final PostRepository postRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +26,6 @@ class PostDetailScreen extends StatelessWidget {
         ],
         body: PostDetailContent(
           post: post,
-          postRepository: postRepository,
         ),
       ),
     );

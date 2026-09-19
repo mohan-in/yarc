@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:developer' as developer;
 
-import 'package:dex_compat/dex_compat.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,11 +9,10 @@ import 'package:visibility_detector/visibility_detector.dart';
 import 'package:yarc/di/providers.dart';
 import 'package:yarc/notifiers/notifiers.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
-import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/screens/home_screen.dart';
-import 'package:yarc/screens/post_detail_screen.dart';
 import 'package:yarc/services/services.dart';
 import 'package:yarc/theme/theme.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/widgets/biometric_lock_overlay.dart';
 
 void main() async {
@@ -27,8 +25,12 @@ void main() async {
   );
 
   await HistoryService.init();
-  final isDesktopMode = await DexCompat.isDesktopMode();
   final prefs = await SharedPreferences.getInstance();
+
+  // On Android 15+ (API 35+), edge-to-edge is mandatory. Explicitly opting in
+  // here ensures the Flutter engine registers its WindowInsets listener and
+  // correctly exposes navigation-bar heights via MediaQuery.viewPadding.
+  unawaited(SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge));
 
   final themeNotifier = ThemeNotifier();
   await themeNotifier.init();
@@ -36,22 +38,17 @@ void main() async {
   runApp(
     ChangeNotifierProvider.value(
       value: themeNotifier,
-      child: YarcApp(
-        isDesktopMode: isDesktopMode,
-        prefs: prefs,
-      ),
+      child: YarcApp(prefs: prefs),
     ),
   );
 }
 
 class YarcApp extends StatefulWidget {
   const YarcApp({
-    required this.isDesktopMode,
     required this.prefs,
     super.key,
   });
 
-  final bool isDesktopMode;
   final SharedPreferences prefs;
 
   @override
@@ -102,7 +99,6 @@ class _YarcAppState extends State<YarcApp> {
 
           try {
             final redditService = context.read<RedditService>();
-            final postRepository = context.read<PostRepository>();
             final post = await redditService.fetchPost(result.postId!);
 
             if (post != null && context.mounted) {
@@ -112,14 +108,9 @@ class _YarcAppState extends State<YarcApp> {
               }
 
               unawaited(
-                Navigator.push(
+                AppRouter.toPostDetail(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => PostDetailScreen(
-                      post: post,
-                      postRepository: postRepository,
-                    ),
-                  ),
+                  post: post,
                 ),
               );
             } else if (context.mounted) {
@@ -185,13 +176,12 @@ class _YarcAppState extends State<YarcApp> {
             themeMode: themeMode,
             home: const HomeScreen(),
             builder: (context, child) {
-              // Apply DexCompat desktop scaling first, then layer the
-              // biometric lock overlay on top of the entire app.
-              final dexBuilder = DexCompat.builder(widget.isDesktopMode);
-              final scaled = dexBuilder(context, child);
               return _SecureWindowWrapper(
                 child: BiometricLockOverlay(
-                  child: scaled,
+                  child: SafeArea(
+                    top: false,
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               );
             },

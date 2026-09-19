@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:yarc/repositories/auth_repository.dart';
-import 'package:yarc/services/auth_service.dart';
 
 /// Notifier for managing authentication state.
 ///

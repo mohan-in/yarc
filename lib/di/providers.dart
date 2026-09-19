@@ -60,15 +60,13 @@ List<SingleChildWidget> getAppProviders(SharedPreferences prefs) {
       create: (_) => SubredditsNotifier(),
       update: (_, repo, notifier) => notifier!..setRepository(repo),
     ),
-    ChangeNotifierProxyProvider2<
-      SubredditRepository,
-      RedditService,
-      SearchNotifier
-    >(
+    ChangeNotifierProxyProvider<SubredditRepository, TopSubredditsNotifier>(
+      create: (_) => TopSubredditsNotifier(),
+      update: (_, repo, notifier) => notifier!..setRepository(repo),
+    ),
+    ChangeNotifierProxyProvider<SubredditRepository, SearchNotifier>(
       create: (_) => SearchNotifier(),
-      update: (_, repo, reddit, notifier) => notifier!
-        ..setRepository(repo)
-        ..setRedditService(reddit),
+      update: (_, repo, notifier) => notifier!..setRepository(repo),
     ),
     ChangeNotifierProvider(create: (_) => VideoAutoplayNotifier()),
   ];

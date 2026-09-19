@@ -103,21 +103,8 @@ class _SavedPostsBody extends StatelessWidget {
             ),
           )
         else
-          _SavedPostsFeed(
-            postRepository: context.read<PostRepository>(),
-          ),
+          const FeedSliver(),
       ],
     );
-  }
-}
-
-class _SavedPostsFeed extends StatelessWidget {
-  const _SavedPostsFeed({required this.postRepository});
-
-  final PostRepository postRepository;
-
-  @override
-  Widget build(BuildContext context) {
-    return FeedSliver(postRepository: postRepository);
   }
 }

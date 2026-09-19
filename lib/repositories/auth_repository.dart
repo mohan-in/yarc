@@ -1,5 +1,7 @@
 import 'package:yarc/services/auth_service.dart';
 
+export 'package:yarc/services/auth_service.dart' show AuthState;
+
 /// Repository for authentication operations.
 class AuthRepository {
   AuthRepository(this._service);

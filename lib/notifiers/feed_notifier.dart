@@ -57,6 +57,12 @@ class FeedNotifier extends ChangeNotifier {
   draw.TimeFilter _currentTimeFilter = draw.TimeFilter.day;
   String? _errorMessage;
 
+  /// Fetches comments for a post by ID.
+  Future<List<Comment>> getComments(String postId) async {
+    if (_repository == null) return [];
+    return _repository!.getComments(postId);
+  }
+
   /// Cached filtered list, invalidated by [_invalidateVisiblePosts].
   List<Post>? _cachedVisiblePosts;
 

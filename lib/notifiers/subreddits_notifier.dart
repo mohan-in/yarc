@@ -2,6 +2,7 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/foundation.dart';
 import 'package:yarc/models/custom_feed.dart';
+import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/repositories/subreddit_repository.dart';
 
@@ -41,6 +42,12 @@ class SubredditsNotifier extends ChangeNotifier {
       _errorMessage = null;
       notifyListeners();
     }
+  }
+
+  /// Fetches user profile info by username.
+  Future<RedditorInfo?> fetchUser(String username) async {
+    if (_repository == null) return null;
+    return _repository!.fetchUser(username);
   }
 
   /// Checks if a subreddit is currently subscribed. O(1) via cached Set.

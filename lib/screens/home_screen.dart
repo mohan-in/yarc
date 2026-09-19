@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/notifiers.dart';
-import 'package:yarc/repositories/repositories.dart';
 import 'package:yarc/screens/saved_posts_screen.dart';
 import 'package:yarc/utils/utils.dart';
 import 'package:yarc/widgets/widgets.dart';
@@ -159,20 +158,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _onPostTapNarrow(Post post, PostRepository postRepository) {
+  void _onPostTapNarrow(Post post) {
     unawaited(
       AppRouter.toPostDetail(
         context,
         post: post,
-        postRepository: postRepository,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final postRepository = context.read<PostRepository>();
-
     return PopScope(
       canPop: context.select<FeedNotifier, bool>(
         (n) => n.currentSubreddit == null && n.currentCustomFeedPath == null,
@@ -237,6 +233,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 }
               },
+              onTopSubredditsSelected: () {
+                unawaited(AppRouter.toTopSubreddits(context));
+              },
             );
           },
         ),
@@ -254,12 +253,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
             return _HomeBody(
               scrollController: _scrollController,
-              postRepository: postRepository,
               isWide: isWide,
               selectedPost: _selectedPost,
-              onPostTap: isWide
-                  ? _onPostTapWide
-                  : (post) => _onPostTapNarrow(post, postRepository),
+              onPostTap: isWide ? _onPostTapWide : _onPostTapNarrow,
               onSearch: () => _openSearch(context),
               onScrollToTop: _scrollToTop,
               onLogin: _handleLogin,
@@ -276,7 +272,6 @@ class _HomeScreenState extends State<HomeScreen> {
 class _HomeBody extends StatelessWidget {
   const _HomeBody({
     required this.scrollController,
-    required this.postRepository,
     required this.isWide,
     required this.selectedPost,
     required this.onPostTap,
@@ -287,7 +282,6 @@ class _HomeBody extends StatelessWidget {
   });
 
   final ScrollController scrollController;
-  final PostRepository postRepository;
   final bool isWide;
   final Post? selectedPost;
   final void Function(Post) onPostTap;
@@ -301,7 +295,6 @@ class _HomeBody extends StatelessWidget {
     if (!isWide) {
       return _NarrowLayout(
         scrollController: scrollController,
-        postRepository: postRepository,
         onPostTap: onPostTap,
         onSearch: onSearch,
         onScrollToTop: onScrollToTop,
@@ -317,7 +310,6 @@ class _HomeBody extends StatelessWidget {
           flex: 2,
           child: _NarrowLayout(
             scrollController: scrollController,
-            postRepository: postRepository,
             onPostTap: onPostTap,
             onSearch: onSearch,
             onScrollToTop: onScrollToTop,
@@ -332,7 +324,6 @@ class _HomeBody extends StatelessWidget {
           flex: 3,
           child: _DetailPane(
             selectedPost: selectedPost,
-            postRepository: postRepository,
           ),
         ),
       ],
@@ -345,11 +336,9 @@ class _HomeBody extends StatelessWidget {
 class _DetailPane extends StatelessWidget {
   const _DetailPane({
     required this.selectedPost,
-    required this.postRepository,
   });
 
   final Post? selectedPost;
-  final PostRepository postRepository;
 
   @override
   Widget build(BuildContext context) {
@@ -379,7 +368,6 @@ class _DetailPane extends StatelessWidget {
     return PostDetailContent(
       key: ValueKey(post.id),
       post: post,
-      postRepository: postRepository,
     );
   }
 }
@@ -389,7 +377,6 @@ class _DetailPane extends StatelessWidget {
 class _NarrowLayout extends StatelessWidget {
   const _NarrowLayout({
     required this.scrollController,
-    required this.postRepository,
     required this.onPostTap,
     required this.onSearch,
     required this.onScrollToTop,
@@ -399,7 +386,6 @@ class _NarrowLayout extends StatelessWidget {
   });
 
   final ScrollController scrollController;
-  final PostRepository postRepository;
   final void Function(Post) onPostTap;
   final VoidCallback onSearch;
   final VoidCallback onScrollToTop;
@@ -526,7 +512,6 @@ class _NarrowLayout extends StatelessWidget {
               }
 
               return FeedSliver(
-                postRepository: postRepository,
                 onPostTap: onPostTap,
                 selectedPostId: selectedPostId,
               );

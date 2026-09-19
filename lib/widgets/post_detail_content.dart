@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
-import 'package:yarc/repositories/repositories.dart';
+import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/widgets/comment_list.dart';
 import 'package:yarc/widgets/post_card.dart';
 
@@ -13,12 +14,10 @@ import 'package:yarc/widgets/post_card.dart';
 class PostDetailContent extends StatefulWidget {
   const PostDetailContent({
     required this.post,
-    required this.postRepository,
     super.key,
   });
 
   final Post post;
-  final PostRepository postRepository;
 
   @override
   State<PostDetailContent> createState() => _PostDetailContentState();
@@ -30,7 +29,7 @@ class _PostDetailContentState extends State<PostDetailContent> {
   @override
   void initState() {
     super.initState();
-    _commentsFuture = widget.postRepository.getComments(widget.post.id);
+    _commentsFuture = context.read<FeedNotifier>().getComments(widget.post.id);
   }
 
   @override
@@ -38,7 +37,9 @@ class _PostDetailContentState extends State<PostDetailContent> {
     super.didUpdateWidget(oldWidget);
     // Re-fetch comments when the displayed post changes.
     if (oldWidget.post.id != widget.post.id) {
-      _commentsFuture = widget.postRepository.getComments(widget.post.id);
+      _commentsFuture = context.read<FeedNotifier>().getComments(
+        widget.post.id,
+      );
     }
   }
 

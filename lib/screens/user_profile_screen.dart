@@ -6,8 +6,8 @@ import 'package:provider/provider.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
+import 'package:yarc/notifiers/subreddits_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
-import 'package:yarc/services/reddit_service.dart';
 import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/widgets/widgets.dart';
 
@@ -42,8 +42,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _loadUserInfo() async {
     try {
-      final redditService = context.read<RedditService>();
-      final info = await redditService.fetchUser(widget.username);
+      final notifier = context.read<SubredditsNotifier>();
+      final info = await notifier.fetchUser(widget.username);
       if (mounted) {
         setState(() {
           _userInfo = info;
@@ -123,9 +123,7 @@ class _UserProfileBody extends StatelessWidget {
             ],
           ),
         ),
-        _UserProfileFeed(
-          postRepository: context.read<PostRepository>(),
-        ),
+        const FeedSliver(),
       ],
     );
   }
@@ -286,16 +284,5 @@ class _StatCard extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _UserProfileFeed extends StatelessWidget {
-  const _UserProfileFeed({required this.postRepository});
-
-  final PostRepository postRepository;
-
-  @override
-  Widget build(BuildContext context) {
-    return FeedSliver(postRepository: postRepository);
   }
 }

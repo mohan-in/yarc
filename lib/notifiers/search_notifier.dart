@@ -2,12 +2,10 @@ import 'package:flutter/foundation.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/repositories/subreddit_repository.dart';
-import 'package:yarc/services/reddit_service.dart';
 
 /// Notifier for managing search state (subreddits and users).
 class SearchNotifier extends ChangeNotifier {
   SubredditRepository? _repository;
-  RedditService? _redditService;
 
   // Subreddit search state
   String _query = '';
@@ -35,12 +33,6 @@ class SearchNotifier extends ChangeNotifier {
   // ignore: use_setters_to_change_properties
   void setRepository(SubredditRepository repository) {
     _repository = repository;
-  }
-
-  /// Sets the Reddit service for user lookups.
-  // ignore: use_setters_to_change_properties
-  void setRedditService(RedditService service) {
-    _redditService = service;
   }
 
   Future<void> search(String query) async {
@@ -78,7 +70,7 @@ class SearchNotifier extends ChangeNotifier {
 
   /// Searches for a user by exact username.
   Future<void> searchUser(String username) async {
-    if (_redditService == null) {
+    if (_repository == null) {
       return;
     }
 
@@ -97,7 +89,7 @@ class SearchNotifier extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _redditService!.fetchUser(username);
+      final result = await _repository!.fetchUser(username);
       if (_userQuery == username) {
         _userResult = result;
         _isUserLoading = false;
