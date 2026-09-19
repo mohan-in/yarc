@@ -104,4 +104,21 @@ class PostRepository {
   }) async {
     return _redditService.fetchSavedPosts(username: username, after: after);
   }
+
+  /// Searches for posts within a specific subreddit.
+  Future<PostsResult> searchSubredditPosts({
+    required String query,
+    required String subredditName,
+    String? after,
+    FeedSort sort = FeedSort.hot,
+    draw.TimeFilter timeFilter = draw.TimeFilter.all,
+  }) async {
+    return _redditService.searchSubredditPosts(
+      query: query,
+      subredditName: subredditName,
+      after: after,
+      sort: sort,
+      timeFilter: timeFilter,
+    );
+  }
 }

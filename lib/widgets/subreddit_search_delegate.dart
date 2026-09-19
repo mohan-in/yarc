@@ -9,15 +9,21 @@ import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/utils/number_format_utils.dart';
 
-/// A SearchDelegate for searching subreddits and users.
+/// A SearchDelegate for searching subreddits, users, or posts in a subreddit.
 /// Returns a [SearchResult] when a result is tapped.
 class SubredditSearchDelegate extends SearchDelegate<SearchResult?> {
-  SubredditSearchDelegate();
+  SubredditSearchDelegate({this.currentSubreddit});
 
+  final String? currentSubreddit;
   Timer? _debounceTimer;
 
+  bool get _hasValidSubredditScope =>
+      currentSubreddit != null && !currentSubreddit!.startsWith('u_');
+
   @override
-  String get searchFieldLabel => 'Search subreddits or users';
+  String get searchFieldLabel => _hasValidSubredditScope
+      ? 'Search in r/$currentSubreddit or all Reddit'
+      : 'Search subreddits or users';
 
   @override
   List<Widget> buildActions(BuildContext context) {
@@ -47,7 +53,21 @@ class SubredditSearchDelegate extends SearchDelegate<SearchResult?> {
   }
 
   @override
-  Widget buildResults(BuildContext context) => _buildBody(context);
+  Widget buildResults(BuildContext context) {
+    if (_hasValidSubredditScope && query.trim().isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        close(
+          context,
+          SearchResult(
+            postSearchQuery: query.trim(),
+            targetSubreddit: currentSubreddit,
+          ),
+        );
+      });
+      return const SizedBox.shrink();
+    }
+    return _buildBody(context);
+  }
 
   @override
   Widget buildSuggestions(BuildContext context) => _buildBody(context);
@@ -55,6 +75,7 @@ class SubredditSearchDelegate extends SearchDelegate<SearchResult?> {
   Widget _buildBody(BuildContext context) {
     return _SearchBody(
       query: query,
+      currentSubreddit: _hasValidSubredditScope ? currentSubreddit : null,
       debounceTimer: _debounceTimer,
       onDebounce: (timer) => _debounceTimer = timer,
       onSelectSubreddit: (sub) {
@@ -66,6 +87,17 @@ class SubredditSearchDelegate extends SearchDelegate<SearchResult?> {
         _debounceTimer?.cancel();
         context.read<SearchNotifier>().clear();
         close(context, SearchResult(username: username));
+      },
+      onSelectScopedSearch: (searchQuery, targetSubreddit) {
+        _debounceTimer?.cancel();
+        context.read<SearchNotifier>().clear();
+        close(
+          context,
+          SearchResult(
+            postSearchQuery: searchQuery,
+            targetSubreddit: targetSubreddit,
+          ),
+        );
       },
     );
   }
@@ -85,13 +117,17 @@ class _SearchBody extends StatefulWidget {
     required this.onDebounce,
     required this.onSelectSubreddit,
     required this.onSelectUser,
+    required this.onSelectScopedSearch,
+    this.currentSubreddit,
   });
 
   final String query;
+  final String? currentSubreddit;
   final Timer? debounceTimer;
   final ValueChanged<Timer> onDebounce;
   final ValueChanged<Subreddit> onSelectSubreddit;
   final ValueChanged<String> onSelectUser;
+  final void Function(String query, String subreddit) onSelectScopedSearch;
 
   @override
   State<_SearchBody> createState() => _SearchBodyState();
@@ -149,8 +185,36 @@ class _SearchBodyState extends State<_SearchBody>
 
   @override
   Widget build(BuildContext context) {
+    final sub = widget.currentSubreddit;
+    final trimmedQuery = widget.query.trim();
+    final showScopedTile = sub != null && trimmedQuery.isNotEmpty;
+
     return Column(
       children: [
+        if (showScopedTile)
+          Material(
+            color: Theme.of(
+              context,
+            ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+            child: ListTile(
+              leading: Icon(
+                Icons.search,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              title: Text(
+                'Search "$trimmedQuery" in r/$sub',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              subtitle: const Text('Search posts inside this subreddit'),
+              trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+              onTap: () {
+                widget.onSelectScopedSearch(trimmedQuery, sub);
+              },
+            ),
+          ),
         TabBar(
           controller: _tabController,
           tabs: const [

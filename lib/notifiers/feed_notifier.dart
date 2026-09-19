@@ -50,6 +50,7 @@ class FeedNotifier extends ChangeNotifier {
 
   /// True when the feed shows the current user's saved posts.
   bool _savedMode = false;
+  String? _searchQuery;
   String? _after;
   Set<String> _readPostIds = {};
   Set<String> _hiddenPostIds = {};
@@ -72,6 +73,7 @@ class FeedNotifier extends ChangeNotifier {
   Subreddit? get currentSubredditInfo => _currentSubredditInfo;
   String? get currentCustomFeedPath => _currentCustomFeedPath;
   String? get currentCustomFeedName => _currentCustomFeedName;
+  String? get searchQuery => _searchQuery;
 
   /// Derived directly from SettingsNotifier — single source of truth.
   bool get hideRead => _settings?.hideReadPosts ?? false;
@@ -227,6 +229,19 @@ class FeedNotifier extends ChangeNotifier {
   /// Extracted from [loadPosts] to replace an unreadable nested ternary and
   /// make each branch independently unit-testable.
   Future<PostsResult> _fetchResult({required bool refresh}) {
+    // Branch 0: In-subreddit post search mode
+    if (_searchQuery != null && _currentSubreddit != null) {
+      return _repository!.searchSubredditPosts(
+        query: _searchQuery!,
+        subredditName: _currentSubreddit!,
+        after: refresh ? null : _after,
+        sort: _currentSort,
+        timeFilter: _currentTimeFilter == draw.TimeFilter.day
+            ? draw.TimeFilter.all
+            : _currentTimeFilter,
+      );
+    }
+
     // Branch 1: Saved-posts mode (always requires a logged-in username).
     if (_savedMode) {
       return _repository!.getSavedPosts(
@@ -282,6 +297,7 @@ class FeedNotifier extends ChangeNotifier {
   void _resetFeed() {
     _posts = [];
     _after = null;
+    _searchQuery = null;
     _currentSubreddit = null;
     _currentSubredditInfo = null;
     _currentCustomFeedPath = null;
@@ -290,6 +306,33 @@ class FeedNotifier extends ChangeNotifier {
     _savedMode = false;
     _isLoading = false;
     _invalidateVisiblePosts();
+  }
+
+  /// Performs a post search scoped to the currently active subreddit.
+  Future<void> searchInCurrentSubreddit(String query) async {
+    if (_repository == null || _currentSubreddit == null) return;
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      await clearSubredditSearch();
+      return;
+    }
+
+    _searchQuery = trimmed;
+    _posts = [];
+    _after = null;
+    _invalidateVisiblePosts();
+    await loadPosts(refresh: true);
+  }
+
+  /// Clears the active in-subreddit search query and restores the normal feed.
+  Future<void> clearSubredditSearch() async {
+    if (_searchQuery != null) {
+      _searchQuery = null;
+      _posts = [];
+      _after = null;
+      _invalidateVisiblePosts();
+      await loadPosts(refresh: true);
+    }
   }
 
   void selectSubreddit(String? subreddit) {

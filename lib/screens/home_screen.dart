@@ -126,16 +126,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openSearch(BuildContext context) async {
+    final currentSub = context.read<FeedNotifier>().currentSubreddit;
     final result = await showSearch<SearchResult?>(
       context: context,
-      delegate: SubredditSearchDelegate(),
+      delegate: SubredditSearchDelegate(currentSubreddit: currentSub),
     );
 
     if (result == null || !context.mounted) {
       return;
     }
 
-    if (result.subreddit != null) {
+    if (result.postSearchQuery != null) {
+      unawaited(
+        context.read<FeedNotifier>().searchInCurrentSubreddit(
+          result.postSearchQuery!,
+        ),
+      );
+    } else if (result.subreddit != null) {
       context.read<FeedNotifier>().selectSubredditWithInfo(result.subreddit!);
     } else if (result.username != null) {
       // Navigate to the user's profile feed using the u_{username} subreddit.
@@ -511,9 +518,69 @@ class _NarrowLayout extends StatelessWidget {
                 );
               }
 
-              return FeedSliver(
-                onPostTap: onPostTap,
-                selectedPostId: selectedPostId,
+              return SliverMainAxisGroup(
+                slivers: [
+                  Selector<FeedNotifier, String?>(
+                    selector: (_, feed) => feed.searchQuery,
+                    builder: (context, searchQuery, _) {
+                      if (searchQuery == null) {
+                        return const SliverToBoxAdapter(
+                          child: SizedBox.shrink(),
+                        );
+                      }
+                      return SliverToBoxAdapter(
+                        child: Material(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.search,
+                                  size: 18,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Results for "$searchQuery"',
+                                    style: TextStyle(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close, size: 18),
+                                  tooltip: 'Clear search',
+                                  onPressed: () {
+                                    unawaited(
+                                      context
+                                          .read<FeedNotifier>()
+                                          .clearSubredditSearch(),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  FeedSliver(
+                    onPostTap: onPostTap,
+                    selectedPostId: selectedPostId,
+                  ),
+                ],
               );
             },
           ),

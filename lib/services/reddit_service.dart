@@ -596,6 +596,73 @@ class RedditService {
     }
   }
 
+  /// Searches for posts within a specific subreddit.
+  Future<PostsResult> searchSubredditPosts({
+    required String query,
+    required String subredditName,
+    String? after,
+    FeedSort sort = FeedSort.hot,
+    draw.TimeFilter timeFilter = draw.TimeFilter.all,
+  }) async {
+    final reddit = _reddit;
+    final trimmedQuery = query.trim();
+    if (reddit == null || trimmedQuery.isEmpty) {
+      return (posts: <Post>[], nextAfter: null);
+    }
+
+    try {
+      return await _withAuthRetry('searchSubredditPosts', () async {
+        final url = '/r/$subredditName/search';
+        final sortParam = switch (sort) {
+          FeedSort.best || FeedSort.hot => 'relevance',
+          FeedSort.newest => 'new',
+          FeedSort.top => 'top',
+          FeedSort.controversial => 'controversial',
+          FeedSort.rising => 'hot',
+        };
+
+        final params = <String, String>{
+          'q': trimmedQuery,
+          'restrict_sr': 'on',
+          'type': 'link',
+          'limit': '50',
+          'after': ?after,
+          'sort': sortParam,
+          't': timeFilter.toString().split('.').last,
+        };
+
+        final response = await reddit.get(url, params: params);
+        if (response is Map) {
+          final listing = response['listing'] as List?;
+          final nextAfter = response['after'] as String?;
+          if (listing != null) {
+            final posts = <Post>[];
+            for (final item in listing) {
+              if (item is draw.Submission) {
+                try {
+                  posts.add(PostParser.parse(item));
+                } on Exception catch (e) {
+                  developer.log(
+                    'Failed to parse search submission ${item.id}: $e',
+                    name: 'RedditService',
+                  );
+                }
+              }
+            }
+            return (posts: posts, nextAfter: nextAfter);
+          }
+        }
+        return (posts: <Post>[], nextAfter: null);
+      });
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to search posts in r/$subredditName: $e',
+        name: 'RedditService',
+      );
+      return (posts: <Post>[], nextAfter: null);
+    }
+  }
+
   /// Fetches a specific subreddit by name.
   Future<Subreddit?> fetchSubredditInfo(String name) async {
     final reddit = _reddit;
