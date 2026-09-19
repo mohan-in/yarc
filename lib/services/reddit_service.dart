@@ -444,6 +444,87 @@ class RedditService {
     }
   }
 
+  /// Fetches the most popular subreddits with lazy pagination.
+  ///
+  /// Pass [after] to continue from a previous page. The result contains
+  /// the fetched [Subreddit] list and a cursor for the next page.
+  Future<SubredditsResult> fetchPopularSubreddits({String? after}) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      return (subreddits: <Subreddit>[], nextAfter: null);
+    }
+
+    try {
+      return await _withAuthRetry('fetchPopularSubreddits', () async {
+        final params = <String, String>{'limit': '$kDefaultPostLimit'};
+        if (after != null) {
+          params['after'] = after;
+        }
+
+        // Use a raw GET so we get both the subreddit data and the
+        // pagination `after` token in a single network round-trip.
+        // DRAW's objectify() converts the Listing response into:
+        //   {'listing': [SubredditRef, ...], 'after': '...'}
+        final response = await reddit.get(
+          '/subreddits/popular',
+          params: params,
+        );
+
+        final subs = <Subreddit>[];
+        String? nextAfterToken;
+
+        if (response is Map) {
+          nextAfterToken = response['after'] as String?;
+          final listing = response['listing'] as List?;
+          if (listing != null) {
+            var batchCount = 0;
+            for (final item in listing) {
+              if (item is draw.Subreddit) {
+                try {
+                  subs.add(Subreddit.fromDraw(item));
+                } on Exception catch (e) {
+                  developer.log(
+                    'Failed to parse popular subreddit: $e',
+                    name: 'RedditService',
+                  );
+                }
+              } else if (item is draw.SubredditRef) {
+                // SubredditRef needs populate() — fall back gracefully.
+                try {
+                  final populated = await item.populate();
+                  subs.add(Subreddit.fromDraw(populated));
+                } on Exception catch (e) {
+                  developer.log(
+                    'Failed to populate SubredditRef: $e',
+                    name: 'RedditService',
+                  );
+                }
+              }
+              if (++batchCount % 5 == 0) {
+                await Future<void>.delayed(Duration.zero);
+              }
+            }
+          }
+        }
+
+        developer.log(
+          'fetchPopularSubreddits: ${subs.length} subs, '
+          'nextAfter: $nextAfterToken',
+          name: 'RedditService',
+        );
+        return (subreddits: subs, nextAfter: nextAfterToken);
+      });
+    } on Exception catch (e, stack) {
+      developer.log(
+        'fetchPopularSubreddits failed: $e',
+        name: 'RedditService',
+        error: e,
+        stackTrace: stack,
+      );
+      return (subreddits: <Subreddit>[], nextAfter: null);
+    }
+  }
+
   /// Fetches the user's subscribed subreddits.
   /// Returns an empty list on failure or if not logged in.
   Future<List<Subreddit>> fetchSubscribedSubreddits() async {

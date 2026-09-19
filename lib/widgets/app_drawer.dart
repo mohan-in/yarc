@@ -14,6 +14,7 @@ class AppDrawer extends StatelessWidget {
     required this.onCustomFeedSelected,
     required this.onLogout,
     required this.onSavedSelected,
+    required this.onTopSubredditsSelected,
     super.key,
     this.currentSubreddit,
     this.currentCustomFeedPath,
@@ -27,6 +28,7 @@ class AppDrawer extends StatelessWidget {
   final void Function(CustomFeed) onCustomFeedSelected;
   final VoidCallback onLogout;
   final VoidCallback onSavedSelected;
+  final VoidCallback onTopSubredditsSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -81,6 +83,16 @@ class AppDrawer extends StatelessWidget {
           onTap: () {
             Navigator.pop(context);
             onSavedSelected();
+          },
+        ),
+
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 28),
+          leading: const Icon(Icons.trending_up),
+          title: const Text('Popular Subreddits'),
+          onTap: () {
+            Navigator.pop(context);
+            onTopSubredditsSelected();
           },
         ),
 
