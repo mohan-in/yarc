@@ -259,6 +259,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       _chewieController = ChewieController(
         videoPlayerController: _videoPlayerController,
         aspectRatio: _videoPlayerController.value.aspectRatio,
+        showControlsOnInitialize: false,
         deviceOrientationsOnEnterFullScreen: [
           DeviceOrientation.portraitUp,
           DeviceOrientation.portraitDown,
