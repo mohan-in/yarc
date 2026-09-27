@@ -136,17 +136,15 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    // Subreddit and user taps are handled directly inside the delegate
+    // (pushed without closing), so only in-subreddit post search queries
+    // return a result here.
     if (result.postSearchQuery != null) {
       unawaited(
         context.read<FeedNotifier>().searchInCurrentSubreddit(
           result.postSearchQuery!,
         ),
       );
-    } else if (result.subreddit != null) {
-      context.read<FeedNotifier>().selectSubredditWithInfo(result.subreddit!);
-    } else if (result.username != null) {
-      // Navigate to the user's profile feed using the u_{username} subreddit.
-      context.read<FeedNotifier>().selectSubreddit('u_${result.username}');
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/search_notifier.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/utils/constants.dart';
 import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/utils/image_utils.dart';
@@ -80,13 +81,14 @@ class SubredditSearchDelegate extends SearchDelegate<SearchResult?> {
       onDebounce: (timer) => _debounceTimer = timer,
       onSelectSubreddit: (sub) {
         _debounceTimer?.cancel();
-        context.read<SearchNotifier>().clear();
-        close(context, SearchResult(subreddit: sub));
+        // Do NOT clear the SearchNotifier — the search page stays alive in
+        // the back stack so results must still be visible on back-navigate.
+        unawaited(AppRouter.toSubredditFeed(context, subreddit: sub));
       },
       onSelectUser: (username) {
         _debounceTimer?.cancel();
-        context.read<SearchNotifier>().clear();
-        close(context, SearchResult(username: username));
+        // Same rationale as onSelectSubreddit.
+        unawaited(AppRouter.toUserProfile(context, username));
       },
       onSelectScopedSearch: (searchQuery, targetSubreddit) {
         _debounceTimer?.cancel();

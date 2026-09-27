@@ -113,9 +113,16 @@ class FeedNotifier extends ChangeNotifier {
   /// Sets the repository. Called by ProxyProvider.
   void setRepository(PostRepository repository) {
     _repository = repository;
-    // If selectUserProfile() was called before the repository was ready,
-    // trigger the deferred initial load now.
-    if (_profileUsername != null && _posts.isEmpty && !_isLoading) {
+    // If any select*() method was called before the repository was ready,
+    // trigger the deferred initial load now. This covers subreddit feeds,
+    // custom feeds, user profiles, and saved-posts mode — all of which call
+    // loadPosts() in their select* method, but bail out early because the
+    // repository is null at create() time.
+    final hasSelection =
+        _currentSubreddit != null ||
+        _currentCustomFeedPath != null ||
+        _profileUsername != null;
+    if (hasSelection && _posts.isEmpty && !_isLoading) {
       unawaited(loadPosts());
     }
   }

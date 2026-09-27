@@ -4,9 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/subreddit.dart';
-import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/subreddits_notifier.dart';
 import 'package:yarc/notifiers/top_subreddits_notifier.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/utils/number_format_utils.dart';
 
@@ -168,6 +168,7 @@ class _TopSubredditsList extends StatelessWidget {
         }
         return _SubredditListTile(
           subreddit: subreddits[index],
+          rank: index + 1,
         );
       },
     );
@@ -177,9 +178,11 @@ class _TopSubredditsList extends StatelessWidget {
 class _SubredditListTile extends StatelessWidget {
   const _SubredditListTile({
     required this.subreddit,
+    required this.rank,
   });
 
   final Subreddit subreddit;
+  final int rank;
 
   @override
   Widget build(BuildContext context) {
@@ -189,19 +192,61 @@ class _SubredditListTile extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       onTap: () {
-        // Select this subreddit on the global FeedNotifier, then pop back
-        // to HomeScreen so the user lands directly on the subreddit feed.
-        context.read<FeedNotifier>().selectSubredditWithInfo(subreddit);
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        // Push a scoped SubredditFeedScreen so the back stack is preserved:
+        // [HomeScreen → TopSubredditsScreen → SubredditFeedScreen].
+        // Pressing back returns to Popular Subreddits, not HomeScreen.
+        unawaited(AppRouter.toSubredditFeed(context, subreddit: subreddit));
       },
-      leading: _SubredditAvatar(subreddit: subreddit),
-      title: Text(
-        'r/${subreddit.displayName}',
-        style: theme.textTheme.titleSmall?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+      leading: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 32,
+            child: Text(
+              '$rank',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: 8),
+          _SubredditAvatar(subreddit: subreddit),
+        ],
+      ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (subreddit.isOver18) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'NSFW',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Flexible(
+            child: Text(
+              'r/${subreddit.displayName}',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
       subtitle: subreddit.subscriberCount != null
           ? Row(
