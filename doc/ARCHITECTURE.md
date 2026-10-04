@@ -316,3 +316,10 @@ MultiProvider(
 | `visibility_detector` | Scroll-based visibility tracking (autoplay) |
 | `intl` | Date/number formatting |
 | `html_unescape` | HTML entity decoding |
+
+---
+
+## Technical Debt & Improvements Roadmap
+
+For identified architectural gaps, model refactoring tasks, test coverage expansion, and performance improvements, see [IMPROVEMENTS_ROADMAP.md](IMPROVEMENTS_ROADMAP.md).
+

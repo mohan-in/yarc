@@ -57,13 +57,27 @@ To run this app, you need a Reddit API Client ID to access Reddit's data.
 5. Click **"create app"**.
 6. Copy the string listed just under your app name. This is your **Client ID**.
 
-### 2. Run the App
+### 2. Configure & Run the App
 
-```bash
-flutter run --dart-define=REDDIT_CLIENT_ID=YOUR_CLIENT_ID
-```
+1. Copy the example configuration file:
+   ```bash
+   cp config.example.json config.json
+   ```
 
-Replace `YOUR_CLIENT_ID` with the actual ID you obtained from Reddit.
+2. Open `config.json` and enter your Reddit Client ID:
+   ```json
+   {
+     "REDDIT_CLIENT_ID": "YOUR_CLIENT_ID_HERE"
+   }
+   ```
+   *(Note: `config.json` is gitignored so your credentials won't be committed).*
+
+3. Run the app:
+   ```bash
+   flutter run --dart-define-from-file=config.json
+   ```
+
+*(Alternatively, you can pass `--dart-define=REDDIT_CLIENT_ID=YOUR_CLIENT_ID` directly via the CLI).*
 
 ## Documentation
 

@@ -5,24 +5,30 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "yarc",
+            "name": "YARC",
             "request": "launch",
             "type": "dart",
             "toolArgs": [
-                "--dart-define=REDDIT_CLIENT_ID=YOUR_CLIENT_ID"
+                "--dart-define-from-file=config.json"
             ]
         },
         {
-            "name": "yarc (profile mode)",
+            "name": "YARC (profile mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "profile"
+            "flutterMode": "profile",
+            "toolArgs": [
+                "--dart-define-from-file=config.json"
+            ]
         },
         {
-            "name": "yarc (release mode)",
+            "name": "YARC (release mode)",
             "request": "launch",
             "type": "dart",
-            "flutterMode": "release"
+            "flutterMode": "release",
+            "toolArgs": [
+                "--dart-define-from-file=config.json"
+            ]
         }
     ]
 }
