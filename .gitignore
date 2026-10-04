@@ -31,6 +31,7 @@ migrate_working_dir/
 .pub-cache/
 .pub/
 /build/
+/android/build/
 /coverage/
 
 # Symbolication related
@@ -46,4 +47,9 @@ app.*.map.json
 
 # Flutter/Dart DevTools related
 devtools_options.yaml
+
+# Local environment & config files
+config.json
+config.*.json
+!config.example.json
 
