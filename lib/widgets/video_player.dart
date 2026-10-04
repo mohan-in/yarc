@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:developer' as developer;
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +12,7 @@ import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/notifiers/video_autoplay_notifier.dart';
 import 'package:yarc/theme/theme.dart';
 import 'package:yarc/utils/constants.dart';
+import 'package:yarc/utils/image_utils.dart';
 
 class RedditVideoPlayer extends StatefulWidget {
   const RedditVideoPlayer({
@@ -16,20 +20,25 @@ class RedditVideoPlayer extends StatefulWidget {
     super.key,
     this.autoPlay = false,
     this.aspectRatio = 16 / 9,
+    this.thumbnailUrl,
   });
 
   final String videoUrl;
   final bool autoPlay;
   final double aspectRatio;
+  final String? thumbnailUrl;
 
   @override
   State<RedditVideoPlayer> createState() => _RedditVideoPlayerState();
 }
 
 class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
-  late VideoPlayerController _videoPlayerController;
+  VideoPlayerController? _videoPlayerController;
   ChewieController? _chewieController;
   bool _isInit = false;
+  bool _isInitializing = false;
+  bool _userTappedToPlay = false;
+
   // Unique ID for this player instance, stable across rebuilds.
   // Using a per-instance key (not the URL) avoids ID collisions when two
   // posts share the same video URL (e.g. crossposts).
@@ -53,8 +62,8 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   double _lastVolume = 1;
 
   void _onVideoControllerUpdate() {
-    if (mounted) {
-      final currentVolume = _videoPlayerController.value.volume;
+    if (mounted && _videoPlayerController != null) {
+      final currentVolume = _videoPlayerController!.value.volume;
       if (currentVolume != _lastVolume) {
         _lastVolume = currentVolume;
         final isMuted = currentVolume == 0;
@@ -69,16 +78,12 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   @override
   void initState() {
     super.initState();
-    // Generate a unique ID from this object's identity to avoid collisions
-    // between two players that share the same videoUrl (e.g. crossposts).
     _playerId = '${identityHashCode(this)}_${widget.videoUrl.hashCode}';
     _notifier = context.read<VideoAutoplayNotifier>();
     _notifier.addListener(_onNotifierUpdate);
     _settings = context.read<SettingsNotifier>();
     _settings.addListener(_onSettingsChanged);
     _lastVolume = _settings.muteVideosByDefault ? 0.0 : 1.0;
-    // updateInterval is set globally in main.dart — no per-instance override.
-    unawaited(_initializePlayer());
   }
 
   @override
@@ -94,15 +99,12 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
 
   /// Called when [SettingsNotifier] changes — applies mute/unmute instantly.
   void _onSettingsChanged() {
-    if (!_isInit || !mounted) return;
+    if (!_isInit || !mounted || _videoPlayerController == null) return;
     final targetVolume = _settings.muteVideosByDefault ? 0.0 : 1.0;
-    unawaited(_videoPlayerController.setVolume(targetVolume));
+    unawaited(_videoPlayerController!.setVolume(targetVolume));
   }
 
   /// Called when the notifier's `playingVideoId` changes.
-  /// Handles three cases: another video took over (pause us), we are
-  /// the active video (resume if needed), or nobody is playing and
-  /// we are visible (claim playback).
   void _onNotifierUpdate() {
     final isFullScreen = _chewieController?.isFullScreen ?? false;
     if (!_isInit || _chewieController == null || !mounted || isFullScreen) {
@@ -118,21 +120,15 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       unawaited(_chewieController!.pause());
     } else if (activeId == _playerId &&
         _overlapsSafeZone &&
-        widget.autoPlay &&
+        (widget.autoPlay || _userTappedToPlay) &&
         !isFullScreen &&
         !_chewieController!.isPlaying) {
       // We are the active video and visible — resume.
       unawaited(_chewieController!.play());
     } else if (activeId == null &&
         _overlapsSafeZone &&
-        widget.autoPlay &&
+        (widget.autoPlay || _userTappedToPlay) &&
         !isFullScreen) {
-      // No video is currently playing and we are visible — claim it.
-      // This handles the case where VisibilityDetector callbacks fire
-      // out of order: the incoming video's callback ran before the
-      // outgoing video released ownership, so _tryPlay() was a no-op.
-      // Now that the outgoing video has stopped, we get notified here
-      // and can claim playback.
       _tryPlay();
     }
   }
@@ -142,8 +138,12 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     super.didUpdateWidget(oldWidget);
     if (widget.autoPlay != oldWidget.autoPlay) {
       if (widget.autoPlay && _overlapsSafeZone) {
-        _tryPlay();
-      } else if (!widget.autoPlay) {
+        if (!_isInit && !_isInitializing) {
+          unawaited(_initializePlayer(andPlay: true));
+        } else if (_isInit) {
+          _tryPlay();
+        }
+      } else if (!widget.autoPlay && !_userTappedToPlay) {
         _tryPause();
       }
     }
@@ -171,7 +171,11 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       final safeZoneBottom = screenHeight * 0.75;
 
       return top < safeZoneBottom && bottom > safeZoneTop;
-    } on Object catch (_) {
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to calculate safe zone: $e',
+        name: 'RedditVideoPlayer',
+      );
       return false;
     }
   }
@@ -190,7 +194,7 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   /// and visibility.
   void _evaluateAutoplay() {
     final isFullScreen = _chewieController?.isFullScreen ?? false;
-    if (!mounted || !_isInit || _chewieController == null || isFullScreen) {
+    if (!mounted || isFullScreen) {
       return;
     }
 
@@ -202,19 +206,18 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
       _overlapsSafeZone = currentlyInSafeZone;
     }
 
-    if (_overlapsSafeZone && widget.autoPlay) {
-      _tryPlay();
-    } else if (!_overlapsSafeZone) {
+    if (_overlapsSafeZone && (widget.autoPlay || _userTappedToPlay)) {
+      if (!_isInit && !_isInitializing) {
+        unawaited(_initializePlayer(andPlay: true));
+      } else if (_isInit) {
+        _tryPlay();
+      }
+    } else if (!_overlapsSafeZone && _isInit) {
       _tryPause();
     }
   }
 
   /// Claims playback ownership and starts playing.
-  ///
-  /// If nobody is playing, or if we already own playback, we play.
-  /// If another video is currently playing, we do NOT steal playback.
-  /// We wait for it to leave the safe zone, at which point it releases
-  /// ownership and [_onNotifierUpdate] will trigger us to start.
   void _tryPlay() {
     final isFullScreen = _chewieController?.isFullScreen ?? false;
     if (!_isInit || _chewieController == null || isFullScreen) {
@@ -239,34 +242,40 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     _notifier.stop(_playerId);
   }
 
-  Future<void> _initializePlayer() async {
-    _videoPlayerController = VideoPlayerController.networkUrl(
+  Future<void> _initializePlayer({bool andPlay = false}) async {
+    if (_isInitializing || _isInit) {
+      return;
+    }
+    _isInitializing = true;
+
+    final controller = VideoPlayerController.networkUrl(
       Uri.parse(widget.videoUrl),
     );
+    _videoPlayerController = controller;
 
     try {
-      await _videoPlayerController.initialize();
+      await controller.initialize();
       // Apply mute setting immediately after initialization.
       if (_settings.muteVideosByDefault) {
-        await _videoPlayerController.setVolume(0);
+        await controller.setVolume(0);
       }
       if (!mounted) {
         return;
       }
-      _videoPlayerController.addListener(_onVideoControllerUpdate);
+      controller.addListener(_onVideoControllerUpdate);
       _hasVideoListener = true;
 
       _chewieController = ChewieController(
-        videoPlayerController: _videoPlayerController,
-        aspectRatio: _videoPlayerController.value.aspectRatio,
+        videoPlayerController: controller,
+        aspectRatio: controller.value.aspectRatio,
         showControlsOnInitialize: false,
-        deviceOrientationsOnEnterFullScreen: [
+        deviceOrientationsOnEnterFullScreen: const [
           DeviceOrientation.portraitUp,
           DeviceOrientation.portraitDown,
           DeviceOrientation.landscapeLeft,
           DeviceOrientation.landscapeRight,
         ],
-        deviceOrientationsAfterFullScreen: [
+        deviceOrientationsAfterFullScreen: const [
           DeviceOrientation.portraitUp,
           DeviceOrientation.portraitDown,
         ],
@@ -296,15 +305,23 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
 
       setState(() {
         _isInit = true;
+        _isInitializing = false;
       });
 
-      // If we are already visible (e.g. first video in feed on load),
-      // kick off autoplay immediately. VisibilityDetector will fire shortly
-      // but this covers the initialization race.
-      if (widget.autoPlay && _overlapsSafeZone && mounted) {
+      if ((andPlay || (widget.autoPlay && _overlapsSafeZone)) && mounted) {
         _tryPlay();
       }
-    } on Object catch (_) {}
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to initialize video player: $e',
+        name: 'RedditVideoPlayer',
+      );
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -312,18 +329,16 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
     _scrollPosition?.removeListener(_evaluateAutoplay);
     _notifier.removeListener(_onNotifierUpdate);
     _settings.removeListener(_onSettingsChanged);
-    if (_hasVideoListener) {
-      _videoPlayerController.removeListener(_onVideoControllerUpdate);
+    if (_hasVideoListener && _videoPlayerController != null) {
+      _videoPlayerController!.removeListener(_onVideoControllerUpdate);
     }
-    // Always stop playback and release ownership on dispose.
-    // This is critical — without it, a video scrolled far off-screen
-    // (whose widget is disposed by the list) continues to hold
-    // playingVideoId and blocks all other videos from playing.
     if (_chewieController != null && _chewieController!.isPlaying) {
       unawaited(_chewieController!.pause());
     }
     _notifier.stop(_playerId);
-    unawaited(_videoPlayerController.dispose());
+    if (_videoPlayerController != null) {
+      unawaited(_videoPlayerController!.dispose());
+    }
     _chewieController?.dispose();
     super.dispose();
   }
@@ -331,16 +346,84 @@ class _RedditVideoPlayerState extends State<RedditVideoPlayer> {
   @override
   Widget build(BuildContext context) {
     if (!_isInit || _chewieController == null) {
-      return AspectRatio(
-        aspectRatio: widget.aspectRatio,
-        child: const ColoredBox(
-          color: Colors.black12,
-          child: Center(child: CircularProgressIndicator()),
-        ),
+      final placeholder = widget.thumbnailUrl != null
+          ? GestureDetector(
+              onTap: () {
+                setState(() {
+                  _userTappedToPlay = true;
+                });
+                unawaited(_initializePlayer(andPlay: true));
+              },
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  AspectRatio(
+                    aspectRatio: widget.aspectRatio,
+                    child: CachedNetworkImage(
+                      imageUrl: ImageUtils.getCorsUrl(widget.thumbnailUrl!),
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) =>
+                          const ColoredBox(color: Colors.black12),
+                      errorWidget: (context, url, error) => const ColoredBox(
+                        color: Colors.black12,
+                        child: Icon(
+                          Icons.movie_outlined,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_isInitializing)
+                    const Center(child: CircularProgressIndicator())
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.play_arrow,
+                        color: Colors.white,
+                        size: 40,
+                      ),
+                    ),
+                ],
+              ),
+            )
+          : AspectRatio(
+              aspectRatio: widget.aspectRatio,
+              child: ColoredBox(
+                color: Colors.black12,
+                child: Center(
+                  child: _isInitializing
+                      ? const CircularProgressIndicator()
+                      : IconButton(
+                          iconSize: 48,
+                          icon: const Icon(
+                            Icons.play_circle_outline,
+                            color: Colors.white70,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _userTappedToPlay = true;
+                            });
+                            unawaited(_initializePlayer(andPlay: true));
+                          },
+                        ),
+                ),
+              ),
+            );
+
+      return VisibilityDetector(
+        key: ValueKey('video_$_playerId'),
+        onVisibilityChanged: _onVisibilityChanged,
+        child: placeholder,
       );
     }
 
-    final nativeAspectRatio = _videoPlayerController.value.aspectRatio;
+    final nativeAspectRatio = _videoPlayerController!.value.aspectRatio;
     final viewportHeight = MediaQuery.of(context).size.height;
     final maxHeight = viewportHeight * kVideoMaxHeightFraction;
     final screenWidth = MediaQuery.of(context).size.width;

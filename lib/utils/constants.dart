@@ -59,3 +59,12 @@ const Duration kScrollToTopDuration = Duration(milliseconds: 300);
 /// Localized reason shown to the user during the biometric auth prompt
 /// when reopening the app on an NSFW subreddit.
 const String kBiometricNsfwReason = 'Authenticate to view NSFW content';
+
+/// Maximum number of read post IDs to retain in local history (LRU cap).
+const int kMaxReadHistoryCount = 2000;
+
+/// Hive box name for caching feed posts offline.
+const String kFeedCacheBoxName = 'feed_cache';
+
+/// Maximum number of posts to cache per feed view.
+const int kMaxCachedPostsPerFeed = 50;

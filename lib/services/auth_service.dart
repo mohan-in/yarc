@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'dart:math';
 
 import 'package:draw/draw.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:yarc/utils/constants.dart';
@@ -12,7 +13,11 @@ enum AuthState { loggedIn, loggedOut, unauthenticated }
 
 /// Service responsible for Reddit OAuth2 authentication.
 class AuthService {
-  AuthService(this._prefs);
+  AuthService({
+    FlutterSecureStorage secureStorage = const FlutterSecureStorage(),
+    SharedPreferences? prefs,
+  }) : _secureStorage = secureStorage,
+       _prefs = prefs;
 
   static const String _clientId = String.fromEnvironment('REDDIT_CLIENT_ID');
   static const String _credentialsKey = 'reddit_credentials';
@@ -30,7 +35,8 @@ class AuthService {
 
   static const String _redirectUri = 'com.mohan.reddit.client://callback';
 
-  final SharedPreferences _prefs;
+  final FlutterSecureStorage _secureStorage;
+  final SharedPreferences? _prefs;
 
   Reddit? _reddit;
   String? _lastSavedCredentials;
@@ -63,9 +69,53 @@ class AuthService {
     try {
       final credentials = _reddit!.auth.credentials;
       return credentials.refreshToken != null;
-    } on Exception catch (_) {
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to read auth credentials: $e',
+        name: 'AuthService',
+      );
       return false;
     }
+  }
+
+  /// Reads stored credentials from secure storage, with automatic migration
+  /// from legacy SharedPreferences if found.
+  Future<String?> _readCredentials() async {
+    try {
+      final secure = await _secureStorage.read(key: _credentialsKey);
+      if (secure != null && secure.isNotEmpty) {
+        return secure;
+      }
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to read credentials from secure storage: $e',
+        name: 'AuthService',
+      );
+    }
+
+    if (_prefs != null) {
+      final legacy = _prefs.getString(_credentialsKey);
+      if (legacy != null && legacy.isNotEmpty) {
+        try {
+          await _secureStorage.write(
+            key: _credentialsKey,
+            value: legacy,
+          );
+          await _prefs.remove(_credentialsKey);
+          developer.log(
+            'Migrated credentials from SharedPreferences to secure storage',
+            name: 'AuthService',
+          );
+        } on Exception catch (e) {
+          developer.log(
+            'Failed to migrate credentials to secure storage: $e',
+            name: 'AuthService',
+          );
+        }
+        return legacy;
+      }
+    }
+    return null;
   }
 
   /// Persists the current credentials to storage.
@@ -80,15 +130,23 @@ class AuthService {
     try {
       final currentCredentials = _reddit!.auth.credentials.toJson();
       if (currentCredentials != _lastSavedCredentials) {
-        await _prefs.setString(_credentialsKey, currentCredentials);
+        await _secureStorage.write(
+          key: _credentialsKey,
+          value: currentCredentials,
+        );
         _lastSavedCredentials = currentCredentials;
       }
-    } on Exception catch (_) {}
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to persist credentials: $e',
+        name: 'AuthService',
+      );
+    }
   }
 
   /// Initializes the data source, restoring the session if available.
   Future<void> init() async {
-    final credentialsJson = _prefs.getString(_credentialsKey);
+    final credentialsJson = await _readCredentials();
 
     if (credentialsJson != null) {
       if (_clientId.isEmpty) {
@@ -129,10 +187,14 @@ class AuthService {
         } else {
           _authStateController.add(AuthState.loggedOut);
         }
-      } on Exception catch (_) {
+      } on Exception catch (e) {
         // Do NOT call logout() here. The stored credentials may still be
         // valid. Only emit loggedOut so the UI shows a login prompt without
         // destroying the refresh token — the user can retry without re-auth.
+        developer.log(
+          'Failed to restore session on startup: $e',
+          name: 'AuthService',
+        );
         _authStateController.add(AuthState.loggedOut);
       }
     } else {
@@ -167,7 +229,7 @@ class AuthService {
       return false;
     }
 
-    final credentialsJson = _prefs.getString(_credentialsKey);
+    final credentialsJson = await _readCredentials();
     if (credentialsJson == null) {
       return false;
     }
@@ -199,8 +261,8 @@ class AuthService {
   Future<String?> authenticate() async {
     if (_clientId.isEmpty) {
       return 'Reddit Client ID not configured. '
-          'Please pass it via '
-          '--dart-define=REDDIT_CLIENT_ID=...';
+          'Please define it in config.json or pass it via '
+          '--dart-define-from-file=config.json';
     }
 
     try {
@@ -270,16 +332,31 @@ class AuthService {
     _reddit = redditInstance;
 
     final credentialsJson = _reddit!.auth.credentials.toJson();
-    await _prefs.setString(_credentialsKey, credentialsJson);
+    await _secureStorage.write(
+      key: _credentialsKey,
+      value: credentialsJson,
+    );
     _lastSavedCredentials = credentialsJson;
   }
 
   /// Logs out the user by clearing stored credentials.
   Future<void> logout() async {
-    await _prefs.remove(_credentialsKey);
-    _reddit = null;
-    _currentUsername = null;
-    _authStateController.add(AuthState.loggedOut);
+    try {
+      await _secureStorage.delete(key: _credentialsKey);
+      if (_prefs != null) {
+        await _prefs.remove(_credentialsKey);
+      }
+    } on Exception catch (e) {
+      developer.log(
+        'Failed to clear credentials on logout: $e',
+        name: 'AuthService',
+      );
+    } finally {
+      _reddit = null;
+      _lastSavedCredentials = null;
+      _currentUsername = null;
+      _authStateController.add(AuthState.loggedOut);
+    }
   }
 
   /// Closes the auth state stream controller.
