@@ -1,8 +1,8 @@
-import 'package:html_unescape/html_unescape.dart';
-
 /// Utility helpers for HTML/text processing of Reddit API content.
 class HtmlUtils {
-  static final HtmlUnescape _unescape = HtmlUnescape();
+  static final _htmlEntityRegex = RegExp(
+    '&(#(?:x[0-9a-fA-F]+|[0-9]+)|[a-zA-Z]+);',
+  );
 
   /// Matches Reddit's Giphy comment embed shorthand, e.g.
   /// `[giphy:abc123XYZ:downsized](http://...)` or `[giphy:abc123XYZ](http://...)`.
@@ -20,8 +20,48 @@ class HtmlUtils {
     caseSensitive: false,
   );
 
+  static const _namedEntities = <String, String>{
+    'amp': '&',
+    'lt': '<',
+    'gt': '>',
+    'quot': '"',
+    'apos': "'",
+    'nbsp': '\u00A0',
+    'ndash': '–',
+    'mdash': '—',
+    'lsquo': '‘',
+    'rsquo': '’',
+    'ldquo': '“',
+    'rdquo': '”',
+    'hellip': '…',
+    'copy': '©',
+    'reg': '®',
+    'trade': '™',
+    'bull': '•',
+    'deg': '°',
+    'plusmn': '±',
+    'frac12': '½',
+    'frac14': '¼',
+    'frac34': '¾',
+    'times': '×',
+    'divide': '÷',
+  };
+
+  /// Decodes HTML entities (e.g. `&amp;`, `&lt;`, `&#39;`, `&#x2F;`) into
+  /// their plain characters using pure Dart.
   static String unescape(String text) {
-    return _unescape.convert(text);
+    if (!text.contains('&')) return text;
+    return text.replaceAllMapped(_htmlEntityRegex, (match) {
+      final entity = match.group(1)!;
+      if (entity.startsWith('#x') || entity.startsWith('#X')) {
+        final code = int.tryParse(entity.substring(2), radix: 16);
+        return code != null ? String.fromCharCode(code) : match.group(0)!;
+      } else if (entity.startsWith('#')) {
+        final code = int.tryParse(entity.substring(1));
+        return code != null ? String.fromCharCode(code) : match.group(0)!;
+      }
+      return _namedEntities[entity] ?? match.group(0)!;
+    });
   }
 
   /// Converts Reddit's proprietary Giphy embed shorthand into standard

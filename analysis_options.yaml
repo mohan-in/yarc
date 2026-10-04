@@ -5,6 +5,7 @@ analyzer:
     - "build/**"
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+    - android/**
 
 linter:
   rules:
@@ -16,3 +17,6 @@ linter:
     
     # 3. OPT IN: Extra safety for your Repository logic
     avoid_print: true
+
+    # 4. OPT OUT: Flutter 3.47+ marks precacheImage and Navigator.push with @awaitNotRequired
+    unnecessary_unawaited: false
