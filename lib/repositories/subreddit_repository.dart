@@ -1,5 +1,4 @@
 import 'package:yarc/models/custom_feed.dart';
-import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/models/types.dart';
 import 'package:yarc/services/reddit_service.dart';
@@ -9,10 +8,6 @@ class SubredditRepository {
   SubredditRepository(this._redditService);
 
   final RedditService _redditService;
-
-  /// Fetches a redditor's profile info by username.
-  Future<RedditorInfo?> fetchUser(String username) =>
-      _redditService.fetchUser(username);
 
   /// Fetches the user's subscribed subreddits, sorted alphabetically.
   Future<List<Subreddit>> getSubscribed() async {

@@ -6,3 +6,4 @@ export 'redditor_info.dart';
 export 'search_result.dart';
 export 'subreddit.dart';
 export 'types.dart';
+export 'vote_type.dart';

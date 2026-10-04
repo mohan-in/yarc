@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
-import 'package:yarc/notifiers/feed_notifier.dart';
+import 'package:yarc/notifiers/comments_notifier.dart';
 import 'package:yarc/widgets/comment_list.dart';
 import 'package:yarc/widgets/post_card.dart';
 
@@ -29,7 +29,9 @@ class _PostDetailContentState extends State<PostDetailContent> {
   @override
   void initState() {
     super.initState();
-    _commentsFuture = context.read<FeedNotifier>().getComments(widget.post.id);
+    _commentsFuture = context.read<CommentsNotifier>().loadComments(
+      widget.post.id,
+    );
   }
 
   @override
@@ -37,7 +39,7 @@ class _PostDetailContentState extends State<PostDetailContent> {
     super.didUpdateWidget(oldWidget);
     // Re-fetch comments when the displayed post changes.
     if (oldWidget.post.id != widget.post.id) {
-      _commentsFuture = context.read<FeedNotifier>().getComments(
+      _commentsFuture = context.read<CommentsNotifier>().loadComments(
         widget.post.id,
       );
     }

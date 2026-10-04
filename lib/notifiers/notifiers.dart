@@ -1,8 +1,10 @@
 export 'auth_notifier.dart';
 export 'biometric_lock_notifier.dart';
+export 'comments_notifier.dart';
 export 'feed_notifier.dart';
 export 'search_notifier.dart';
 export 'subreddits_notifier.dart';
 export 'theme_notifier.dart';
 export 'top_subreddits_notifier.dart';
+export 'user_notifier.dart';
 export 'video_autoplay_notifier.dart';

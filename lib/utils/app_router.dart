@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:yarc/models/post.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/screens/post_detail_screen.dart';
+import 'package:yarc/screens/saved_posts_screen.dart';
 import 'package:yarc/screens/settings_screen.dart';
 import 'package:yarc/screens/subreddit_feed_screen.dart';
 import 'package:yarc/screens/top_subreddits_screen.dart';
 import 'package:yarc/screens/user_profile_screen.dart';
+import 'package:yarc/widgets/full_screen_image_view.dart';
 
 /// Centralised navigation helper.
 ///
@@ -91,6 +93,36 @@ abstract final class AppRouter {
       context,
       MaterialPageRoute<void>(
         builder: (_) => SubredditFeedScreen.fromName(name: name),
+      ),
+    );
+  }
+
+  /// Navigates to the [SavedPostsScreen] for [username].
+  static Future<void> toSavedPosts(
+    BuildContext context, {
+    required String username,
+  }) {
+    return Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => SavedPostsScreen(username: username),
+      ),
+    );
+  }
+
+  /// Navigates to the [FullScreenImageView].
+  static Future<void> toFullScreenImageView(
+    BuildContext context, {
+    required List<String> imageUrls,
+    int initialIndex = 0,
+  }) {
+    return Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => FullScreenImageView(
+          imageUrls: imageUrls,
+          initialIndex: initialIndex,
+        ),
       ),
     );
   }

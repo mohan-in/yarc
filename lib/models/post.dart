@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:yarc/models/vote_type.dart';
 
 /// Represents a parsed segment of a flair, either text or a custom emoji.
 @immutable
@@ -9,9 +10,44 @@ class FlairItem {
     this.emojiUrl,
   });
 
+  factory FlairItem.fromJson(Map<String, dynamic> json) => FlairItem(
+    isEmoji: json['isEmoji'] as bool? ?? false,
+    text: json['text'] as String?,
+    emojiUrl: json['emojiUrl'] as String?,
+  );
+
   final bool isEmoji;
   final String? text;
   final String? emojiUrl;
+
+  FlairItem copyWith({
+    bool? isEmoji,
+    String? text,
+    String? emojiUrl,
+  }) {
+    return FlairItem(
+      isEmoji: isEmoji ?? this.isEmoji,
+      text: text ?? this.text,
+      emojiUrl: emojiUrl ?? this.emojiUrl,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'isEmoji': isEmoji,
+    if (text != null) 'text': text,
+    if (emojiUrl != null) 'emojiUrl': emojiUrl,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is FlairItem &&
+          other.isEmoji == isEmoji &&
+          other.text == text &&
+          other.emojiUrl == emojiUrl);
+
+  @override
+  int get hashCode => Object.hash(isEmoji, text, emojiUrl);
 }
 
 /// A data model representing a Reddit post.
@@ -45,7 +81,50 @@ class Post {
     this.isSaved = false,
     this.isNsfw = false,
     this.isStickied = false,
+    this.voteType = VoteType.none,
   });
+
+  factory Post.fromJson(Map<String, dynamic> json) => Post(
+    id: json['id'] as String? ?? '',
+    title: json['title'] as String? ?? '',
+    author: json['author'] as String? ?? '',
+    subreddit: json['subreddit'] as String? ?? '',
+    ups: json['ups'] as int? ?? 0,
+    numComments: json['numComments'] as int? ?? 0,
+    permalink: json['permalink'] as String? ?? '',
+    content: json['content'] as String? ?? '',
+    createdUtc:
+        DateTime.tryParse(json['createdUtc'] as String? ?? '')?.toUtc() ??
+        DateTime.now().toUtc(),
+    thumbnail: json['thumbnail'] as String?,
+    imageUrl: json['imageUrl'] as String?,
+    images: (json['images'] as List<dynamic>?)?.cast<String>() ?? const [],
+    url: json['url'] as String?,
+    isVideo: json['isVideo'] as bool? ?? false,
+    videoUrl: json['videoUrl'] as String?,
+    isYoutube: json['isYoutube'] as bool? ?? false,
+    youtubeId: json['youtubeId'] as String?,
+    aspectRatio: (json['aspectRatio'] as num?)?.toDouble(),
+    crosspostParent: json['crosspostParent'] != null
+        ? Post.fromJson(json['crosspostParent'] as Map<String, dynamic>)
+        : null,
+    authorFlairText: json['authorFlairText'] as String?,
+    authorFlairRichtext: (json['authorFlairRichtext'] as List<dynamic>?)
+        ?.map((e) => FlairItem.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    linkFlairText: json['linkFlairText'] as String?,
+    linkFlairRichtext: (json['linkFlairRichtext'] as List<dynamic>?)
+        ?.map((e) => FlairItem.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    totalAwardsReceived: json['totalAwardsReceived'] as int? ?? 0,
+    isSaved: json['isSaved'] as bool? ?? false,
+    isNsfw: json['isNsfw'] as bool? ?? false,
+    isStickied: json['isStickied'] as bool? ?? false,
+    voteType: VoteType.values.firstWhere(
+      (v) => v.name == json['voteType'],
+      orElse: () => VoteType.none,
+    ),
+  );
 
   /// The unique ID of the post (e.g., "t3_12345").
   final String id;
@@ -120,6 +199,44 @@ class Post {
   /// Whether the user has saved this post.
   final bool isSaved;
 
+  /// The user's vote state on this post.
+  final VoteType voteType;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'author': author,
+    'subreddit': subreddit,
+    'ups': ups,
+    'numComments': numComments,
+    'permalink': permalink,
+    'content': content,
+    'createdUtc': createdUtc.toIso8601String(),
+    if (thumbnail != null) 'thumbnail': thumbnail,
+    if (imageUrl != null) 'imageUrl': imageUrl,
+    'images': images,
+    if (url != null) 'url': url,
+    'isVideo': isVideo,
+    if (videoUrl != null) 'videoUrl': videoUrl,
+    'isYoutube': isYoutube,
+    if (youtubeId != null) 'youtubeId': youtubeId,
+    if (aspectRatio != null) 'aspectRatio': aspectRatio,
+    if (crosspostParent != null) 'crosspostParent': crosspostParent!.toJson(),
+    if (authorFlairText != null) 'authorFlairText': authorFlairText,
+    if (authorFlairRichtext != null)
+      'authorFlairRichtext': authorFlairRichtext!
+          .map((e) => e.toJson())
+          .toList(),
+    if (linkFlairText != null) 'linkFlairText': linkFlairText,
+    if (linkFlairRichtext != null)
+      'linkFlairRichtext': linkFlairRichtext!.map((e) => e.toJson()).toList(),
+    'totalAwardsReceived': totalAwardsReceived,
+    'isSaved': isSaved,
+    'isNsfw': isNsfw,
+    'isStickied': isStickied,
+    'voteType': voteType.name,
+  };
+
   List<Object?> get props => [
     id,
     title,
@@ -143,8 +260,11 @@ class Post {
     isStickied,
     authorFlairText,
     linkFlairText,
+    authorFlairRichtext,
+    linkFlairRichtext,
     totalAwardsReceived,
     isSaved,
+    voteType,
   ];
 
   @override
@@ -155,7 +275,13 @@ class Post {
     final q = other.props;
     if (p.length != q.length) return false;
     for (var i = 0; i < p.length; i++) {
-      if (p[i] != q[i]) return false;
+      final a = p[i];
+      final b = q[i];
+      if (a is List && b is List) {
+        if (!listEquals(a, b)) return false;
+      } else if (a != b) {
+        return false;
+      }
     }
     return true;
   }
@@ -192,6 +318,7 @@ class Post {
     bool? isSaved,
     bool? isNsfw,
     bool? isStickied,
+    VoteType? voteType,
   }) {
     return Post(
       id: id ?? this.id,
@@ -221,6 +348,7 @@ class Post {
       isSaved: isSaved ?? this.isSaved,
       isNsfw: isNsfw ?? this.isNsfw,
       isStickied: isStickied ?? this.isStickied,
+      voteType: voteType ?? this.voteType,
     );
   }
 }

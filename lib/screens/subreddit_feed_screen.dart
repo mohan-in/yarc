@@ -66,6 +66,27 @@ class _SubredditFeedScreenState extends State<SubredditFeedScreen> {
     return notifier;
   }
 
+  Future<void> _openSearch(BuildContext context) async {
+    final currentSub =
+        context.read<FeedNotifier>().currentSubreddit ?? widget._displayName;
+    final result = await showSearch<SearchResult?>(
+      context: context,
+      delegate: SubredditSearchDelegate(currentSubreddit: currentSub),
+    );
+
+    if (result == null || !context.mounted) {
+      return;
+    }
+
+    if (result.postSearchQuery != null) {
+      unawaited(
+        context.read<FeedNotifier>().searchInCurrentSubreddit(
+          result.postSearchQuery!,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProxyProvider2<
@@ -77,16 +98,21 @@ class _SubredditFeedScreenState extends State<SubredditFeedScreen> {
       update: (_, repo, settings, notifier) => notifier!
         ..setRepository(repo)
         ..setSettings(settings),
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('r/${widget._displayName}'),
-          actions: [
-            UniversalAppBarActions(
-              onScrollToTop: () => scrollToTop(_scrollController),
+      child: Builder(
+        builder: (context) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text('r/${widget._displayName}'),
+              actions: [
+                UniversalAppBarActions(
+                  onScrollToTop: () => scrollToTop(_scrollController),
+                  onSearch: () => _openSearch(context),
+                ),
+              ],
             ),
-          ],
-        ),
-        body: _SubredditFeedBody(scrollController: _scrollController),
+            body: _SubredditFeedBody(scrollController: _scrollController),
+          );
+        },
       ),
     );
   }
@@ -117,6 +143,7 @@ class _SubredditFeedBody extends StatelessWidget {
         return context.read<FeedNotifier>().refresh();
       },
       slivers: [
+        const SearchBannerSliver(),
         if (errorMessage != null && posts.isEmpty)
           SliverFillRemaining(
             child: Padding(

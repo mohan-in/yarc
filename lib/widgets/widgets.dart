@@ -16,6 +16,7 @@ export 'post_card.dart';
 export 'post_detail_content.dart';
 export 'post_list.dart';
 export 'post_metadata.dart';
+export 'search_banner_sliver.dart';
 export 'sort_filter_bottom_sheet.dart';
 export 'subreddit_info_card.dart';
 export 'subreddit_search_delegate.dart';

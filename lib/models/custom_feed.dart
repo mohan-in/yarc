@@ -1,4 +1,3 @@
-import 'package:draw/draw.dart' as draw;
 import 'package:flutter/foundation.dart';
 
 /// Represents a Reddit custom feed (multireddit).
@@ -9,11 +8,13 @@ class CustomFeed {
     required this.path,
   });
 
-  /// Creates a [CustomFeed] from a DRAW library multireddit object.
-  factory CustomFeed.fromDraw(draw.Multireddit multi) {
+  CustomFeed copyWith({
+    String? displayName,
+    String? path,
+  }) {
     return CustomFeed(
-      displayName: multi.displayName,
-      path: (multi.data?['path'] as String?) ?? '',
+      displayName: displayName ?? this.displayName,
+      path: path ?? this.path,
     );
   }
 

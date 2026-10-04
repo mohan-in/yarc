@@ -6,7 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/notifiers/feed_notifier.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
-import 'package:yarc/notifiers/subreddits_notifier.dart';
+import 'package:yarc/notifiers/user_notifier.dart';
 import 'package:yarc/repositories/post_repository.dart';
 import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/widgets/widgets.dart';
@@ -42,7 +42,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _loadUserInfo() async {
     try {
-      final notifier = context.read<SubredditsNotifier>();
+      final notifier = context.read<UserNotifier>();
       final info = await notifier.fetchUser(widget.username);
       if (mounted) {
         setState(() {
