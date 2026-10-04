@@ -1,3 +1,5 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:provider/single_child_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -10,10 +12,22 @@ import 'package:yarc/services/services.dart';
 ///
 /// Order is critical: services are registered first, followed by repositories,
 /// then notifiers that depend on those repositories.
-List<SingleChildWidget> getAppProviders(SharedPreferences prefs) {
+List<SingleChildWidget> getAppProviders({
+  required SharedPreferences prefs,
+  required Box<dynamic> historyBox,
+  Box<dynamic>? feedCacheBox,
+  FlutterSecureStorage secureStorage = const FlutterSecureStorage(),
+}) {
   return [
-    Provider(create: (_) => AuthService(prefs)),
-    Provider(create: (_) => HistoryService()),
+    Provider(
+      create: (_) => AuthService(
+        secureStorage: secureStorage,
+        prefs: prefs,
+      ),
+    ),
+    Provider(create: (_) => HistoryService(historyBox)),
+    if (feedCacheBox != null)
+      Provider(create: (_) => FeedCacheService(feedCacheBox)),
     Provider(create: (_) => BiometricService()),
     ProxyProvider<BiometricService, BiometricRepository>(
       update: (_, service, prev) => prev ?? BiometricRepository(service),
@@ -35,12 +49,26 @@ List<SingleChildWidget> getAppProviders(SharedPreferences prefs) {
     ProxyProvider<AuthService, AuthRepository>(
       update: (_, auth, prev) => prev ?? AuthRepository(auth),
     ),
-    ProxyProvider2<RedditService, HistoryService, PostRepository>(
-      update: (_, reddit, history, prev) =>
-          prev ?? PostRepository(reddit, history),
-    ),
+    if (feedCacheBox != null)
+      ProxyProvider3<
+        RedditService,
+        HistoryService,
+        FeedCacheService,
+        PostRepository
+      >(
+        update: (_, reddit, history, cache, prev) =>
+            prev ?? PostRepository(reddit, history, cache),
+      )
+    else
+      ProxyProvider2<RedditService, HistoryService, PostRepository>(
+        update: (_, reddit, history, prev) =>
+            prev ?? PostRepository(reddit, history),
+      ),
     ProxyProvider<RedditService, SubredditRepository>(
       update: (_, reddit, prev) => prev ?? SubredditRepository(reddit),
+    ),
+    ProxyProvider<RedditService, UserRepository>(
+      update: (_, reddit, prev) => prev ?? UserRepository(reddit),
     ),
     ChangeNotifierProxyProvider<AuthRepository, AuthNotifier>(
       create: (_) => AuthNotifier(),
@@ -56,6 +84,10 @@ List<SingleChildWidget> getAppProviders(SharedPreferences prefs) {
         ..setRepository(repo)
         ..setSettings(settings),
     ),
+    ChangeNotifierProxyProvider<PostRepository, CommentsNotifier>(
+      create: (_) => CommentsNotifier(),
+      update: (_, repo, notifier) => notifier!..setRepository(repo),
+    ),
     ChangeNotifierProxyProvider<SubredditRepository, SubredditsNotifier>(
       create: (_) => SubredditsNotifier(),
       update: (_, repo, notifier) => notifier!..setRepository(repo),
@@ -64,9 +96,19 @@ List<SingleChildWidget> getAppProviders(SharedPreferences prefs) {
       create: (_) => TopSubredditsNotifier(),
       update: (_, repo, notifier) => notifier!..setRepository(repo),
     ),
-    ChangeNotifierProxyProvider<SubredditRepository, SearchNotifier>(
-      create: (_) => SearchNotifier(),
+    ChangeNotifierProxyProvider<UserRepository, UserNotifier>(
+      create: (_) => UserNotifier(),
       update: (_, repo, notifier) => notifier!..setRepository(repo),
+    ),
+    ChangeNotifierProxyProvider2<
+      SubredditRepository,
+      UserRepository,
+      SearchNotifier
+    >(
+      create: (_) => SearchNotifier(),
+      update: (_, subRepo, userRepo, notifier) => notifier!
+        ..setSubredditRepository(subRepo)
+        ..setUserRepository(userRepo),
     ),
     ChangeNotifierProvider(create: (_) => VideoAutoplayNotifier()),
   ];

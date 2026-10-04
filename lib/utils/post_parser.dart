@@ -1,5 +1,6 @@
 import 'package:draw/draw.dart' as draw;
 import 'package:yarc/models/post.dart';
+import 'package:yarc/models/vote_type.dart';
 import 'package:yarc/utils/html_utils.dart';
 import 'package:yarc/utils/parsers/content_sanitizer.dart';
 import 'package:yarc/utils/parsers/crosspost_parser.dart';
@@ -205,6 +206,11 @@ class PostParser {
       isSaved: submission.saved,
       isNsfw: submission.over18,
       isStickied: isStickied,
+      voteType: switch (submission.data?['likes'] as bool?) {
+        true => VoteType.upvoted,
+        false => VoteType.downvoted,
+        null => VoteType.none,
+      },
     );
   }
 }

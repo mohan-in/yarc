@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/utils/image_utils.dart';
-import 'package:yarc/widgets/full_screen_image_view.dart';
 import 'package:yarc/widgets/image_save_dialog.dart';
 
 /// A reusable widget for displaying a single network image with loading,
@@ -30,13 +30,9 @@ class CachedImage extends StatelessWidget {
       onLongPress: () => showImageSaveDialog(context, imageUrl),
       onTap: () {
         unawaited(
-          Navigator.push<void>(
+          AppRouter.toFullScreenImageView(
             context,
-            MaterialPageRoute<void>(
-              builder: (context) => FullScreenImageView(
-                imageUrls: fullScreenUrls ?? [imageUrl],
-              ),
-            ),
+            imageUrls: fullScreenUrls ?? [imageUrl],
           ),
         );
       },

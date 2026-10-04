@@ -5,4 +5,5 @@ export 'feed_utils.dart';
 export 'html_utils.dart';
 export 'image_utils.dart';
 export 'number_format_utils.dart';
+export 'parsers/parsers.dart';
 export 'post_parser.dart';

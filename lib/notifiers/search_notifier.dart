@@ -2,10 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/repositories/subreddit_repository.dart';
+import 'package:yarc/repositories/user_repository.dart';
 
 /// Notifier for managing search state (subreddits and users).
 class SearchNotifier extends ChangeNotifier {
-  SubredditRepository? _repository;
+  SubredditRepository? _subredditRepository;
+  UserRepository? _userRepository;
 
   // Subreddit search state
   String _query = '';
@@ -29,14 +31,25 @@ class SearchNotifier extends ChangeNotifier {
   /// from "searched but not found").
   bool get userSearched => _userSearched;
 
-  /// Sets the subreddit repository. Called by ProxyProvider.
+  /// Sets the subreddit repository.
   // ignore: use_setters_to_change_properties
+  void setSubredditRepository(SubredditRepository repository) {
+    _subredditRepository = repository;
+  }
+
+  /// Sets the user repository.
+  // ignore: use_setters_to_change_properties
+  void setUserRepository(UserRepository repository) {
+    _userRepository = repository;
+  }
+
+  /// Backwards-compatible alias for [setSubredditRepository].
   void setRepository(SubredditRepository repository) {
-    _repository = repository;
+    setSubredditRepository(repository);
   }
 
   Future<void> search(String query) async {
-    if (_repository == null) {
+    if (_subredditRepository == null) {
       return;
     }
 
@@ -53,7 +66,7 @@ class SearchNotifier extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final results = await _repository!.search(query);
+      final results = await _subredditRepository!.search(query);
       if (_query == query) {
         _results = results;
         _isLoading = false;
@@ -70,7 +83,7 @@ class SearchNotifier extends ChangeNotifier {
 
   /// Searches for a user by exact username.
   Future<void> searchUser(String username) async {
-    if (_repository == null) {
+    if (_userRepository == null) {
       return;
     }
 
@@ -89,7 +102,7 @@ class SearchNotifier extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _repository!.fetchUser(username);
+      final result = await _userRepository!.fetchUser(username);
       if (_userQuery == username) {
         _userResult = result;
         _isUserLoading = false;

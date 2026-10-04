@@ -1,11 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:yarc/models/comment.dart';
+import 'package:yarc/models/vote_type.dart';
+import 'package:yarc/notifiers/comments_notifier.dart';
 import 'package:yarc/theme/theme.dart';
 import 'package:yarc/utils/date_utils.dart';
 import 'package:yarc/widgets/markdown_content.dart';
 
 class CommentTile extends StatefulWidget {
-  const CommentTile({required this.comment, super.key, this.depth = 0});
+  const CommentTile({
+    required this.comment,
+    super.key,
+    this.depth = 0,
+  });
 
   final Comment comment;
   final int depth;
@@ -49,21 +58,25 @@ class _CommentTileState extends State<CommentTile> {
           onTap: _toggleCollapse,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            child: Row(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
+                _CommentHeader(
+                  comment: widget.comment,
+                  isCollapsed: _isCollapsed,
+                ),
+                AnimatedCrossFade(
+                  duration: const Duration(milliseconds: 200),
+                  crossFadeState: _isCollapsed
+                      ? CrossFadeState.showFirst
+                      : CrossFadeState.showSecond,
+                  firstChild: const SizedBox.shrink(),
+                  secondChild: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _CommentHeader(
-                        comment: widget.comment,
-                        isCollapsed: _isCollapsed,
-                      ),
-                      if (!_isCollapsed) ...[
-                        const SizedBox(height: 4),
-                        _CommentBody(body: widget.comment.body),
-                      ],
+                      const SizedBox(height: 4),
+                      _CommentBody(body: widget.comment.body),
+                      _CommentActions(comment: widget.comment),
                     ],
                   ),
                 ),
@@ -71,12 +84,20 @@ class _CommentTileState extends State<CommentTile> {
             ),
           ),
         ),
-        if (!_isCollapsed && widget.comment.replies.isNotEmpty)
-          _CommentReplies(
-            replies: widget.comment.replies,
-            depth: nextDepth,
-            depthColor: depthColor,
-          ),
+        AnimatedCrossFade(
+          duration: const Duration(milliseconds: 200),
+          crossFadeState: _isCollapsed
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          firstChild: const SizedBox.shrink(),
+          secondChild: widget.comment.replies.isNotEmpty
+              ? _CommentReplies(
+                  replies: widget.comment.replies,
+                  depth: nextDepth,
+                  depthColor: depthColor,
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
 
@@ -94,7 +115,7 @@ class _CommentTileState extends State<CommentTile> {
   }
 }
 
-/// Displays the comment author, timestamp, and collapse indicator.
+/// Displays the comment author, timestamp, score, and collapse indicator.
 class _CommentHeader extends StatelessWidget {
   const _CommentHeader({
     required this.comment,
@@ -125,6 +146,16 @@ class _CommentHeader extends StatelessWidget {
             color: colorScheme.onSurfaceVariant,
           ),
         ),
+        const SizedBox(width: 8),
+        Text(
+          '• ${comment.ups} pts',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+            fontWeight: comment.voteType != VoteType.none
+                ? FontWeight.bold
+                : FontWeight.normal,
+          ),
+        ),
         if (isCollapsed) ...[
           const SizedBox(width: 8),
           Icon(
@@ -140,6 +171,82 @@ class _CommentHeader extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// Action bar for voting on a comment.
+class _CommentActions extends StatelessWidget {
+  const _CommentActions({required this.comment});
+
+  final Comment comment;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        IconButton(
+          icon: Icon(
+            comment.voteType == VoteType.upvoted
+                ? Icons.arrow_upward
+                : Icons.arrow_upward_outlined,
+            size: 16,
+            color: comment.voteType == VoteType.upvoted
+                ? colorScheme.primary
+                : colorScheme.outline,
+          ),
+          onPressed: () {
+            unawaited(
+              context.read<CommentsNotifier>().voteComment(
+                comment,
+                VoteType.upvoted,
+              ),
+            );
+          },
+          tooltip: 'Upvote comment',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        ),
+        Text(
+          '${comment.ups}',
+          style: theme.textTheme.labelSmall?.copyWith(
+            fontWeight: comment.voteType != VoteType.none
+                ? FontWeight.bold
+                : FontWeight.normal,
+            color: comment.voteType == VoteType.upvoted
+                ? colorScheme.primary
+                : (comment.voteType == VoteType.downvoted
+                      ? colorScheme.error
+                      : colorScheme.onSurfaceVariant),
+          ),
+        ),
+        IconButton(
+          icon: Icon(
+            comment.voteType == VoteType.downvoted
+                ? Icons.arrow_downward
+                : Icons.arrow_downward_outlined,
+            size: 16,
+            color: comment.voteType == VoteType.downvoted
+                ? colorScheme.error
+                : colorScheme.outline,
+          ),
+          onPressed: () {
+            unawaited(
+              context.read<CommentsNotifier>().voteComment(
+                comment,
+                VoteType.downvoted,
+              ),
+            );
+          },
+          tooltip: 'Downvote comment',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+        ),
       ],
     );
   }

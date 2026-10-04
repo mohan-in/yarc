@@ -286,6 +286,8 @@ class _PostMedia extends StatelessWidget {
       mediaWidget = RedditVideoPlayer(
         videoUrl: post.videoUrl!,
         autoPlay: autoPlay,
+        aspectRatio: post.aspectRatio ?? (16 / 9),
+        thumbnailUrl: post.imageUrl ?? post.thumbnail,
       );
     } else if (showYoutube) {
       mediaWidget = YouTubeEmbed(videoId: post.youtubeId!);

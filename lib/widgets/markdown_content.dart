@@ -9,9 +9,9 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:yarc/notifiers/settings_notifier.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/utils/image_utils.dart';
 import 'package:yarc/widgets/faded_truncation.dart';
-import 'package:yarc/widgets/full_screen_image_view.dart';
 
 /// A widget that parses text (Markdown) and renders it with clickable links
 /// and inline images.
@@ -134,13 +134,9 @@ class _TapToOpenImageBuilder extends MarkdownElementBuilder {
     return GestureDetector(
       onTap: () {
         unawaited(
-          Navigator.push<void>(
+          AppRouter.toFullScreenImageView(
             context,
-            MaterialPageRoute<void>(
-              builder: (context) => FullScreenImageView(
-                imageUrls: [url],
-              ),
-            ),
+            imageUrls: [url],
           ),
         );
       },

@@ -4,9 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:yarc/theme/theme.dart';
+import 'package:yarc/utils/app_router.dart';
 import 'package:yarc/utils/constants.dart';
 import 'package:yarc/utils/image_utils.dart';
-import 'package:yarc/widgets/full_screen_image_view.dart';
 
 /// A horizontal carousel for displaying multiple images with swipe navigation.
 class ImageCarousel extends StatefulWidget {
@@ -51,14 +51,10 @@ class _ImageCarouselState extends State<ImageCarousel> {
             return GestureDetector(
               onTap: () {
                 unawaited(
-                  Navigator.push<void>(
+                  AppRouter.toFullScreenImageView(
                     context,
-                    MaterialPageRoute<void>(
-                      builder: (context) => FullScreenImageView(
-                        imageUrls: widget.imageUrls,
-                        initialIndex: index,
-                      ),
-                    ),
+                    imageUrls: widget.imageUrls,
+                    initialIndex: index,
                   ),
                 );
               },

@@ -3,10 +3,12 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:visibility_detector/visibility_detector.dart';
 import 'package:yarc/di/providers.dart';
+import 'package:yarc/l10n/app_localizations.dart';
 import 'package:yarc/notifiers/notifiers.dart';
 import 'package:yarc/notifiers/settings_notifier.dart';
 import 'package:yarc/screens/home_screen.dart';
@@ -24,7 +26,8 @@ void main() async {
     milliseconds: 100,
   );
 
-  await HistoryService.init();
+  final historyBox = await HistoryService.openBox();
+  final feedCacheBox = await FeedCacheService.openBox();
   final prefs = await SharedPreferences.getInstance();
 
   // On Android 15+ (API 35+), edge-to-edge is mandatory. Explicitly opting in
@@ -38,7 +41,11 @@ void main() async {
   runApp(
     ChangeNotifierProvider.value(
       value: themeNotifier,
-      child: YarcApp(prefs: prefs),
+      child: YarcApp(
+        prefs: prefs,
+        historyBox: historyBox,
+        feedCacheBox: feedCacheBox,
+      ),
     ),
   );
 }
@@ -46,10 +53,14 @@ void main() async {
 class YarcApp extends StatefulWidget {
   const YarcApp({
     required this.prefs,
+    required this.historyBox,
+    this.feedCacheBox,
     super.key,
   });
 
   final SharedPreferences prefs;
+  final Box<dynamic> historyBox;
+  final Box<dynamic>? feedCacheBox;
 
   @override
   State<YarcApp> createState() => _YarcAppState();
@@ -98,8 +109,8 @@ class _YarcAppState extends State<YarcApp> {
             ..showSnackBar(const SnackBar(content: Text('Opening post...')));
 
           try {
-            final redditService = context.read<RedditService>();
-            final post = await redditService.fetchPost(result.postId!);
+            final feedNotifier = context.read<FeedNotifier>();
+            final post = await feedNotifier.getPost(result.postId!);
 
             if (post != null && context.mounted) {
               if (result.subreddit != null) {
@@ -152,7 +163,11 @@ class _YarcAppState extends State<YarcApp> {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: getAppProviders(widget.prefs),
+      providers: getAppProviders(
+        prefs: widget.prefs,
+        historyBox: widget.historyBox,
+        feedCacheBox: widget.feedCacheBox,
+      ),
       child: Builder(
         builder: (context) {
           if (_pendingDeepLink != null) {
@@ -174,6 +189,8 @@ class _YarcAppState extends State<YarcApp> {
             theme: appTheme,
             darkTheme: darkAppTheme,
             themeMode: themeMode,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
             home: const HomeScreen(),
             builder: (context, child) {
               return _SecureWindowWrapper(

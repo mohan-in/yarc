@@ -9,8 +9,12 @@ import 'package:yarc/models/post.dart';
 import 'package:yarc/models/redditor_info.dart';
 import 'package:yarc/models/subreddit.dart';
 import 'package:yarc/models/types.dart';
+import 'package:yarc/models/vote_type.dart';
 import 'package:yarc/services/auth_service.dart';
 import 'package:yarc/utils/constants.dart';
+import 'package:yarc/utils/parsers/comment_parser.dart';
+import 'package:yarc/utils/parsers/custom_feed_parser.dart';
+import 'package:yarc/utils/parsers/subreddit_parser.dart';
 import 'package:yarc/utils/post_parser.dart';
 
 /// Service for Reddit API calls.
@@ -297,6 +301,62 @@ class RedditService {
     });
   }
 
+  /// Casts or clears a vote on a post.
+  Future<void> votePost({
+    required String postId,
+    required VoteType voteType,
+  }) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      throw Exception('Reddit client not initialized or logged out');
+    }
+    final fullname = postId.startsWith('t3_') ? postId : 't3_$postId';
+    final dir = switch (voteType) {
+      VoteType.upvoted => '1',
+      VoteType.downvoted => '-1',
+      VoteType.none => '0',
+    };
+    return _withAuthRetry('votePost', () async {
+      await reddit.post(
+        'api/vote/',
+        {'id': fullname, 'dir': dir},
+        discardResponse: true,
+      );
+      developer.log(
+        'Successfully voted $voteType on post: $postId',
+        name: 'RedditService',
+      );
+    });
+  }
+
+  /// Casts or clears a vote on a comment.
+  Future<void> voteComment({
+    required String commentId,
+    required VoteType voteType,
+  }) async {
+    final reddit = _reddit;
+    if (reddit == null) {
+      throw Exception('Reddit client not initialized or logged out');
+    }
+    final fullname = commentId.startsWith('t1_') ? commentId : 't1_$commentId';
+    final dir = switch (voteType) {
+      VoteType.upvoted => '1',
+      VoteType.downvoted => '-1',
+      VoteType.none => '0',
+    };
+    return _withAuthRetry('voteComment', () async {
+      await reddit.post(
+        'api/vote/',
+        {'id': fullname, 'dir': dir},
+        discardResponse: true,
+      );
+      developer.log(
+        'Successfully voted $voteType on comment: $commentId',
+        name: 'RedditService',
+      );
+    });
+  }
+
   /// Returns the appropriate sorted stream for a subreddit.
   Stream<draw.UserContent> _getSubredditStream(
     draw.SubredditRef sub, {
@@ -416,7 +476,7 @@ class RedditService {
         if (submission.comments != null) {
           return submission.comments!.comments
               .whereType<draw.Comment>()
-              .map(Comment.fromDraw)
+              .map(CommentParser.parse)
               .toList();
         }
         return <Comment>[];
@@ -481,7 +541,7 @@ class RedditService {
             for (final item in listing) {
               if (item is draw.Subreddit) {
                 try {
-                  subs.add(Subreddit.fromDraw(item));
+                  subs.add(SubredditParser.parse(item));
                 } on Exception catch (e) {
                   developer.log(
                     'Failed to parse popular subreddit: $e',
@@ -492,7 +552,7 @@ class RedditService {
                 // SubredditRef needs populate() — fall back gracefully.
                 try {
                   final populated = await item.populate();
-                  subs.add(Subreddit.fromDraw(populated));
+                  subs.add(SubredditParser.parse(populated));
                 } on Exception catch (e) {
                   developer.log(
                     'Failed to populate SubredditRef: $e',
@@ -537,7 +597,7 @@ class RedditService {
       return await _withAuthRetry('fetchSubscribedSubreddits', () async {
         final subs = <Subreddit>[];
         await for (final sub in reddit.user.subreddits()) {
-          subs.add(Subreddit.fromDraw(sub));
+          subs.add(SubredditParser.parse(sub));
         }
         return subs;
       });
@@ -559,7 +619,7 @@ class RedditService {
         if (multis == null) {
           return <CustomFeed>[];
         }
-        return multis.map(CustomFeed.fromDraw).toList();
+        return multis.map(CustomFeedParser.parse).toList();
       });
     } on Exception catch (_) {
       return [];
@@ -584,7 +644,7 @@ class RedditService {
         for (final ref in results) {
           try {
             final sub = await ref.populate();
-            subs.add(Subreddit.fromDraw(sub));
+            subs.add(SubredditParser.parse(sub));
           } on Exception catch (_) {
             // Skip subreddits that fail to load
           }
@@ -674,7 +734,7 @@ class RedditService {
       return await _withAuthRetry('fetchSubredditInfo', () async {
         final ref = reddit.subreddit(name);
         final sub = await ref.populate();
-        return Subreddit.fromDraw(sub);
+        return SubredditParser.parse(sub);
       });
     } on Exception catch (e, stack) {
       developer.log(

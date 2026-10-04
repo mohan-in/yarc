@@ -1,0 +1,67 @@
+{
+  "@@locale": "en",
+  "appTitle": "YARC",
+  "@appTitle": {
+    "description": "Title of the application"
+  },
+  "home": "Home",
+  "@home": {
+    "description": "Label for Home navigation"
+  },
+  "saved": "Saved",
+  "@saved": {
+    "description": "Label for Saved posts navigation"
+  },
+  "settings": "Settings",
+  "@settings": {
+    "description": "Label for Settings navigation"
+  },
+  "search": "Search",
+  "@search": {
+    "description": "Tooltip and label for search action"
+  },
+  "upvote": "Upvote",
+  "@upvote": {
+    "description": "Tooltip for upvote action"
+  },
+  "downvote": "Downvote",
+  "@downvote": {
+    "description": "Tooltip for downvote action"
+  },
+  "share": "Share",
+  "@share": {
+    "description": "Tooltip for share action"
+  },
+  "save": "Save",
+  "@save": {
+    "description": "Tooltip for save post action"
+  },
+  "unsave": "Unsave",
+  "@unsave": {
+    "description": "Tooltip for unsave post action"
+  },
+  "comments": "Comments",
+  "@comments": {
+    "description": "Label for comments count"
+  },
+  "offlineModeBanner": "Offline mode — showing cached posts",
+  "@offlineModeBanner": {
+    "description": "Banner message when running in offline mode"
+  },
+  "selectPostToRead": "Select a post to read",
+  "@selectPostToRead": {
+    "description": "Placeholder text in wide layout when no post is selected"
+  },
+  "biometricReason": "Authenticate to view NSFW content",
+  "@biometricReason": {
+    "description": "Reason text shown for biometric authentication"
+  },
+  "login": "Log In",
+  "@login": {
+    "description": "Button text for logging into Reddit"
+  },
+  "logout": "Log Out",
+  "@logout": {
+    "description": "Button text for logging out"
+  }
+}

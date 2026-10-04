@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:yarc/models/models.dart';
 import 'package:yarc/notifiers/notifiers.dart';
-import 'package:yarc/screens/saved_posts_screen.dart';
 import 'package:yarc/utils/utils.dart';
 import 'package:yarc/widgets/widgets.dart';
 
@@ -228,12 +227,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 final username = context.read<AuthNotifier>().currentUsername;
                 if (username != null) {
                   unawaited(
-                    Navigator.push<void>(
+                    AppRouter.toSavedPosts(
                       context,
-                      MaterialPageRoute<void>(
-                        builder: (context) =>
-                            SavedPostsScreen(username: username),
-                      ),
+                      username: username,
                     ),
                   );
                 }
@@ -518,62 +514,8 @@ class _NarrowLayout extends StatelessWidget {
 
               return SliverMainAxisGroup(
                 slivers: [
-                  Selector<FeedNotifier, String?>(
-                    selector: (_, feed) => feed.searchQuery,
-                    builder: (context, searchQuery, _) {
-                      if (searchQuery == null) {
-                        return const SliverToBoxAdapter(
-                          child: SizedBox.shrink(),
-                        );
-                      }
-                      return SliverToBoxAdapter(
-                        child: Material(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.primaryContainer.withValues(alpha: 0.3),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 4,
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.search,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    'Results for "$searchQuery"',
-                                    style: TextStyle(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, size: 18),
-                                  tooltip: 'Clear search',
-                                  onPressed: () {
-                                    unawaited(
-                                      context
-                                          .read<FeedNotifier>()
-                                          .clearSubredditSearch(),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  const _OfflineBannerSliver(),
+                  const SearchBannerSliver(),
                   FeedSliver(
                     onPostTap: onPostTap,
                     selectedPostId: selectedPostId,
@@ -583,6 +525,45 @@ class _NarrowLayout extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Displays an informational banner when the feed is loaded from offline cache.
+class _OfflineBannerSliver extends StatelessWidget {
+  const _OfflineBannerSliver();
+
+  @override
+  Widget build(BuildContext context) {
+    final isOffline = context.select<FeedNotifier, bool>((n) => n.isOffline);
+    if (!isOffline) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    final theme = Theme.of(context);
+    return SliverToBoxAdapter(
+      child: Container(
+        color: theme.colorScheme.tertiaryContainer,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Row(
+          children: [
+            Icon(
+              Icons.cloud_off,
+              size: 18,
+              color: theme.colorScheme.onTertiaryContainer,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Offline mode — showing cached posts',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onTertiaryContainer,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -57,11 +57,12 @@ class FeedNotifier extends ChangeNotifier {
   FeedSort _currentSort = FeedSort.best;
   draw.TimeFilter _currentTimeFilter = draw.TimeFilter.day;
   String? _errorMessage;
+  bool _isOffline = false;
 
-  /// Fetches comments for a post by ID.
-  Future<List<Comment>> getComments(String postId) async {
-    if (_repository == null) return [];
-    return _repository!.getComments(postId);
+  /// Fetches a single post by ID.
+  Future<Post?> getPost(String postId) async {
+    if (_repository == null) return null;
+    return _repository!.getPost(postId);
   }
 
   /// Cached filtered list, invalidated by [_invalidateVisiblePosts].
@@ -69,6 +70,7 @@ class FeedNotifier extends ChangeNotifier {
 
   List<Post> get posts => _posts;
   bool get isLoading => _isLoading;
+  bool get isOffline => _isOffline;
   String? get currentSubreddit => _currentSubreddit;
   Subreddit? get currentSubredditInfo => _currentSubredditInfo;
   String? get currentCustomFeedPath => _currentCustomFeedPath;
@@ -221,11 +223,27 @@ class FeedNotifier extends ChangeNotifier {
 
       _posts = refresh ? result.posts : [..._posts, ...uniqueNewPosts];
       _after = result.nextAfter;
+      _isOffline = false;
       _isLoading = false;
       _invalidateVisiblePosts();
       notifyListeners();
     } on Exception catch (e) {
       _isLoading = false;
+      if (_posts.isEmpty && _repository != null) {
+        final cached = _repository!.getCachedPosts(
+          subreddit: _currentSubreddit,
+          customFeedPath: _currentCustomFeedPath,
+          sort: _currentSort,
+        );
+        if (cached.isNotEmpty) {
+          _posts = cached;
+          _isOffline = true;
+          _errorMessage = null;
+          _invalidateVisiblePosts();
+          notifyListeners();
+          return;
+        }
+      }
       _errorMessage = e.toString();
       notifyListeners();
     }
@@ -465,6 +483,7 @@ class FeedNotifier extends ChangeNotifier {
     _currentCustomFeedPath = null;
     _currentCustomFeedName = null;
     _isLoading = false;
+    _isOffline = false;
     // hideRead is derived from _settings — no local reset needed.
     _readPostIds = {};
     _hiddenPostIds = {};
@@ -491,7 +510,60 @@ class FeedNotifier extends ChangeNotifier {
       _saveEvents.add((post.id, !newStatus));
       _errorMessage = 'Failed to ${newStatus ? 'save' : 'unsave'} post: $e';
       notifyListeners();
-      rethrow;
+    }
+  }
+
+  /// Casts or clears a vote on a post with optimistic UI update.
+  Future<void> vote(Post post, VoteType targetVote) async {
+    if (_repository == null) return;
+
+    final oldVote = post.voteType;
+    final oldUps = post.ups;
+    final newVote = oldVote == targetVote ? VoteType.none : targetVote;
+
+    var delta = 0;
+    if (oldVote == VoteType.none) {
+      delta = newVote == VoteType.upvoted
+          ? 1
+          : (newVote == VoteType.downvoted ? -1 : 0);
+    } else if (oldVote == VoteType.upvoted) {
+      delta = newVote == VoteType.none
+          ? -1
+          : (newVote == VoteType.downvoted ? -2 : 0);
+    } else if (oldVote == VoteType.downvoted) {
+      delta = newVote == VoteType.none
+          ? 1
+          : (newVote == VoteType.upvoted ? 2 : 0);
+    }
+
+    final updated = post.copyWith(
+      voteType: newVote,
+      ups: oldUps + delta,
+    );
+    _updatePost(updated);
+
+    try {
+      await _repository!.votePost(
+        postId: post.id,
+        voteType: newVote,
+      );
+    } on Exception catch (e) {
+      final reverted = post.copyWith(
+        voteType: oldVote,
+        ups: oldUps,
+      );
+      _updatePost(reverted);
+      _errorMessage = 'Failed to vote on post: $e';
+      notifyListeners();
+    }
+  }
+
+  void _updatePost(Post updatedPost) {
+    final index = _posts.indexWhere((p) => p.id == updatedPost.id);
+    if (index != -1) {
+      _posts[index] = updatedPost;
+      _invalidateVisiblePosts();
+      notifyListeners();
     }
   }
 
